@@ -1,24 +1,48 @@
 package lib
 
-import "os"
+import (
+	"io"
+	"os"
+	"path/filepath"
+	"strconv"
+)
 
-func Query[TInputData interface{}]() []TInputData { panic("implement me") }
+func Query[TInputData interface{}]() []TInputData { panic("implement Query") }
 
-//type MapCallback[TInputData interface{}, TOutputData interface{}] func(inputData TInputData) TOutputData
-
-func Map[TInputData interface{}, TOutputData interface{}](inputData []TInputData, cb func(inputData TInputData) TOutputData) []TOutputData {
-	panic("implement me")
+func Map[TInputData interface{}, TOutputData interface{}](
+	inputData []TInputData,
+	cb func(inputData TInputData) TOutputData,
+) []TOutputData {
+	panic("implement Map")
 }
 
-func Save() {
-	getwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	println(getwd)
+func Itoa(i int) string {
+	return strconv.Itoa(i)
 }
 
-func GenerateSql[TInputData interface{}](data []TInputData, outputFile string) {
+func Atoi(s string) int {
+	panic("implement Atoi")
+}
+
+func GenerateSqlFile[TInputData interface{}](data []TInputData, outputFile string) {
+	sql := GenerateSql(data)
+	wd, _ := os.Getwd()
+	fileName := filepath.Join(wd, outputFile)
+	dir := filepath.Dir(fileName)
+	_ = os.MkdirAll(dir, os.ModePerm)
+	writer, _ := os.Create(fileName)
+	_, _ = io.WriteString(writer, sql)
+	_ = writer.Close()
+}
+
+func GenerateSqlStdOut[TInputData interface{}](data []TInputData) {
+	sql := GenerateSql(data)
+	writer := os.Stdout
+	_, _ = io.WriteString(writer, sql)
+	_ = writer.Close()
+}
+
+func GenerateSql[TInputData interface{}](data []TInputData) string {
 	panic("implement me")
 }
 

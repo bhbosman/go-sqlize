@@ -3,11 +3,9 @@ package cmd
 import (
 	"fmt"
 	"github.com/bhbosman/go-sqlize/cmd/internal"
-	"go/ast"
-
 	"github.com/spf13/cobra"
 	"github.com/ugurcsen/gods-generic/queues/linkedlistqueue"
-
+	"go/ast"
 	"go/build"
 	"go/parser"
 	"go/token"
@@ -15,18 +13,32 @@ import (
 	"path/filepath"
 )
 
-var rootCmd = &cobra.Command{
+var RootCmd = &cobra.Command{
 	Use:   "sqlize",
 	Short: "sqlize",
 	Long:  "sqlize",
 	Run: func(cmd *cobra.Command, args []string) {
+		for _, argItem := range args {
+			absPath := func(argItem string) string {
+				if !filepath.IsAbs(argItem) {
+					wd, _ := os.Getwd()
+					return filepath.Join(wd, argItem)
+				}
+				return argItem
+			}(argItem)
 
-		for _, __inputFolder := range args {
-			inputFolder := __inputFolder
-			if !filepath.IsAbs(inputFolder) {
-				wd, _ := os.Getwd()
-				inputFolder = filepath.Join(wd, inputFolder)
-			}
+			inputFolder, inputFile := func(absPath string) (string, string) {
+				fileInfo, err := os.Stat(absPath)
+				if err != nil {
+					_, _ = fmt.Fprintln(os.Stderr, err.Error())
+					os.Exit(1)
+				}
+				if !fileInfo.IsDir() {
+					return filepath.Split(absPath)
+				}
+				return absPath, ""
+			}(absPath)
+
 			fs := token.NewFileSet()
 			rawAst := &internal.RawAstRead{internal.FunctionMap{}, internal.StructMethodMap{}, internal.TypeSpecMap{}, []internal.Node[*ast.FuncDecl]{}}
 			state := &internal.ReadAstFileState{
@@ -35,6 +47,7 @@ var rootCmd = &cobra.Command{
 				build.Default.GOPATH,
 				inputFolder,
 			}
+
 			state.PathsToBeReadQueue.Enqueue(inputFolder)
 			for !state.PathsToBeReadQueue.Empty() {
 				if absPath, ok := state.PathsToBeReadQueue.Dequeue(); ok {
@@ -48,7 +61,6 @@ var rootCmd = &cobra.Command{
 						_, _ = fmt.Fprintln(os.Stderr, err.Error())
 						os.Exit(1)
 					}
-
 					for _, file := range pkg.GoFiles {
 						astFile, err := parser.ParseFile(fs, filepath.Join(pkg.Dir, file), nil, parser.SkipObjectResolution)
 						if err != nil {
@@ -57,8 +69,6 @@ var rootCmd = &cobra.Command{
 						}
 						internal.ReadAstFile(state, rawAst, astFile, pkg.ImportPath, absPath, file, fs)
 					}
-					println(0)
-
 				}
 			}
 			compiler := &internal.Compiler{}
@@ -68,18 +78,23 @@ var rootCmd = &cobra.Command{
 				rawAst.TypeSpecMap,
 				rawAst.InitFunctions,
 			)
-			compiler.Compile()
+			var ss []string
+			if inputFile != "" {
+				ss = append(ss, inputFile)
+			}
+
+			compiler.Compile(ss...)
 		}
 	},
 }
 
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
 func init() {
-	rootCmd.Flags().StringP("inputFolder", "i", "./work", "input folder")
+	RootCmd.Flags().StringP("inputFolder", "i", "./work", "input folder")
 }

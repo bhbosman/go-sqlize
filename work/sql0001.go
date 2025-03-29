@@ -1,59 +1,75 @@
 package work
 
 import (
-	"github.com/bhbosman/go-sqlize/data"
 	"github.com/bhbosman/go-sqlize/lib"
 )
 
+type UserInformation struct {
+	UserInformationId int
+	Name              string
+	Surname           string
+	Data              int
+}
+
+type View struct {
+	UserInformationId int
+	Name              string
+	Surname           string
+	Data              float64
+}
+
 func init() {
-	lib.Save()
-	lib.GenerateSql(
+	lib.GenerateSqlFile(
 		lib.Map(
-			lib.Query[data.Table](),
-			func(inputData data.Table) data.View {
-				return data.View{
+			lib.Query[UserInformation](),
+			func(inputData UserInformation) View {
+				return View{
+					inputData.UserInformationId,
 					"Brendan",
 					"Bosman",
 					float64(inputData.Data),
 				}
 			},
-		), "./output/Sql0001.sql")
-	lib.GenerateSql(
+		), "./output/sql0001_01.sql")
+	lib.GenerateSqlFile(
 		lib.Map(
-			lib.Query[data.Table](),
-			func(inputData data.Table) data.View {
-				return data.View{
+			lib.Query[UserInformation](),
+			func(inputData UserInformation) View {
+				return View{
+					inputData.UserInformationId,
 					"Brendan",
 					"Bosman",
 					float64(inputData.Data) + 12 + 12*441 + 2 + 2 + 2 + 2,
 				}
 			},
-		), "./output/Sql0002.sql")
-	lib.GenerateSql(
+		), "./output/sql0001_02.sql")
+	lib.GenerateSqlFile(
 		lib.Map(
-			lib.Query[data.Table](),
-			func(inputData data.Table) data.View {
-				f := func(s data.Table, sss string) string {
+			lib.Query[UserInformation](),
+			func(inputData UserInformation) View {
+				f := func(s UserInformation, sss string) string {
 					return s.Name + " " + s.Surname + " " + sss
 				}
-				return data.View{
+				return View{
+					inputData.UserInformationId,
 					f(inputData, "ddd"),
 					"Bosman",
 					float64(inputData.Data) + 12 + 12*441 + 2 + 2 + 2 + 2,
 				}
 			},
-		), "./output/Sql0003.sql")
-	lib.GenerateSql(
+		), "./output/sql0001_03.sql")
+	lib.GenerateSqlFile(
 		lib.Map(
-			lib.Query[data.Table](),
-			func(inputData data.Table) data.View {
-				f := func(s data.Table, sss string) string {
+			lib.Query[UserInformation](),
+			func(inputData UserInformation) View {
+				f := func(s UserInformation, sss string) string {
 					return s.Name + " " + s.Surname + " " + sss
 				}
-				return data.View{
+				return View{
 					Name:    f(inputData, "ddd"),
 					Surname: "Bosman",
+					Data:    float64(22),
 				}
 			},
-		), "./output/Sql0004.sql")
+		), "./output/sql0001_04.sql")
 }

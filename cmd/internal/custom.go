@@ -53,6 +53,7 @@ type coercion struct {
 	Position token.Pos
 	to       string
 	Node     Node[ast.Node]
+	rt       reflect.Type
 }
 
 func (coercion *coercion) Pos() token.Pos {
@@ -64,9 +65,10 @@ func (coercion *coercion) End() token.Pos {
 }
 
 type BinaryExpr struct {
-	OpPos  token.Pos        // position of Op
-	Op     token.Token      // operator
-	Values []Node[ast.Node] // right operand
+	OpPos token.Pos   // position of Op
+	Op    token.Token // operator
+	left  Node[ast.Node]
+	right Node[ast.Node]
 }
 
 func (binop *BinaryExpr) Pos() token.Pos {
@@ -75,4 +77,84 @@ func (binop *BinaryExpr) Pos() token.Pos {
 
 func (binop *BinaryExpr) End() token.Pos {
 	return binop.OpPos
+}
+
+type nullValue struct{}
+
+type NilExpression struct {
+}
+
+func (nilExpression *NilExpression) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (nilExpression *NilExpression) End() token.Pos {
+	return token.NoPos
+}
+
+type ReflectValueExpression struct {
+	rv reflect.Value
+}
+
+func (rv *ReflectValueExpression) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (rv *ReflectValueExpression) End() token.Pos {
+	return token.NoPos
+}
+
+type SupportedFunction struct {
+	functionName string
+	params       []Node[ast.Node]
+	rt           reflect.Type
+}
+
+func (supportedFunction *SupportedFunction) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (supportedFunction *SupportedFunction) End() token.Pos {
+	return token.NoPos
+}
+
+type ConditionalStatement struct {
+	condition Node[ast.Node]
+	values    []Node[ast.Node]
+}
+
+type IfThenElseCondition struct {
+	conditionalStatement []ConditionalStatement
+}
+
+func (ite *IfThenElseCondition) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (ite *IfThenElseCondition) End() token.Pos {
+	return token.NoPos
+}
+
+type PartialExpression struct {
+	conditionalStatement []struct {
+		condition Node[ast.Node]
+		value     Node[ast.Node]
+	}
+}
+
+func (partialExpression *PartialExpression) IsValidNode() bool {
+	for _, conditionalStatement := range partialExpression.conditionalStatement {
+		if rv, b := isLiterateValue(conditionalStatement.condition); b && rv.Kind() == reflect.Bool && rv.Bool() {
+			return true
+		}
+	}
+	return false
+}
+
+func (partialExpression *PartialExpression) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (partialExpression *PartialExpression) End() token.Pos {
+	return token.NoPos
 }

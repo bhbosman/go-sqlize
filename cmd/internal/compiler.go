@@ -52,9 +52,10 @@ func (compiler *Compiler) Init(
 	compiler.CompilerState |= CompilerState_InitCalled
 	compiler.Sources = map[string]interface{}{}
 	compiler.GlobalTypes = map[ValueKey]OnCreateType{
-		ValueKey{"", "int"}:     compiler.registerInt,
-		ValueKey{"", "string"}:  compiler.registerString,
-		ValueKey{"", "float64"}: compiler.registerFloat64,
+		ValueKey{"", "int"}:         compiler.registerInt,
+		ValueKey{"", "string"}:      compiler.registerString,
+		ValueKey{"", "float64"}:     compiler.registerFloat64,
+		ValueKey{libFolder, "Some"}: compiler.registerLibType,
 	}
 
 	compiler.GlobalFunctions = map[ValueKey]OnCreateExecuteStatement{
@@ -86,6 +87,10 @@ func (compiler *Compiler) Init(
 	}
 
 	for key, value := range TypeSpecMap {
+		if key.Folder == libFolder && key.Key == "Some" {
+			continue
+		}
+
 		fn := func(vk ValueKey, node Node[*ast.TypeSpec]) OnCreateType {
 			return func(state State, exprs []Node[ast.Expr]) reflect.Type {
 				if node.Node.TypeParams == nil || node.Node.TypeParams.NumFields() == len(exprs) {
@@ -143,7 +148,7 @@ func (compiler *Compiler) genericCall(state State, rv reflect.Value, arguments [
 	return nil, artNone, false
 }
 
-func (compiler *Compiler) Compile(fileNames ...string) {
+func (compiler *Compiler) Compile(currentContext *CurrentContext, fileNames ...string) {
 	m := map[string]bool{}
 	for _, fileName := range fileNames {
 		m[fileName] = true
@@ -153,7 +158,7 @@ func (compiler *Compiler) Compile(fileNames ...string) {
 			currentNode := ChangeParamNode[*ast.FuncDecl, ast.Node](initFunction, initFunction.Node)
 			compiler.CompileFunc(
 				State{
-					[]IABC{&CurrentContext{map[string]Node[ast.Node]{}, nil}},
+					[]IABC{&CurrentContext{map[string]Node[ast.Node]{}, currentContext}},
 					currentNode}, initFunction)
 		}
 	}
@@ -316,49 +321,5 @@ func (compiler *Compiler) valueToNode(state State, value reflect.Value) Node[ast
 		return ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{value})
 	default:
 		panic("unhandled default case")
-	}
-}
-
-func (compiler *Compiler) internalFindLhsExpression(state State, node Node[ast.Expr], tok token.Token) interface{} {
-	switch item := node.Node.(type) {
-	case *ast.Ident:
-		if item.Name == "_" {
-			fn := func() AssignStatement {
-				return func(state State, value Node[ast.Node]) {
-					// do nothing
-				}
-			}
-			return fn()
-		}
-		fn := func(currentContext *CurrentContext, key string) AssignStatement {
-			return func(state State, value Node[ast.Node]) {
-				currentContext.mm[key] = value
-			}
-		}
-		switch tok {
-		case token.DEFINE:
-			currentContext := GetCompilerState[*CurrentContext](state)
-			return fn(currentContext, item.Name)
-		case token.ASSIGN:
-			//err := syntaxErrorf(state.currentNode, "No assignements allowed")
-			//panic(err)
-			currentContext := GetCompilerState[*CurrentContext](state)
-			currentContext.FindValue(item.Name)
-			for currentContext != nil {
-				if _, ok := currentContext.mm[item.Name]; ok {
-					break
-
-				}
-				currentContext = currentContext.parent
-			}
-			if currentContext != nil {
-				return fn(currentContext, item.Name)
-			}
-			panic("this should never happen")
-		default:
-			panic("unhandled default case")
-		}
-	default:
-		panic(item)
 	}
 }

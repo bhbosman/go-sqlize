@@ -65,7 +65,7 @@ func (compiler *Compiler) executeBlockStmt(state State, node Node[*ast.BlockStmt
 			continue
 		}
 	}
-	state = SetCompilerState(newContext.parent, state)
+	state = SetCompilerState(newContext.Parent, state)
 	if len(conditionalStatement) > 0 {
 		panic("implement me")
 		//pe := &PartialExpressions{partials}

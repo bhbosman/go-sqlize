@@ -11,6 +11,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 )
 
 var RootCmd = &cobra.Command{
@@ -83,7 +84,14 @@ var RootCmd = &cobra.Command{
 				ss = append(ss, inputFile)
 			}
 
-			compiler.Compile(ss...)
+			currentContext := &internal.CurrentContext{
+				map[string]internal.Node[ast.Node]{
+					"__stdOut__": {Node: &internal.ReflectValueExpression{reflect.ValueOf(cmd.OutOrStdout())}},
+				},
+				nil,
+			}
+
+			compiler.Compile(currentContext, ss...)
 		}
 	},
 }

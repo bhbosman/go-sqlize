@@ -48,6 +48,9 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 			compiler.internalFindSources(conditionalStatement.condition, m)
 			compiler.internalFindSources(conditionalStatement.value, m)
 		}
+	case *NilValueExpression:
+		// nothing to do
+		break
 	default:
 		panic(reflect.TypeOf(node.Node).String())
 	}

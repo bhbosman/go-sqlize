@@ -11,7 +11,7 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 		var conditionalStatement []ConditionalStatement
 		//artResultCount := 0
 		var whatIsReturned CallArrayResultType = 0
-		var isLogical bool = false
+		var isLogical = false
 
 		newContext := &CurrentContext{map[string]Node[ast.Node]{}, GetCompilerState[*CurrentContext](state)}
 		state = SetCompilerState(newContext, state)
@@ -48,7 +48,7 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 								conditionalStatement = append(conditionalStatement, conditionalStatementInstance)
 							}
 						}
-						state = SetCompilerState(newBodyContext.parent, state)
+						state = SetCompilerState(newBodyContext.Parent, state)
 					}
 				}
 				// do the else part of the if statement
@@ -83,22 +83,21 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 								panic("ddddd")
 							}
 						}
-						state = SetCompilerState(newElseContext.parent, state)
+						state = SetCompilerState(newElseContext.Parent, state)
 					}
 				}
 			}
 			switch {
-			case (whatIsReturned == artReturn): // looking for this
+			case whatIsReturned == artReturn: // looking for this
 				break
 			default:
 				err := syntaxErrorf(state.currentNode, "an if statement should return on both legs or not on any")
 				panic(err)
 			}
 		}
-		state = SetCompilerState(newContext.parent, state)
+		state = SetCompilerState(newContext.Parent, state)
 		ite := &IfThenElseCondition{conditionalStatement}
 		resultValue := ChangeParamNode[*ast.IfStmt, ast.Node](node, ite)
 		return []Node[ast.Node]{resultValue}, artReturn
-
 	}
 }

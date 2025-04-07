@@ -8,10 +8,6 @@ import (
 	"strconv"
 )
 
-func (compiler *Compiler) findLhsExpression(state State, node Node[ast.Expr], tok token.Token) AssignStatement {
-	return compiler.internalFindLhsExpression(state, node, tok).(AssignStatement)
-}
-
 func (compiler *Compiler) findRhsExpression(state State, node Node[ast.Expr]) ExecuteStatement {
 	return compiler.internalFindRhsExpression(0, state, node).(ExecuteStatement)
 }
@@ -295,7 +291,7 @@ func (compiler *Compiler) onFuncLitExecutionStatement(node Node[*ast.FuncLit]) O
 			state = SetCompilerState(newContext, state)
 			param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, node.Node.Body)
 			values, art := compiler.executeBlockStmt(state, param)
-			state = SetCompilerState(newContext.parent, state)
+			state = SetCompilerState(newContext.Parent, state)
 			return values, art
 		}
 	}
@@ -335,7 +331,7 @@ func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node
 		case Node[ast.Node]:
 			switch nodeItem := value.Node.(type) {
 			case *ReflectValueExpression:
-				rvFn := nodeItem.rv.MethodByName(item.Sel.Name)
+				rvFn := nodeItem.Rv.MethodByName(item.Sel.Name)
 				return compiler.initExecutionStatement(state, stackIndex, compiler.builtInStructMethods(rvFn), nil, arguments)
 			default:
 				panic(value.Node)

@@ -19,9 +19,6 @@ func (value *TrailRecord) End() token.Pos {
 	return value.Position
 }
 
-//func (value *Value) exprNode() {
-//}
-
 type TrailSource struct {
 	Position token.Pos // identifier position
 	Alias    string
@@ -93,7 +90,7 @@ func (nilExpression *NilExpression) End() token.Pos {
 }
 
 type ReflectValueExpression struct {
-	rv reflect.Value
+	Rv reflect.Value
 }
 
 func (rv *ReflectValueExpression) Pos() token.Pos {
@@ -156,5 +153,16 @@ func (partialExpression *PartialExpression) Pos() token.Pos {
 }
 
 func (partialExpression *PartialExpression) End() token.Pos {
+	return token.NoPos
+}
+
+type NilValueExpression struct {
+}
+
+func (rv *NilValueExpression) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (rv *NilValueExpression) End() token.Pos {
 	return token.NoPos
 }

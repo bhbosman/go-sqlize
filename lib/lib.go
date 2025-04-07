@@ -9,10 +9,7 @@ import (
 
 func Query[TInputData interface{}]() []TInputData { panic("implement Query") }
 
-func Map[TInputData interface{}, TOutputData interface{}](
-	inputData []TInputData,
-	cb func(inputData TInputData) TOutputData,
-) []TOutputData {
+func Map[TInputData interface{}, TOutputData interface{}](inputData []TInputData, cb func(inputData TInputData) TOutputData) []TOutputData {
 	panic("implement Map")
 }
 
@@ -42,40 +39,58 @@ func GenerateSqlStdOut[TInputData interface{}](data []TInputData) {
 	_ = writer.Close()
 }
 
-func GenerateSql[TInputData interface{}](data []TInputData) string {
-	panic("implement me")
+func GenerateSqlTest[TInputData interface{}](data []TInputData) {
+	panic("implement GenerateSqlTest")
 }
 
-//type Some[TData interface{}] struct {
-//	data       TData
-//	isAssigned bool
-//}
-//
+func GenerateSql[TInputData interface{}](data []TInputData) string {
+	panic("implement GenerateSql")
+}
+
+type Some[TData interface{}] struct {
+	data       TData
+	isAssigned bool
+}
+
 //func (self Some[TData]) Set(data TData) Some[TData] {
 //	return Some[TData]{data, true}
 //}
+//
 //func (self Some[TData]) ToNone() Some[TData] {
 //	return Some[TData]{reflect.Zero(reflect.TypeFor[TData]()).Interface().(TData), false}
 //}
+//
 //func (self Some[TData]) Get() TData {
 //	if self.isAssigned {
 //		return self.data
 //	}
 //	return self.ToNone().data
 //}
+//
 //func (self Some[TData]) IsAssigned() bool {
 //	return self.isAssigned
 //}
-//func SetValue[TData interface{}](data TData) Some[TData] {
-//	return Some[TData]{}.Set(data)
-//}
-//func SetValueV02[TData interface{}](data TData) Some[TData] {
-//	return Some[TData]{}.Set(data)
-//}
-//
-//func SetNone[TData interface{}]() Some[TData] {
-//	return Some[TData]{}.ToNone()
-//}
+
+func SetSomeValue[TData interface{}](data TData) Some[TData] {
+	panic("implement SetSomeValue")
+
+}
+
+func SetSomeNone[TData interface{}]() Some[TData] {
+	panic("implement SetSomeNone")
+
+}
+
+func IsSomeAssigned[TData interface{}](Some[TData]) bool {
+	panic("implement IsSomeAssigned")
+
+}
+
+func SomeData[TData interface{}](Some[TData]) TData {
+	panic("implement SomeData")
+
+}
+
 //func GetValue[TData interface{}](data Some[TData]) TData {
 //	return data.Get()
 //}

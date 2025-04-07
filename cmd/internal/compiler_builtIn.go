@@ -23,6 +23,10 @@ func (compiler *Compiler) addBuiltInFunctions() {
 	compiler.GlobalFunctions[ValueKey{"", "print"}] = compiler.builtInPrint
 }
 
+func (compiler *Compiler) registerLibType(state State, i []Node[ast.Expr]) reflect.Type {
+	panic("dfgdfgfd")
+}
+
 func (compiler *Compiler) registerFloat64(State, []Node[ast.Expr]) reflect.Type {
 	return reflect.TypeFor[float64]()
 }
@@ -113,7 +117,7 @@ func (compiler *Compiler) builtInPanic(_ State, _ []Node[ast.Expr], arguments []
 		case *ast.BasicLit:
 			panic(fmt.Errorf(arg.Value))
 		case *ReflectValueExpression:
-			panic(fmt.Errorf(arg.rv.String()))
+			panic(fmt.Errorf(arg.Rv.String()))
 		default:
 			panic("implementation required")
 		}

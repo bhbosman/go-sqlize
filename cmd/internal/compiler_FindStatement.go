@@ -66,7 +66,7 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 	case *EntityField:
 		return reflect.Value{}, false
 	case *ReflectValueExpression:
-		return item.rv, true
+		return item.Rv, true
 	case *ast.BasicLit:
 		switch item.Kind {
 		case token.INT:

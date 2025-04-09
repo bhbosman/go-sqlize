@@ -166,3 +166,16 @@ func (rv *NilValueExpression) Pos() token.Pos {
 func (rv *NilValueExpression) End() token.Pos {
 	return token.NoPos
 }
+
+type MultiBinaryExpr struct {
+	Op          token.Token // operator
+	expressions []Node[ast.Node]
+}
+
+func (multiBinOp *MultiBinaryExpr) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (multiBinOp *MultiBinaryExpr) End() token.Pos {
+	return token.NoPos
+}

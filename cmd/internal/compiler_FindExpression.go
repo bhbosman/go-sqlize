@@ -92,9 +92,22 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.UnaryExpr, ast.Node](node, node.Node.X))
 			param := ChangeParamNode(node, node.Node.X)
 			arr, _ := compiler.findRhsExpression(tempState, param)(tempState)
-			switch arr[0].Node.(type) {
+			switch nodeItem := arr[0].Node.(type) {
 			case *BinaryExpr:
-				panic("implement me")
+				switch nodeItem.Op {
+				case token.NEQ:
+					be := &BinaryExpr{
+						arr[0].Node.Pos(),
+						token.EQL,
+						nodeItem.left,
+						nodeItem.right,
+					}
+					return []Node[ast.Node]{ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)}, artValue
+
+				default:
+					panic("implement me")
+				}
+
 			case *EntityField:
 				be := &BinaryExpr{
 					arr[0].Node.Pos(),

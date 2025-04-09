@@ -47,31 +47,9 @@ func GenerateSql[TInputData interface{}](data []TInputData) string {
 	panic("implement GenerateSql")
 }
 
-type Some[TData interface{}] struct {
-	data       TData
-	isAssigned bool
-}
+type Some[TData interface{}] struct{}
 
-//func (self Some[TData]) Set(data TData) Some[TData] {
-//	return Some[TData]{data, true}
-//}
-//
-//func (self Some[TData]) ToNone() Some[TData] {
-//	return Some[TData]{reflect.Zero(reflect.TypeFor[TData]()).Interface().(TData), false}
-//}
-//
-//func (self Some[TData]) Get() TData {
-//	if self.isAssigned {
-//		return self.data
-//	}
-//	return self.ToNone().data
-//}
-//
-//func (self Some[TData]) IsAssigned() bool {
-//	return self.isAssigned
-//}
-
-func SetSomeValue[TData interface{}](data TData) Some[TData] {
+func SetSomeValue[TData interface{}](TData) Some[TData] {
 	panic("implement SetSomeValue")
 
 }
@@ -88,12 +66,28 @@ func IsSomeAssigned[TData interface{}](Some[TData]) bool {
 
 func SomeData[TData interface{}](Some[TData]) TData {
 	panic("implement SomeData")
-
 }
 
-//func GetValue[TData interface{}](data Some[TData]) TData {
-//	return data.Get()
-//}
-//func IsAssigned[TData interface{}](data Some[TData]) bool {
-//	return data.isAssigned
-//}
+func SomeData2[TData interface{}](Some[TData]) (TData, bool) {
+	panic("implement SomeData2")
+}
+
+func GetSomeData[TData interface{}](Some[TData]) (TData, bool) {
+	panic("implement GetSomeData")
+}
+
+func GetSomeData02[TData01, TData02 interface{}](Some[TData01], Some[TData02]) (TData01, TData02, bool) {
+	panic("implement GetSomeData02")
+}
+
+func GetSomeData03[TData01, TData02, TData03 interface{}](Some[TData01], Some[TData02], Some[TData03]) (TData01, TData02, TData03, bool) {
+	panic("implement GetSomeData03")
+}
+
+func GetSomeData04[TData01, TData02, TData03, TData04 interface{}](Some[TData01], Some[TData02], Some[TData03], Some[TData04]) (TData01, TData02, TData03, TData04, bool) {
+	panic("implement GetSomeData04")
+}
+
+func GetSomeData05[TData01, TData02, TData03, TData04, TData05 interface{}](Some[TData01], Some[TData02], Some[TData03], Some[TData04], Some[TData05]) (TData01, TData02, TData03, TData04, TData05, bool) {
+	panic("implement GetSomeData05")
+}

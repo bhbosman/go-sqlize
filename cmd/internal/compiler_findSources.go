@@ -43,14 +43,20 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 		for _, param := range nodeItem.params {
 			compiler.internalFindSources(param, m)
 		}
+		break
 	case *PartialExpression:
 		for _, conditionalStatement := range nodeItem.conditionalStatement {
 			compiler.internalFindSources(conditionalStatement.condition, m)
 			compiler.internalFindSources(conditionalStatement.value, m)
 		}
+		break
 	case *NilValueExpression:
 		// nothing to do
 		break
+	case *MultiBinaryExpr:
+		for _, expression := range nodeItem.expressions {
+			compiler.internalFindSources(expression, m)
+		}
 	default:
 		panic(reflect.TypeOf(node.Node).String())
 	}

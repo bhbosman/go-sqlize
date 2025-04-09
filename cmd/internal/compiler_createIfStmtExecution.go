@@ -63,7 +63,7 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 								switch nodeItem := bodyElseValues[0].Node.(type) {
 								case *IfThenElseCondition:
 									conditionalStatement = append(conditionalStatement, nodeItem.conditionalStatement...)
-								case *ReflectValueExpression:
+								case *ReflectValueExpression, *NilValueExpression, *PartialExpression:
 									condition := ChangeParamNode[ast.Node, ast.Node](bodyElseValues[0], &ReflectValueExpression{reflect.ValueOf(true)})
 									conditionalStatementInstance := ConditionalStatement{condition, bodyElseValues}
 									conditionalStatement = append(conditionalStatement, conditionalStatementInstance)

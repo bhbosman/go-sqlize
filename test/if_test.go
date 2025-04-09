@@ -22,7 +22,7 @@ func TestName(t *testing.T) {
 	for _, s := range ss {
 		t.Run(s.testName, func(t *testing.T) {
 			cmd.RootCmd.SetArgs([]string{s.fileName})
-			var sb *strings.Builder = new(strings.Builder)
+			sb := new(strings.Builder)
 			cmd.RootCmd.SetOut(sb)
 
 			err := cmd.RootCmd.Execute()
@@ -33,8 +33,6 @@ func TestName(t *testing.T) {
 				require.Equal(t, sb.String(), s.result)
 				return
 			}
-			println(sb.String())
-
 		})
 	}
 }

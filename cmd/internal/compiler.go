@@ -11,8 +11,6 @@ import (
 
 const libFolder = "github.com/bhbosman/go-sqlize/lib"
 
-//var someTypeValueKey = ValueKey{libFolder, "Some"}
-
 type GlobalMethodHandlerKey struct {
 	rt         reflect.Type
 	methodName string

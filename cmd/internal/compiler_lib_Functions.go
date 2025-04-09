@@ -19,6 +19,9 @@ func (compiler *Compiler) addLibFunctions() {
 	compiler.GlobalFunctions[ValueKey{libFolder, "SetSomeNone"}] = compiler.libSetSomeNoneImplementation
 	compiler.GlobalFunctions[ValueKey{libFolder, "IsSomeAssigned"}] = compiler.libIsSomeAssignedImplementation
 	compiler.GlobalFunctions[ValueKey{libFolder, "SomeData"}] = compiler.libSomeDataImplementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "SomeData2"}] = compiler.libSomeData2Implementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData"}] = compiler.libGetSomeDataImplementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData02"}] = compiler.libGetSomeData02Implementation
 }
 
 func (compiler *Compiler) libQueryImplementation(_ State, typeParams []Node[ast.Expr], _ []Node[ast.Node]) ExecuteStatement {
@@ -105,7 +108,6 @@ func (compiler *Compiler) libGenerateSqlTestImplementation(state State, params [
 			panic(fmt.Sprintf("libGenerateSqlTestImplementation __stdOut__ not found"))
 		}
 		panic(fmt.Sprintf("libGenerateSqlTestImplementation value from GenerateSql not literal"))
-
 	}
 }
 
@@ -135,6 +137,10 @@ func (compiler *Compiler) libSetSomeNoneImplementation(state State, params []Nod
 }
 
 func (compiler *Compiler) libIsSomeAssignedImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 1 {
+		panic(fmt.Errorf("IsSomeAssigned implementation requires 1 arguments, got %d", len(arguments)))
+	}
+	// Todo: do some optimize when arguments[0] is a literal
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
 		binExpr := &BinaryExpr{
 			OpPos: 0,
@@ -147,7 +153,75 @@ func (compiler *Compiler) libIsSomeAssignedImplementation(state State, params []
 }
 
 func (compiler *Compiler) libSomeDataImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 1 {
+		panic(fmt.Errorf("SomeData implementation requires 1 arguments, got %d", len(arguments)))
+	}
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
 		return arguments[0:1], artValue
 	}
+}
+
+func (compiler *Compiler) libSomeData2Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 1 {
+		panic(fmt.Errorf("SomeData2 implementation requires 1 arguments, got %d", len(arguments)))
+	}
+	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+
+		v, _ := compiler.libIsSomeAssignedImplementation(state, params, arguments)(state)
+		result := append(arguments, v[0])
+		return result, artValue
+	}
+}
+
+func (compiler *Compiler) libGetSomeDataImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 1 {
+		panic(fmt.Errorf("GetSomeData implementation requires 1 arguments, got %d", len(arguments)))
+	}
+	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+
+		v, _ := compiler.libIsSomeAssignedImplementation(state, params, arguments)(state)
+		result := append(arguments, v[0])
+		return result, artValue
+	}
+}
+
+func (compiler *Compiler) getGetSomeDataN(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+		var binaryOperations []Node[ast.Node]
+		for _, arg := range arguments {
+			v, _ := compiler.libIsSomeAssignedImplementation(state, params, []Node[ast.Node]{arg})(state)
+			binaryOperations = append(binaryOperations, v...)
+		}
+		v := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &MultiBinaryExpr{token.LAND, binaryOperations})
+		result := append(arguments, v)
+		return result, artValue
+	}
+}
+
+func (compiler *Compiler) libGetSomeData02Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 2 {
+		panic(fmt.Errorf("GetSomeData02 implementation requires 2 arguments, got %d", len(arguments)))
+	}
+	return compiler.getGetSomeDataN(state, params, arguments)
+}
+
+func (compiler *Compiler) libGetSomeData03Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 3 {
+		panic(fmt.Errorf("GetSomeData03 implementation requires 3 arguments, got %d", len(arguments)))
+	}
+	return compiler.getGetSomeDataN(state, params, arguments)
+}
+
+func (compiler *Compiler) libGetSomeData04Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 4 {
+		panic(fmt.Errorf("GetSomeData04 implementation requires 4 arguments, got %d", len(arguments)))
+	}
+	return compiler.getGetSomeDataN(state, params, arguments)
+}
+
+func (compiler *Compiler) libGetSomeData05Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 5 {
+		panic(fmt.Errorf("GetSomeData05 implementation requires 5 arguments, got %d", len(arguments)))
+	}
+	return compiler.getGetSomeDataN(state, params, arguments)
 }

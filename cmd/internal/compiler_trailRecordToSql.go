@@ -89,6 +89,23 @@ func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, 
 		}
 		compiler.internalProjectTrailRecord(w, tabCount, last, stackCount+1, name, nodeItem.right)
 		_, _ = io.WriteString(w, ")")
+	case *MultiBinaryExpr:
+		_, _ = io.WriteString(w, "(")
+		for idx, expr := range nodeItem.expressions {
+			if idx != 0 {
+				switch nodeItem.Op {
+				case token.LAND:
+					_, _ = io.WriteString(w, " AND ")
+				case token.LOR:
+					_, _ = io.WriteString(w, " OR ")
+				default:
+					panic("unhandled default case")
+				}
+			}
+			compiler.internalProjectTrailRecord(w, tabCount, last, stackCount+1, name, expr)
+		}
+		_, _ = io.WriteString(w, ")")
+
 	case *ReflectValueExpression:
 		kind := nodeItem.Rv.Kind()
 		switch {

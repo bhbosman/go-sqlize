@@ -63,20 +63,18 @@ func init() {
 			return "dddd", "eeeeee"
 		}
 	}
-
-	lib.GenerateSqlTest(
-		lib.Map(
-			lib.Query[UserInformationForIf](),
-			func(inputData UserInformationForIf) UserInformationForIfView {
-				x, y := statusFn(inputData)
-				return UserInformationForIfView{
-					Name:    inputData.Name,
-					SurName: inputData.SurName,
-					Status1: x,
-					Status2: y,
-					Level1:  levelFn(inputData),
-					Level2:  levelFn(inputData),
-				}
-			},
-		))
+	query := lib.Query[UserInformationForIf]()
+	mapFn := func(inputData UserInformationForIf) UserInformationForIfView {
+		x, y := statusFn(inputData)
+		return UserInformationForIfView{
+			Name:    inputData.Name,
+			SurName: inputData.SurName,
+			Status1: x,
+			Status2: y,
+			Level1:  levelFn(inputData),
+			Level2:  levelFn(inputData),
+		}
+	}
+	mapValue := lib.Map(query, mapFn)
+	lib.GenerateSqlTest(mapValue)
 }

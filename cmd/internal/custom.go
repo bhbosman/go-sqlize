@@ -119,46 +119,80 @@ func (supportedFunction *SupportedFunction) End() token.Pos {
 	return token.NoPos
 }
 
-type ConditionalStatement struct {
+type MultiValueCondition struct {
 	condition Node[ast.Node]
 	values    []Node[ast.Node]
 }
 
-//type IfThenElseCondition struct {
-//	conditionalStatement []ConditionalStatement
-//}
-//
-//func (ite *IfThenElseCondition) Pos() token.Pos {
-//	return token.NoPos
-//}
-//
-//func (ite *IfThenElseCondition) End() token.Pos {
-//	return token.NoPos
-//}
-
-type PartialExpression struct {
-	conditionalStatement []struct {
-		condition Node[ast.Node]
-		value     Node[ast.Node]
-	}
+type SingleValueCondition struct {
+	condition Node[ast.Node]
+	value     Node[ast.Node]
 }
 
-func (partialExpression *PartialExpression) IsValidNode() bool {
-	for _, conditionalStatement := range partialExpression.conditionalStatement {
-		if rv, b := isLiterateValue(conditionalStatement.condition); b && rv.Kind() == reflect.Bool && rv.Bool() {
-			return true
+type IfThenElseMultiValueCondition struct {
+	conditionalStatement []MultiValueCondition
+}
+
+func (ite *IfThenElseMultiValueCondition) Expand(parentNode Node[ast.Node]) []Node[ast.Node] {
+	var result []Node[ast.Node]
+	for range ite.conditionalStatement[0].values {
+		result = append(result, ChangeParamNode[ast.Node, ast.Node](parentNode, &IfThenElseSingleValueCondition{}))
+	}
+
+	for partialAnswerIdx, partialAnswer := range result {
+		if partialAnswerNode, ok := partialAnswer.Node.(*IfThenElseSingleValueCondition); ok {
+			for _, stmt := range ite.conditionalStatement {
+				idxNode := stmt.values[partialAnswerIdx]
+				partialAnswerNode.conditionalStatement = append(partialAnswerNode.conditionalStatement, SingleValueCondition{condition: stmt.condition, value: idxNode})
+			}
 		}
 	}
-	return false
+	return result
 }
 
-func (partialExpression *PartialExpression) Pos() token.Pos {
+func (ite *IfThenElseMultiValueCondition) Pos() token.Pos {
 	return token.NoPos
 }
 
-func (partialExpression *PartialExpression) End() token.Pos {
+func (ite *IfThenElseMultiValueCondition) End() token.Pos {
 	return token.NoPos
 }
+
+type IfThenElseSingleValueCondition struct {
+	conditionalStatement []SingleValueCondition
+}
+
+func (iteSingleCondition *IfThenElseSingleValueCondition) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (iteSingleCondition *IfThenElseSingleValueCondition) End() token.Pos {
+	return token.NoPos
+}
+
+//	type PartialExpression struct {
+//		conditionalStatement []struct {
+//			condition Node[ast.Node]
+//			value     Node[ast.Node]
+//		}
+//	}
+//
+//func (partialExpression *PartialExpression) IsValidNode() bool {
+//	for _, conditionalStatement := range partialExpression.conditionalStatement {
+//		if rv, b := isLiterateValue(conditionalStatement.condition); b && rv.Kind() == reflect.Bool && rv.Bool() {
+//			return true
+//		}
+//	}
+//	return false
+//}
+//
+//func (partialExpression *PartialExpression) Pos() token.Pos {
+//	return token.NoPos
+//}
+//
+//func (partialExpression *PartialExpression) End() token.Pos {
+//	return token.NoPos
+//}
 
 type NilValueExpression struct {
 }
@@ -182,4 +216,8 @@ func (multiBinOp *MultiBinaryExpr) Pos() token.Pos {
 
 func (multiBinOp *MultiBinaryExpr) End() token.Pos {
 	return token.NoPos
+}
+
+type IExpand interface {
+	Expand(parentNode Node[ast.Node]) []Node[ast.Node]
 }

@@ -131,7 +131,8 @@ func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, 
 			}
 		}
 		_, _ = io.WriteString(w, fmt.Sprintf(")"))
-	case *PartialExpression:
+
+	case *IfThenElseSingleValueCondition:
 		_, _ = io.WriteString(w, "case\n")
 
 		for _, expr := range nodeItem.conditionalStatement {
@@ -152,6 +153,7 @@ func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, 
 			tabCount--
 		}
 		_, _ = io.WriteString(w, fmt.Sprintf("%vend", strings.Repeat("\t", tabCount)))
+
 	case *NilValueExpression:
 		_, _ = io.WriteString(w, fmt.Sprintf("nil"))
 	default:

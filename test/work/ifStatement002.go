@@ -60,31 +60,31 @@ func init() {
 		}
 	}
 
-	//statusFn := func(inputData UserInformationForIf02) (string, string) {
-	//	if !inputData.Active {
-	//		return "activeX", "activeY"
-	//	} else {
-	//		return "dddd", "eeeeee"
-	//	}
-	//}
+	statusFn := func(inputData UserInformationForIf02) (string, string) {
+		if !inputData.Active {
+			return "activeX", "activeY"
+		} else {
+			return "dddd", "eeeeee"
+		}
+	}
 	query := lib.Query[UserInformationForIf02]()
 	mapFn := func(inputData UserInformationForIf02) UserInformationForIfView02 {
-		//x, y := statusFn(inputData)
+		x, y := statusFn(inputData)
 		return UserInformationForIfView02{
 			Name:    inputData.Name,
 			SurName: inputData.SurName,
-			//Status1: x,
-			//Status2: y,
-			//Level1: func() lib.Some[string] {
-			//	if inputData.Active {
-			//		return lib.SetSomeNone[string]()
-			//
-			//	} else {
-			//		return lib.SetSomeValue(levelFn(inputData))
-			//	}
-			//}(),
+			Status1: x,
+			Status2: y,
+			Level1: func() lib.Some[string] {
+				if inputData.Active {
+					return lib.SetSomeNone[string]()
+
+				} else {
+					return lib.SetSomeValue(levelFn(inputData))
+				}
+			}(),
 			Level2: levelFn(inputData),
-			//Level3: lib.SetSomeNone[string](),
+			Level3: lib.SetSomeNone[string](),
 		}
 	}
 	lib.GenerateSqlTest(lib.Map(query, mapFn))

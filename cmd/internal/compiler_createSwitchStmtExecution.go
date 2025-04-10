@@ -8,7 +8,8 @@ func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) 
 		for _, expr := range node.Node.List {
 			param := ChangeParamNode[*ast.CaseClause, ast.Expr](node, expr)
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.CaseClause, ast.Node](node, expr))
-			nn, _ := compiler.findRhsExpression(tempState, param)(tempState)
+			es := compiler.findRhsExpression(tempState, param)
+			nn, _ := compiler.executeAndExpandStatement(tempState, es)
 			nodes = append(nodes, nn...)
 		}
 		return nodes, artValue

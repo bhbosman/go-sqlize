@@ -91,7 +91,8 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 		case token.SUB:
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.UnaryExpr, ast.Node](node, node.Node.X))
 			param := ChangeParamNode(node, node.Node.X)
-			arr, _ := compiler.findRhsExpression(tempState, param)(tempState)
+			es := compiler.findRhsExpression(tempState, param)
+			arr, _ := compiler.executeAndExpandStatement(tempState, es)
 
 			rve := &ReflectValueExpression{reflect.ValueOf(-1)}
 			rveNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, rve)
@@ -103,7 +104,8 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 		case token.NOT:
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.UnaryExpr, ast.Node](node, node.Node.X))
 			param := ChangeParamNode(node, node.Node.X)
-			arr, _ := compiler.findRhsExpression(tempState, param)(tempState)
+			es := compiler.findRhsExpression(tempState, param)
+			arr, _ := compiler.executeAndExpandStatement(tempState, es)
 			switch nodeItem := arr[0].Node.(type) {
 			case *BinaryExpr:
 				switch nodeItem.Op {
@@ -132,12 +134,14 @@ func (compiler *Compiler) createRhsBinaryExprExecution(node Node[*ast.BinaryExpr
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
 		param := ChangeParamNode(node, node.Node.X)
 		tempState := state.setCurrentNode(ChangeParamNode[*ast.BinaryExpr, ast.Node](node, node.Node.X))
-		x, _ := compiler.findRhsExpression(tempState, param)(tempState)
+		esX := compiler.findRhsExpression(tempState, param)
+		x, _ := compiler.executeAndExpandStatement(tempState, esX)
 		rvX, isXLiteral := isLiterateValue(x[0])
 
 		param = ChangeParamNode(node, node.Node.Y)
 		tempState = state.setCurrentNode(ChangeParamNode[*ast.BinaryExpr, ast.Node](node, node.Node.Y))
-		y, _ := compiler.findRhsExpression(tempState, param)(tempState)
+		esY := compiler.findRhsExpression(tempState, param)
+		y, _ := compiler.executeAndExpandStatement(tempState, esY)
 		rvY, isYLiteral := isLiterateValue(y[0])
 
 		switch {
@@ -401,7 +405,8 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 				case *ast.KeyValueExpr:
 					param = ChangeParamNode(node, expr.Value)
 					tempState := state.setCurrentNode(ChangeParamNode[*ast.CompositeLit, ast.Node](node, expr.Value))
-					vv, _ := compiler.findRhsExpression(tempState, param)(tempState)
+					es := compiler.findRhsExpression(tempState, param)
+					vv, _ := compiler.executeAndExpandStatement(tempState, es)
 					switch key := expr.Key.(type) {
 					case *ast.Ident:
 						rv.FieldByName(key.Name).Set(reflect.ValueOf(vv[0]))
@@ -411,7 +416,8 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 				default:
 					param = ChangeParamNode(node, elt)
 					tempState := state.setCurrentNode(ChangeParamNode[*ast.CompositeLit, ast.Node](node, elt))
-					vv, _ := compiler.findRhsExpression(tempState, param)(tempState)
+					es := compiler.findRhsExpression(tempState, param)
+					vv, _ := compiler.executeAndExpandStatement(tempState, es)
 					itemRv := reflect.ValueOf(vv[0])
 					rv.Field(idx).Set(itemRv)
 
@@ -440,7 +446,7 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 			param := ChangeParamNode(state.currentNode, arg)
 			tempState := state.setCurrentNode(ChangeParamNode[ast.Node, ast.Node](state.currentNode, arg))
 			fn := compiler.findRhsExpression(tempState, param)
-			nodeArg, _ := fn(state)
+			nodeArg, _ := compiler.executeAndExpandStatement(state, fn)
 			args = append(args, nodeArg...)
 		}
 		param := ChangeParamNode(node, node.Node.Fun)

@@ -19,6 +19,10 @@ func notFound(typeName, methodName string) error {
 	return fmt.Errorf("handler not found for %v in %v", typeName, methodName)
 }
 
+func createError(methodName, message string) error {
+	return fmt.Errorf("%v in %v", message, methodName)
+}
+
 func (compiler *Compiler) findStatement(state State, node Node[ast.Stmt]) (ExecuteStatement, Node[ast.Node]) {
 	switch item := node.Node.(type) {
 	case *ast.FolderContextInformation:
@@ -115,7 +119,7 @@ func (compiler *Compiler) createReturnStmtExecution(node Node[*ast.ReturnStmt]) 
 
 			param01 := ChangeParamNode[*ast.ReturnStmt, ast.Node](node, expr)
 			state = state.setCurrentNode(param01)
-			v, _ := fn(state)
+			v, _ := compiler.executeAndExpandStatement(state, fn)
 			result = append(result, v...)
 		}
 		return result, artReturn
@@ -132,10 +136,11 @@ func (compiler *Compiler) createAssignStatementExecution(node Node[*ast.AssignSt
 				param := ChangeParamNode(node, rhsExpression)
 				tempState := state.setCurrentNode(ChangeParamNode[*ast.AssignStmt, ast.Node](node, rhsExpression))
 				fn := compiler.findRhsExpression(tempState, param)
-				state = state.setCurrentNode(ChangeParamNode[*ast.AssignStmt, ast.Node](node, rhsExpression))
-				arr, _ := fn(state)
+				tempState = tempState.setCurrentNode(ChangeParamNode[*ast.AssignStmt, ast.Node](node, rhsExpression))
+				arr, _ := compiler.executeAndExpandStatement(tempState, fn)
 				rhsArray = append(rhsArray, arr...)
 			}
+
 			for idx, lhsExpression := range node.Node.Lhs {
 				param := ChangeParamNode(node, lhsExpression)
 				state = state.setCurrentNode(ChangeParamNode[*ast.AssignStmt, ast.Node](node, lhsExpression))

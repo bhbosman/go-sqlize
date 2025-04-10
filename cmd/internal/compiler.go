@@ -319,3 +319,17 @@ func (compiler *Compiler) valueToNode(state State, value reflect.Value) Node[ast
 		panic("unhandled default case")
 	}
 }
+
+func (compiler *Compiler) executeAndExpandStatement(state State, executeStatement ExecuteStatement) ([]Node[ast.Node], CallArrayResultType) {
+	var result []Node[ast.Node]
+	arr, v := executeStatement(state)
+	for _, instance := range arr {
+		if expand, ok := instance.Node.(IExpand); ok {
+			ex := expand.Expand(state.currentNode)
+			result = append(result, ex...)
+		} else {
+			result = append(result, arr...)
+		}
+	}
+	return result, v
+}

@@ -44,12 +44,6 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 			compiler.internalFindSources(param, m)
 		}
 		break
-	case *PartialExpression:
-		for _, conditionalStatement := range nodeItem.conditionalStatement {
-			compiler.internalFindSources(conditionalStatement.condition, m)
-			compiler.internalFindSources(conditionalStatement.value, m)
-		}
-		break
 	case *NilValueExpression:
 		// nothing to do
 		break
@@ -57,6 +51,12 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 		for _, expression := range nodeItem.expressions {
 			compiler.internalFindSources(expression, m)
 		}
+	case *IfThenElseSingleValueCondition:
+		for _, conditionalStatement := range nodeItem.conditionalStatement {
+			compiler.internalFindSources(conditionalStatement.condition, m)
+			compiler.internalFindSources(conditionalStatement.value, m)
+		}
+		break
 	default:
 		panic(reflect.TypeOf(node.Node).String())
 	}

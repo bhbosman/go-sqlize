@@ -9,6 +9,8 @@ import (
 	"strconv"
 )
 
+const libFolder = "github.com/bhbosman/go-sqlize/lib"
+
 func (compiler *Compiler) addLibFunctions() {
 	compiler.GlobalFunctions[ValueKey{libFolder, "Query"}] = compiler.libQueryImplementation
 	compiler.GlobalFunctions[ValueKey{libFolder, "Map"}] = compiler.libMapImplementation
@@ -22,6 +24,9 @@ func (compiler *Compiler) addLibFunctions() {
 	compiler.GlobalFunctions[ValueKey{libFolder, "SomeData2"}] = compiler.libSomeData2Implementation
 	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData"}] = compiler.libGetSomeDataImplementation
 	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData02"}] = compiler.libGetSomeData02Implementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData03"}] = compiler.libGetSomeData03Implementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData04"}] = compiler.libGetSomeData04Implementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData05"}] = compiler.libGetSomeData05Implementation
 }
 
 func (compiler *Compiler) libQueryImplementation(_ State, typeParams []Node[ast.Expr], _ []Node[ast.Node]) ExecuteStatement {
@@ -178,7 +183,6 @@ func (compiler *Compiler) libGetSomeDataImplementation(state State, params []Nod
 		panic(fmt.Errorf("GetSomeData implementation requires 1 arguments, got %d", len(arguments)))
 	}
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-
 		v, _ := compiler.libIsSomeAssignedImplementation(state, params, arguments)(state)
 		result := append(arguments, v[0])
 		return result, artValue

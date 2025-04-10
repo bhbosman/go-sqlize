@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-const libFolder = "github.com/bhbosman/go-sqlize/lib"
-
 type GlobalMethodHandlerKey struct {
 	rt         reflect.Type
 	methodName string

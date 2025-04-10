@@ -111,6 +111,9 @@ func ReadAstFile(incomingState *ReadAstFileState, rawAst *RawAstRead, astFile *a
 				default:
 					return true
 				}
+			case *ast.SwitchStmt:
+				return true
+
 			case ast.Stmt:
 				// check if part of a list
 				if cursor.Index() < 0 {
@@ -131,5 +134,6 @@ func ReadAstFile(incomingState *ReadAstFileState, rawAst *RawAstRead, astFile *a
 			default:
 				return true
 			}
-		})
+		},
+	)
 }

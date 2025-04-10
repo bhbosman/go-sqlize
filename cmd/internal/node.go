@@ -1,8 +1,11 @@
 package internal
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
+	"reflect"
+	"strings"
 )
 
 type Node[TType ast.Node] struct {
@@ -14,6 +17,26 @@ type Node[TType ast.Node] struct {
 	FileName  string
 	Fs        *token.FileSet
 	Valid     bool
+}
+
+func NodeString(node Node[ast.Node]) (string, bool) {
+	if unk, ok := node.Node.(fmt.Stringer); ok {
+		return unk.String(), true
+	}
+	return "", false
+}
+
+func NodesString(nodes []Node[ast.Node]) string {
+	var s []string
+	for _, node := range nodes {
+		if nodeString, b := NodeString(node); b {
+			s = append(s, nodeString)
+		} else {
+			rt := reflect.TypeOf(node.Node)
+			s = append(s, rt.String())
+		}
+	}
+	return strings.Join(s, ",")
 }
 
 type ICheckNode interface {

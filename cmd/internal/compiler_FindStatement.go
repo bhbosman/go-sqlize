@@ -29,6 +29,14 @@ func (compiler *Compiler) findStatement(state State, node Node[ast.Stmt]) (Execu
 	case *ast.IfStmt:
 		value := ChangeParamNode(node, item)
 		return compiler.createIfStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+	case *ast.SwitchStmt:
+		value := ChangeParamNode(node, item)
+		return compiler.createSwitchStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+
+	case *ast.CaseClause:
+		value := ChangeParamNode(node, item)
+		return compiler.createCaseClauseExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+
 	case *ast.AssignStmt:
 		value := ChangeParamNode(node, item)
 		return compiler.createAssignStatementExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)

@@ -93,6 +93,10 @@ type ReflectValueExpression struct {
 	Rv reflect.Value
 }
 
+func (rv *ReflectValueExpression) String() string {
+	return rv.Rv.String()
+}
+
 func (rv *ReflectValueExpression) Pos() token.Pos {
 	return token.NoPos
 }
@@ -120,17 +124,17 @@ type ConditionalStatement struct {
 	values    []Node[ast.Node]
 }
 
-type IfThenElseCondition struct {
-	conditionalStatement []ConditionalStatement
-}
-
-func (ite *IfThenElseCondition) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (ite *IfThenElseCondition) End() token.Pos {
-	return token.NoPos
-}
+//type IfThenElseCondition struct {
+//	conditionalStatement []ConditionalStatement
+//}
+//
+//func (ite *IfThenElseCondition) Pos() token.Pos {
+//	return token.NoPos
+//}
+//
+//func (ite *IfThenElseCondition) End() token.Pos {
+//	return token.NoPos
+//}
 
 type PartialExpression struct {
 	conditionalStatement []struct {

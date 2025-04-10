@@ -88,6 +88,18 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr]) ExecuteStatement {
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
 		switch node.Node.Op {
+		case token.SUB:
+			tempState := state.setCurrentNode(ChangeParamNode[*ast.UnaryExpr, ast.Node](node, node.Node.X))
+			param := ChangeParamNode(node, node.Node.X)
+			arr, _ := compiler.findRhsExpression(tempState, param)(tempState)
+
+			rve := &ReflectValueExpression{reflect.ValueOf(-1)}
+			rveNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, rve)
+
+			be := &BinaryExpr{arr[0].Node.Pos(), token.MUL, arr[0], rveNode}
+			beNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)
+			return []Node[ast.Node]{beNode}, artValue
+
 		case token.NOT:
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.UnaryExpr, ast.Node](node, node.Node.X))
 			param := ChangeParamNode(node, node.Node.X)
@@ -96,33 +108,23 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 			case *BinaryExpr:
 				switch nodeItem.Op {
 				case token.NEQ:
-					be := &BinaryExpr{
-						arr[0].Node.Pos(),
-						token.EQL,
-						nodeItem.left,
-						nodeItem.right,
-					}
-					return []Node[ast.Node]{ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)}, artValue
-
+					be := &BinaryExpr{arr[0].Node.Pos(), token.EQL, nodeItem.left, nodeItem.right}
+					beNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)
+					return []Node[ast.Node]{beNode}, artValue
 				default:
 					panic("implement me")
 				}
-
 			case *EntityField:
-				be := &BinaryExpr{
-					arr[0].Node.Pos(),
-					token.NEQ,
-					arr[0],
-					ChangeParamNode[*ast.UnaryExpr, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(true)}),
-				}
-				return []Node[ast.Node]{ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)}, artValue
+				right := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(true)})
+				be := &BinaryExpr{arr[0].Node.Pos(), token.NEQ, arr[0], right}
+				beNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)
+				return []Node[ast.Node]{beNode}, artValue
 			default:
 				panic("implement me")
 			}
 		default:
 			panic("implement me")
 		}
-
 	}
 }
 

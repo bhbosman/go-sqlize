@@ -32,7 +32,7 @@ func (compiler *Compiler) executeBlockStmt(state State, node Node[*ast.BlockStmt
 		}
 	}
 	state = SetCompilerState(newContext.Parent, state)
-	if len(values) > 0 && vv == artReturnAndContinue {
+	if len(values) > 0 && vv^artFCI == artReturnAndContinue {
 		return values, artReturnAndContinue
 	}
 	return nil, artNone

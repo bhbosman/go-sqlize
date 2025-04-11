@@ -329,7 +329,7 @@ func (compiler *Compiler) executeAndExpandStatement(state State, executeStatemen
 			ex := expand.Expand(state.currentNode)
 			result = append(result, ex...)
 		} else {
-			result = append(result, arr...)
+			result = append(result, instance)
 		}
 	}
 	return result, v

@@ -210,3 +210,18 @@ func (ccn *CaseClauseNode) Pos() token.Pos {
 func (ccn *CaseClauseNode) End() token.Pos {
 	return token.NoPos
 }
+
+type LhsToMultipleRhsOperator struct {
+	LhsToRhsOp         token.Token
+	betweenTerminalsOp token.Token // operator
+	Lhs                Node[ast.Node]
+	Rhs                []Node[ast.Node]
+}
+
+func (lhsRhsOperator *LhsToMultipleRhsOperator) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (lhsRhsOperator *LhsToMultipleRhsOperator) End() token.Pos {
+	return token.NoPos
+}

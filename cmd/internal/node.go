@@ -19,6 +19,23 @@ type Node[TType ast.Node] struct {
 	Valid     bool
 }
 
+type SortNodes struct {
+	nodes  []Node[ast.Node]
+	lessFn func(i, j int) bool
+}
+
+func (sortNode *SortNodes) Len() int {
+	return len(sortNode.nodes)
+}
+
+func (sortNode *SortNodes) Less(i, j int) bool {
+	return sortNode.lessFn(i, j)
+}
+
+func (sortNode *SortNodes) Swap(i, j int) {
+	sortNode.nodes[i], sortNode.nodes[j] = sortNode.nodes[j], sortNode.nodes[i]
+}
+
 func NodeString(node Node[ast.Node]) (string, bool) {
 	if unk, ok := node.Node.(fmt.Stringer); ok {
 		return unk.String(), true

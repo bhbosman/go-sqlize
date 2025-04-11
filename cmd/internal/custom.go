@@ -197,3 +197,16 @@ func (multiBinOp *MultiBinaryExpr) End() token.Pos {
 type IExpand interface {
 	Expand(parentNode Node[ast.Node]) []Node[ast.Node]
 }
+
+type CaseClauseNode struct {
+	arr   []Node[ast.Node]
+	nodes []Node[ast.Node]
+}
+
+func (ccn *CaseClauseNode) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (ccn *CaseClauseNode) End() token.Pos {
+	return token.NoPos
+}

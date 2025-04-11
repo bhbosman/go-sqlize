@@ -5,19 +5,6 @@ import (
 	"go/token"
 )
 
-type CaseClauseNode struct {
-	arr   []Node[ast.Node]
-	nodes []Node[ast.Node]
-}
-
-func (ccn *CaseClauseNode) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (ccn *CaseClauseNode) End() token.Pos {
-	return token.NoPos
-}
-
 func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) ExecuteStatement {
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
 		var nodes []Node[ast.Node]

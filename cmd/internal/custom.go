@@ -225,3 +225,16 @@ func (lhsRhsOperator *LhsToMultipleRhsOperator) Pos() token.Pos {
 func (lhsRhsOperator *LhsToMultipleRhsOperator) End() token.Pos {
 	return token.NoPos
 }
+
+type DictionaryExpression struct {
+	m            reflect.Value
+	defaultValue reflect.Value
+}
+
+func (de *DictionaryExpression) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (de *DictionaryExpression) End() token.Pos {
+	return token.NoPos
+}

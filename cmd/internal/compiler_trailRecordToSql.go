@@ -32,6 +32,35 @@ func (compiler *Compiler) projectTrailRecord(w io.Writer, tabCount int, item *Tr
 	}
 }
 
+func (compiler *Compiler) nodeOperator(op token.Token) string {
+	switch op {
+	case token.ADD: // +
+		return " + "
+	case token.SUB: // -
+		return " - "
+	case token.MUL: // *
+		return " * "
+	case token.QUO: // /
+		return " / "
+	case token.LSS: // <
+		return " < "
+	case token.GTR: // >
+		return " > "
+	case token.LAND:
+		return " AND "
+	case token.LOR:
+		return " OR "
+	case token.GEQ:
+		return " >= "
+	case token.NEQ:
+		return " <> "
+	case token.EQL:
+		return " = "
+	default:
+		panic("unhandled default case")
+	}
+}
+
 func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, last bool, stackCount int, name string, node Node[ast.Node]) {
 	if !node.Valid {
 		return
@@ -41,7 +70,7 @@ func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, 
 	}
 	switch nodeItem := node.Node.(type) {
 	case *EntityField:
-		_, _ = io.WriteString(w, fmt.Sprintf("%v.%v", nodeItem.alias, nodeItem.field))
+		_, _ = io.WriteString(w, fmt.Sprintf("[%v].[%v]", nodeItem.alias, nodeItem.field))
 	case *coercion:
 		_, _ = io.WriteString(w, "CAST(")
 		param := ChangeParamNode[ast.Node, ast.Node](node, nodeItem.Node.Node)
@@ -61,32 +90,7 @@ func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, 
 	case *BinaryExpr:
 		_, _ = io.WriteString(w, "(")
 		compiler.internalProjectTrailRecord(w, tabCount, last, stackCount+1, name, nodeItem.left)
-		switch nodeItem.Op {
-		case token.ADD: // +
-			_, _ = io.WriteString(w, " + ")
-		case token.SUB: // -
-			_, _ = io.WriteString(w, " - ")
-		case token.MUL: // *
-			_, _ = io.WriteString(w, " * ")
-		case token.QUO: // /
-			_, _ = io.WriteString(w, " / ")
-		case token.LSS: // <
-			_, _ = io.WriteString(w, " < ")
-		case token.GTR: // >
-			_, _ = io.WriteString(w, " > ")
-		case token.LAND:
-			_, _ = io.WriteString(w, " AND ")
-		case token.LOR:
-			_, _ = io.WriteString(w, " OR ")
-		case token.GEQ:
-			_, _ = io.WriteString(w, " >= ")
-		case token.NEQ:
-			_, _ = io.WriteString(w, " <> ")
-		case token.EQL:
-			_, _ = io.WriteString(w, " = ")
-		default:
-			panic("unhandled default case")
-		}
+		_, _ = io.WriteString(w, compiler.nodeOperator(nodeItem.Op))
 		compiler.internalProjectTrailRecord(w, tabCount, last, stackCount+1, name, nodeItem.right)
 		_, _ = io.WriteString(w, ")")
 	case *MultiBinaryExpr:
@@ -119,6 +123,13 @@ func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, 
 			_, _ = io.WriteString(w, fmt.Sprintf("%v", nodeItem.Rv.Float()))
 		case kind == reflect.Bool:
 			_, _ = io.WriteString(w, fmt.Sprintf("%v", nodeItem.Rv.Bool()))
+		case kind == reflect.Struct:
+			if nodeRv, ok := nodeItem.Rv.Interface().(Node[*ReflectValueExpression]); ok {
+				param := ChangeParamNode[*ReflectValueExpression, ast.Node](nodeRv, nodeRv.Node)
+				compiler.internalProjectTrailRecord(w, tabCount, last, stackCount+1, name, param)
+			}
+		case kind == reflect.Invalid:
+			_, _ = io.WriteString(w, "nil")
 		default:
 			panic("unhandled default case")
 		}
@@ -157,7 +168,17 @@ func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, 
 	case *NilValueExpression:
 		_, _ = io.WriteString(w, fmt.Sprintf("nil"))
 	case *LhsToMultipleRhsOperator:
-		_, _ = io.WriteString(w, "( LhsToMultipleRhsOperator ")
+		_, _ = io.WriteString(w, "(")
+		for idx, rhs := range nodeItem.Rhs {
+			_, _ = io.WriteString(w, "(")
+			compiler.internalProjectTrailRecord(w, tabCount, last, stackCount+1, name, nodeItem.Lhs)
+			_, _ = io.WriteString(w, compiler.nodeOperator(nodeItem.LhsToRhsOp))
+			compiler.internalProjectTrailRecord(w, tabCount, last, stackCount+1, name, rhs)
+			_, _ = io.WriteString(w, ")")
+			if idx != len(nodeItem.Rhs)-1 {
+				_, _ = io.WriteString(w, compiler.nodeOperator(nodeItem.betweenTerminalsOp))
+			}
+		}
 		_, _ = io.WriteString(w, ")")
 	default:
 		panic("implement me")

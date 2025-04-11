@@ -206,7 +206,6 @@ func (compiler *Compiler) createRhsBinaryExprExecution(node Node[*ast.BinaryExpr
 					panic("unhandled default case")
 				}
 
-				panic("unhandled default case")
 			case kindX == reflect.Invalid && KindY != reflect.Invalid:
 				panic("unhandled default case")
 			case kindX != reflect.Invalid && KindY == reflect.Invalid:
@@ -226,12 +225,9 @@ func (compiler *Compiler) createRhsBinaryExprExecution(node Node[*ast.BinaryExpr
 			default:
 				panic("unhandled default case")
 			}
-			panic("unhandled default case")
-
 		default:
 			panic("implement me")
 		}
-
 	}
 }
 
@@ -423,7 +419,6 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 
 				}
 			}
-
 			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](
 				node,
 				&TrailRecord{
@@ -431,7 +426,34 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 					rv,
 				},
 			)
+			return []Node[ast.Node]{nodeValue}, artValue
+		case reflect.Map:
+			rv := reflect.MakeMap(rt)
+			for _, elt := range node.Node.Elts {
+				switch expr := elt.(type) {
+				case *ast.KeyValueExpr:
+					fn := func(state State, expression ast.Expr) ([]Node[ast.Node], CallArrayResultType) {
+						param = ChangeParamNode(node, expression)
+						tempState := state.setCurrentNode(ChangeParamNode[*ast.CompositeLit, ast.Node](node, expression))
+						es := compiler.findRhsExpression(tempState, param)
+						return compiler.executeAndExpandStatement(tempState, es)
+					}
+					nodeValue, _ := fn(state, expr.Value)
+					nodeKey, _ := fn(state, expr.Key)
+					rvValue, okValue := isLiterateValue(nodeValue[0])
+					rvKey, okKey := isLiterateValue(nodeKey[0])
+					if okValue && okKey {
+						dd := reflect.ValueOf(ChangeParamNode[ast.Node, *ReflectValueExpression](state.currentNode, &ReflectValueExpression{rvValue}))
+						rv.SetMapIndex(rvKey.Convert(rt.Key()), dd.Convert(rt.Elem()))
+						continue
+					}
+					panic("must be literal values")
+				default:
+					panic("unhandled key")
+				}
+			}
 
+			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, &ReflectValueExpression{rv})
 			return []Node[ast.Node]{nodeValue}, artValue
 		default:
 			panic("dsfsfds")

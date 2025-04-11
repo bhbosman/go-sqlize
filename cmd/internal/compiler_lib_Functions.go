@@ -6,7 +6,9 @@ import (
 	"go/token"
 	"io"
 	"reflect"
+	"sort"
 	"strconv"
+	"strings"
 )
 
 const libFolder = "github.com/bhbosman/go-sqlize/lib"
@@ -27,6 +29,9 @@ func (compiler *Compiler) addLibFunctions() {
 	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData03"}] = compiler.libGetSomeData03Implementation
 	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData04"}] = compiler.libGetSomeData04Implementation
 	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData05"}] = compiler.libGetSomeData05Implementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "CreateDictionary"}] = compiler.libCreateDictionaryImplementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryLookup"}] = compiler.libDictionaryLookupImplementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryDefault"}] = compiler.libDictionaryDefaultImplementation
 }
 
 func (compiler *Compiler) libQueryImplementation(_ State, typeParams []Node[ast.Expr], _ []Node[ast.Node]) ExecuteStatement {
@@ -228,4 +233,94 @@ func (compiler *Compiler) libGetSomeData05Implementation(state State, params []N
 		panic(fmt.Errorf("GetSomeData05 implementation requires 5 arguments, got %d", len(arguments)))
 	}
 	return compiler.getGetSomeDataN(state, params, arguments)
+}
+
+func (compiler *Compiler) libCreateDictionaryImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 2 {
+		panic(fmt.Errorf("CreateDictionary implementation requires 2 arguments, got %d", len(arguments)))
+	}
+	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+		rv00, ok00 := isLiterateValue(arguments[0])
+		rv01, ok01 := isLiterateValue(arguments[1])
+		if ok00 && ok01 {
+			n := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{rv00, rv01})
+			return []Node[ast.Node]{n}, artValue
+		}
+		panic(fmt.Errorf("createDictionary implementation requires literal values"))
+	}
+}
+
+type rvArraySorter struct {
+	rvArray []reflect.Value
+}
+
+func (rvArray *rvArraySorter) Len() int {
+	return len(rvArray.rvArray)
+}
+
+func (rvArray *rvArraySorter) Less(i, j int) bool {
+	if rvArray.rvArray[i].Kind() == rvArray.rvArray[j].Kind() {
+		ith := rvArray.rvArray[i]
+		jth := rvArray.rvArray[j]
+		switch {
+		case ith.CanInt():
+			return ith.Int() < jth.Int()
+		case ith.CanFloat():
+			return ith.Float() < jth.Float()
+		case ith.Kind() == reflect.String:
+			return strings.Compare(ith.String(), jth.String()) < 0
+		default:
+			return false
+		}
+	}
+	return false
+}
+
+func (rvArray *rvArraySorter) Swap(i, j int) {
+	rvArray.rvArray[i], rvArray.rvArray[j] = rvArray.rvArray[j], rvArray.rvArray[i]
+}
+
+func (compiler *Compiler) libDictionaryLookupImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 2 {
+		panic(fmt.Errorf("DictionaryLookup implementation requires 2 arguments, got %d", len(arguments)))
+	}
+	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+		var conditionalStatement []SingleValueCondition
+		dictionaryExpression := arguments[0].Node.(*DictionaryExpression)
+		{
+			inputData := arguments[1]
+			rvMap := dictionaryExpression.m
+			keyArr := rvMap.MapKeys()
+			sorter := &rvArraySorter{keyArr}
+			sort.Sort(sorter)
+
+			for _, rvKey := range keyArr {
+				rvValue := rvMap.MapIndex(rvKey)
+				condition := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &BinaryExpr{token.NoPos, token.EQL, inputData, ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvKey})})
+				singleValueCondition := SingleValueCondition{condition: condition, value: ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvValue})}
+				conditionalStatement = append(conditionalStatement, singleValueCondition)
+			}
+		}
+		{
+			rvDefault := dictionaryExpression.defaultValue
+			condition := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(true)})
+			singleValueCondition := SingleValueCondition{condition: condition, value: ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvDefault})}
+			conditionalStatement = append(conditionalStatement, singleValueCondition)
+		}
+		ite := &IfThenElseSingleValueCondition{conditionalStatement}
+		resultValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, ite)
+		return []Node[ast.Node]{resultValue}, artReturn
+	}
+}
+
+func (compiler *Compiler) libDictionaryDefaultImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	if len(arguments) != 1 {
+		panic(fmt.Errorf("DictionaryLookup implementation requires 2 arguments, got %d", len(arguments)))
+	}
+	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+		dictionaryExpression := arguments[0].Node.(*DictionaryExpression)
+		rve := &ReflectValueExpression{dictionaryExpression.defaultValue}
+		resultValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, rve)
+		return []Node[ast.Node]{resultValue}, artReturn
+	}
 }

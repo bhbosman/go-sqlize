@@ -48,10 +48,11 @@ func (compiler *Compiler) Init(
 	compiler.CompilerState |= CompilerState_InitCalled
 	compiler.Sources = map[string]interface{}{}
 	compiler.GlobalTypes = map[ValueKey]OnCreateType{
-		ValueKey{"", "int"}:         compiler.registerInt,
-		ValueKey{"", "string"}:      compiler.registerString,
-		ValueKey{"", "float64"}:     compiler.registerFloat64,
-		ValueKey{libFolder, "Some"}: compiler.registerLibType,
+		ValueKey{"", "int"}:               compiler.registerInt,
+		ValueKey{"", "string"}:            compiler.registerString,
+		ValueKey{"", "float64"}:           compiler.registerFloat64,
+		ValueKey{libFolder, "Some"}:       compiler.registerLibType,
+		ValueKey{libFolder, "Dictionary"}: compiler.registerLibType,
 	}
 
 	compiler.GlobalFunctions = map[ValueKey]OnCreateExecuteStatement{
@@ -199,6 +200,18 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 	}
 
 	switch item := node.Node.(type) {
+	case *ast.MapType:
+		paramKey := ChangeParamNode[ast.Expr, ast.Expr](node, item.Key)
+		rtKey := compiler.findType(state, paramKey)
+
+		//paramValue := ChangeParamNode[ast.Expr, ast.Expr](node, item.Value)
+		//rtValue := compiler.findType(state, paramValue)
+
+		rtValue := reflect.TypeFor[Node[*ReflectValueExpression]]()
+
+		rt := reflect.MapOf(rtKey, rtValue)
+		return initOnCreateType(0, rt, nil)
+
 	case *ast.IndexExpr:
 		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
 		indexParam := ChangeParamNode(node, item.Index)
@@ -267,7 +280,7 @@ func (compiler *Compiler) projectSources(w io.Writer, tabCount int, sources []st
 		query, _ := compiler.Sources[source]
 		switch item := query.(type) {
 		case *EntitySource:
-			_, _ = io.WriteString(w, fmt.Sprintf("%v %v", item.rt.String(), source))
+			_, _ = io.WriteString(w, fmt.Sprintf("%v [%v]", item.rt.String(), source))
 		default:
 			panic("unhandled default case")
 		}

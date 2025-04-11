@@ -2,43 +2,24 @@ package work
 
 import "github.com/bhbosman/go-sqlize/lib"
 
-type Switch01InputValues struct {
-	Name     string
-	SurName  string
-	Active   bool
-	Points01 lib.Some[int]
-	Points02 lib.Some[int]
-	Points03 lib.Some[int]
-	Points04 lib.Some[int]
-}
-type Switch01InputValuesView struct {
-	Name    string
-	SurName string
-	Status1 string
-	Status2 string
-	Level1  lib.Some[string]
-	Level2  string
-	Level3  lib.Some[string]
-}
-
 func init() {
 	query := lib.Query[Switch01InputValues]()
 	mapFn := func(inputData Switch01InputValues) Switch01InputValuesView {
 		fn := func(Points01, Points02, Points03, Points04 lib.Some[int]) (lib.Some[string], string, lib.Some[string]) {
 			if p1, p2, p3, p4, ok := lib.GetSomeData04(Points01, Points02, Points03, Points04); ok {
-				switch p1 {
+				switch {
+				case p1 == 0 || p1 == 323 || p1 == 45345 || p1 == 4534234 || p1 == -34:
+					value := p1 + p2 + p3 + p4
+					return lib.SetSomeValue(lib.Itoa(value + 4)), lib.Itoa(value + 5), lib.SetSomeValue(lib.Itoa(value + 6))
+				case p4 == 1:
+					value := p1 + p2 + p3 + p4
+					return lib.SetSomeValue(lib.Itoa(value + 7)), lib.Itoa(value + 8), lib.SetSomeValue(lib.Itoa(value + 9))
+				case p3 == 2:
+					value := p1 + p2 + p3 + p4
+					return lib.SetSomeValue(lib.Itoa(value + 10)), lib.Itoa(value + 11), lib.SetSomeValue(lib.Itoa(value + 12))
 				default:
 					value := p1 + p2 + p3 + p4
 					return lib.SetSomeValue(lib.Itoa(value + 1)), lib.Itoa(value + 2), lib.SetSomeValue(lib.Itoa(value + 3))
-				case 0, 323, 45345, 4534234, -34:
-					value := p1 + p2 + p3 + p4
-					return lib.SetSomeValue(lib.Itoa(value + 4)), lib.Itoa(value + 5), lib.SetSomeValue(lib.Itoa(value + 6))
-				case 1:
-					value := p1 + p2 + p3 + p4
-					return lib.SetSomeValue(lib.Itoa(value + 7)), lib.Itoa(value + 8), lib.SetSomeValue(lib.Itoa(value + 9))
-				case 2:
-					value := p1 + p2 + p3 + p4
-					return lib.SetSomeValue(lib.Itoa(value + 10)), lib.Itoa(value + 11), lib.SetSomeValue(lib.Itoa(value + 12))
 				}
 			} else if p1, p2, p3, ok := lib.GetSomeData03(Points01, Points02, Points03); ok {
 				value := p1 + p2 + p3

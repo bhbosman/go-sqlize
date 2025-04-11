@@ -97,6 +97,9 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		default:
 			panic(notFound(item.Kind.String(), "isLiterateValue"))
 		}
+	case *NilValueExpression:
+		return reflect.Value{}, true
+
 	case *NilExpression:
 		return reflect.Value{}, true
 		// TODO: *BinaryExpr: should always be false, this needs to be fixed where *BinaryExpr: is created

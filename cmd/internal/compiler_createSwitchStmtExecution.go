@@ -17,7 +17,6 @@ func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) 
 			nn, _ := compiler.executeAndExpandStatement(tempState, es)
 			nodes = append(nodes, nn...)
 		}
-
 		for _, stmt := range node.Node.Body {
 			param := ChangeParamNode(node, stmt)
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.CaseClause, ast.Node](node, stmt))
@@ -29,56 +28,64 @@ func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) 
 				return []Node[ast.Node]{returnNode}, artReturnAndContinue
 			}
 		}
-		panic("need a return statement")
+		panic(createError("createCaseClauseExecution", "each case statment in the switch must return somethung"))
 	}
 }
 
 func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) ExecuteStatement {
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		if node.Node.Tag != nil && node.Node.Body != nil {
-			param := ChangeParamNode(node, node.Node.Tag)
-			tempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](node, node.Node.Tag))
-			expression, _ := compiler.findRhsExpression(tempState, param)(state)
-
-			paramBody := ChangeParamNode(node, node.Node.Body)
-			tempState = state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](node, node.Node.Body))
-			stmt, resultType := compiler.executeBlockStmt(tempState, paramBody)
-			if resultType != artReturnAndContinue {
-				panic("need a return statement")
+		expression := func(state State, parent Node[*ast.SwitchStmt], Tag ast.Expr) Node[ast.Node] {
+			if Tag != nil {
+				param := ChangeParamNode(node, Tag)
+				tempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](parent, Tag))
+				result, _ := compiler.findRhsExpression(tempState, param)(state)
+				return result[0]
 			}
-			sortNodes := &SortNodes{stmt, func(i, j int) bool {
-				ith, iok := stmt[i].Node.(*CaseClauseNode)
-				jth, jok := stmt[j].Node.(*CaseClauseNode)
-				if jok && iok {
-					if len(jth.nodes) == 0 && len(ith.nodes) > 0 {
-						return true
-					}
-				}
-				return false
+			return Node[ast.Node]{}
+		}(state, node, node.Node.Tag)
 
-			}}
-			sort.Sort(sortNodes)
-			var conditionalStatement []MultiValueCondition
-
-			for _, n := range stmt {
-				switch item := n.Node.(type) {
-				case *CaseClauseNode:
-					condition := func(item *CaseClauseNode) Node[ast.Node] {
-						if len(item.nodes) == 0 {
-							return ChangeParamNode[*ast.SwitchStmt, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(true)})
-						}
-						return ChangeParamNode[*ast.SwitchStmt, ast.Node](node, &LhsToMultipleRhsOperator{token.EQL, token.LOR, expression[0], item.nodes})
-					}(item)
-					multiValueCondition := MultiValueCondition{condition: condition, values: item.arr}
-					conditionalStatement = append(conditionalStatement, multiValueCondition)
-				default:
-					panic("need a case statement")
-				}
-			}
-			ite := &IfThenElseMultiValueCondition{conditionalStatement}
-			resultValue := ChangeParamNode[*ast.SwitchStmt, ast.Node](node, ite)
-			return []Node[ast.Node]{resultValue}, artReturn
+		paramBody := ChangeParamNode(node, node.Node.Body)
+		tempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](node, node.Node.Body))
+		stmt, resultType := compiler.executeBlockStmt(tempState, paramBody)
+		if resultType != artReturnAndContinue {
+			panic("need a return statement")
 		}
-		panic("need a return statement")
+		sortNodes := &SortNodes{stmt, func(i, j int) bool {
+			ith, iok := stmt[i].Node.(*CaseClauseNode)
+			jth, jok := stmt[j].Node.(*CaseClauseNode)
+			if jok && iok {
+				if len(jth.nodes) == 0 && len(ith.nodes) > 0 {
+					return true
+				}
+			}
+			return false
+		}}
+		sort.Sort(sortNodes)
+		var conditionalStatement []MultiValueCondition
+
+		for _, n := range stmt {
+			switch item := n.Node.(type) {
+			case *CaseClauseNode:
+				condition := func(expression Node[ast.Node], parent Node[*ast.SwitchStmt], item *CaseClauseNode) Node[ast.Node] {
+					if len(item.nodes) == 0 {
+						return ChangeParamNode[*ast.SwitchStmt, ast.Node](parent, &ReflectValueExpression{reflect.ValueOf(true)})
+					}
+					if expression.Valid {
+						return ChangeParamNode[*ast.SwitchStmt, ast.Node](parent, &LhsToMultipleRhsOperator{token.EQL, token.LOR, expression, item.nodes})
+					}
+					if len(item.nodes) == 1 {
+						return item.nodes[0]
+					}
+					panic("not handled")
+				}(expression, node, item)
+				multiValueCondition := MultiValueCondition{condition: condition, values: item.arr}
+				conditionalStatement = append(conditionalStatement, multiValueCondition)
+			default:
+				panic("need a case statement")
+			}
+		}
+		ite := &IfThenElseMultiValueCondition{conditionalStatement}
+		resultValue := ChangeParamNode[*ast.SwitchStmt, ast.Node](node, ite)
+		return []Node[ast.Node]{resultValue}, artReturn
 	}
 }

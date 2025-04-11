@@ -91,3 +91,17 @@ func GetSomeData04[TData01, TData02, TData03, TData04 interface{}](Some[TData01]
 func GetSomeData05[TData01, TData02, TData03, TData04, TData05 interface{}](Some[TData01], Some[TData02], Some[TData03], Some[TData04], Some[TData05]) (TData01, TData02, TData03, TData04, TData05, bool) {
 	panic("implement GetSomeData05")
 }
+
+type Dictionary[TKey comparable, TValue interface{}] struct {
+}
+
+func CreateDictionary[TKey comparable, TValue interface{}](m map[TKey]TValue, defaultValue TValue) Dictionary[TKey, TValue] {
+	panic("implement CreateDictionary")
+}
+
+func DictionaryLookup[TKey comparable, TValue interface{}](Dictionary[TKey, TValue], TKey) TValue {
+	panic("implement DictionaryLookup")
+}
+func DictionaryDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TValue]) TValue {
+	panic("implement DictionaryDefault")
+}

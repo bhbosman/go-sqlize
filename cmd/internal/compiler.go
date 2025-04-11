@@ -168,6 +168,7 @@ const (
 	artReturn
 	artValue
 	artFCI
+	artReturnAndContinue
 )
 
 type sss struct {

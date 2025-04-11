@@ -24,7 +24,6 @@ type Switch01InputValuesView struct {
 func init() {
 	query := lib.Query[Switch01InputValues]()
 	mapFn := func(inputData Switch01InputValues) Switch01InputValuesView {
-
 		fn := func(Points01, Points02, Points03, Points04 lib.Some[int]) (lib.Some[string], string, lib.Some[string]) {
 			if p1, p2, p3, p4, ok := lib.GetSomeData04(Points01, Points02, Points03, Points04); ok {
 				switch p1 {

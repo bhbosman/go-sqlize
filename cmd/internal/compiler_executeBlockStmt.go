@@ -5,6 +5,8 @@ import (
 )
 
 func (compiler *Compiler) executeBlockStmt(state State, node Node[*ast.BlockStmt]) ([]Node[ast.Node], CallArrayResultType) {
+	var values []Node[ast.Node]
+	var vv CallArrayResultType = 0
 	newContext := &CurrentContext{map[string]Node[ast.Node]{}, GetCompilerState[*CurrentContext](state)}
 	state = SetCompilerState(newContext, state)
 	for _, item := range node.Node.List {
@@ -13,6 +15,7 @@ func (compiler *Compiler) executeBlockStmt(state State, node Node[*ast.BlockStmt
 		statementFn, currentNode := compiler.findStatement(tempState, param)
 		tempState = state.setCurrentNode(currentNode)
 		arr, rt := compiler.executeAndExpandStatement(tempState, statementFn)
+		vv |= rt
 		switch rt {
 		case artFCI:
 			switch instance := arr[0].Node.(type) {
@@ -21,14 +24,16 @@ func (compiler *Compiler) executeBlockStmt(state State, node Node[*ast.BlockStmt
 			}
 		case artValue:
 		case artReturn:
-			if len(arr) == 0 {
-				panic("big error")
-			}
 			return arr, artReturn
+		case artReturnAndContinue:
+			values = append(values, arr...)
 		default:
 			continue
 		}
 	}
 	state = SetCompilerState(newContext.Parent, state)
+	if len(values) > 0 && vv == artReturnAndContinue {
+		return values, artReturnAndContinue
+	}
 	return nil, artNone
 }

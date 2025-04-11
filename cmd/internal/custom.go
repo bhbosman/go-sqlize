@@ -170,30 +170,6 @@ func (iteSingleCondition *IfThenElseSingleValueCondition) End() token.Pos {
 	return token.NoPos
 }
 
-//	type PartialExpression struct {
-//		conditionalStatement []struct {
-//			condition Node[ast.Node]
-//			value     Node[ast.Node]
-//		}
-//	}
-//
-//func (partialExpression *PartialExpression) IsValidNode() bool {
-//	for _, conditionalStatement := range partialExpression.conditionalStatement {
-//		if rv, b := isLiterateValue(conditionalStatement.condition); b && rv.Kind() == reflect.Bool && rv.Bool() {
-//			return true
-//		}
-//	}
-//	return false
-//}
-//
-//func (partialExpression *PartialExpression) Pos() token.Pos {
-//	return token.NoPos
-//}
-//
-//func (partialExpression *PartialExpression) End() token.Pos {
-//	return token.NoPos
-//}
-
 type NilValueExpression struct {
 }
 

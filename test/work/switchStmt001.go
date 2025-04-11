@@ -27,6 +27,9 @@ func init() {
 		fn := func(Points01, Points02, Points03, Points04 lib.Some[int]) (lib.Some[string], string, lib.Some[string]) {
 			if p1, p2, p3, p4, ok := lib.GetSomeData04(Points01, Points02, Points03, Points04); ok {
 				switch p1 {
+				default:
+					value := p1 + p2 + p3 + p4
+					return lib.SetSomeValue(lib.Itoa(value)), lib.Itoa(value), lib.SetSomeValue(lib.Itoa(value))
 				case 0, 323, 45345, 4534234, -34:
 					value := p1 + p2 + p3 + p4
 					return lib.SetSomeValue(lib.Itoa(value)), lib.Itoa(value), lib.SetSomeValue(lib.Itoa(value))
@@ -34,9 +37,6 @@ func init() {
 					value := p1 + p2 + p3 + p4
 					return lib.SetSomeValue(lib.Itoa(value)), lib.Itoa(value), lib.SetSomeValue(lib.Itoa(value))
 				case 2:
-					value := p1 + p2 + p3 + p4
-					return lib.SetSomeValue(lib.Itoa(value)), lib.Itoa(value), lib.SetSomeValue(lib.Itoa(value))
-				default:
 					value := p1 + p2 + p3 + p4
 					return lib.SetSomeValue(lib.Itoa(value)), lib.Itoa(value), lib.SetSomeValue(lib.Itoa(value))
 				}

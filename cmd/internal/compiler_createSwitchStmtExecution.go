@@ -46,16 +46,20 @@ func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) 
 			if resultType != artReturnAndContinue {
 				panic("need a return statement")
 			}
-
 			sortNodes := &SortNodes{stmt, func(i, j int) bool {
+				ith, iok := stmt[i].Node.(*CaseClauseNode)
+				jth, jok := stmt[j].Node.(*CaseClauseNode)
+				if jok && iok {
+					if len(jth.nodes) == 0 && len(ith.nodes) > 0 {
+						return true
+					}
+				}
 				return false
 
 			}}
 			sort.Sort(sortNodes)
+			var conditionalStatement []MultiValueCondition
 
-			//sort.Interface()
-
-			ite := &IfThenElseMultiValueCondition{}
 			for _, n := range stmt {
 				switch item := n.Node.(type) {
 				case *CaseClauseNode:
@@ -66,40 +70,14 @@ func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) 
 						return ChangeParamNode[*ast.SwitchStmt, ast.Node](node, &LhsToMultipleRhsOperator{token.EQL, token.LOR, expression[0], item.nodes})
 					}(item)
 					multiValueCondition := MultiValueCondition{condition: condition, values: item.arr}
-					ite.conditionalStatement = append(ite.conditionalStatement, multiValueCondition)
+					conditionalStatement = append(conditionalStatement, multiValueCondition)
 				default:
 					panic("need a case statement")
 				}
 			}
-			panic("need a return statement")
-
-			//
-			//	for _, stmt := range node.Node.Body.List {
-			//		stmtParam := ChangeParamNode[*ast.SwitchStmt, ast.Stmt](node, stmt)
-			//		stmtTempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](node, stmt))
-			//		es, n := compiler.findStatement(stmtTempState, stmtParam)
-			//		tempState := state.setCurrentNode(n)
-			//		es(tempState)
-			//		//
-			//		//compiler.findStatement(stmtTempState, stmtParam)
-			//		//bodyItemParam := ChangeParamNode[*ast.SwitchStmt, ast.Expr](node, bodyItem)
-			//		//bodyItemTempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](node, node.Node.Tag))
-			//		//
-			//		//compiler.findRhsExpression(bodyItemTempState, bodyItemParam)
-			//
-			//	}
-			//
-			//	switch node.Node.Tag.(type) {
-			//	case *ast.Ident:
-			//	default:
-			//		panic(node.Node.Tag)
-			//
-			//	}
-			//
-			//	panic("unhandled default case")
-			//
-			//} else {
-			//	panic(node.Node.Tag)
+			ite := &IfThenElseMultiValueCondition{conditionalStatement}
+			resultValue := ChangeParamNode[*ast.SwitchStmt, ast.Node](node, ite)
+			return []Node[ast.Node]{resultValue}, artReturn
 		}
 		panic("need a return statement")
 	}

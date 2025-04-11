@@ -104,6 +104,8 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		return reflect.Value{}, false
 	case *MultiBinaryExpr:
 		return reflect.Value{}, false
+	case *LhsToMultipleRhsOperator:
+		return reflect.Value{}, false
 	default:
 		panic(notFound(reflect.TypeOf(item).String(), "isLiterateValue"))
 	}

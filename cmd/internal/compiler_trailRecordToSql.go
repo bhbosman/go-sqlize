@@ -156,6 +156,9 @@ func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, 
 
 	case *NilValueExpression:
 		_, _ = io.WriteString(w, fmt.Sprintf("nil"))
+	case *LhsToMultipleRhsOperator:
+		_, _ = io.WriteString(w, "( LhsToMultipleRhsOperator ")
+		_, _ = io.WriteString(w, ")")
 	default:
 		panic("implement me")
 	}

@@ -57,6 +57,11 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 			compiler.internalFindSources(conditionalStatement.value, m)
 		}
 		break
+	case *LhsToMultipleRhsOperator:
+		compiler.internalFindSources(nodeItem.Lhs, m)
+		for _, rhs := range nodeItem.Rhs {
+			compiler.internalFindSources(rhs, m)
+		}
 	default:
 		panic(reflect.TypeOf(node.Node).String())
 	}

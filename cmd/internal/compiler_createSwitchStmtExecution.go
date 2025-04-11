@@ -2,7 +2,6 @@ package internal
 
 import (
 	"go/ast"
-	"go/token"
 )
 
 func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) ExecuteStatement {

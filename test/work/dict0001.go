@@ -3,7 +3,6 @@ package work
 import "github.com/bhbosman/go-sqlize/lib"
 
 func init() {
-
 	query := lib.Query[Switch01InputValues]()
 	mapFn := func(inputData Switch01InputValues) Switch01InputValuesView {
 		l1 := func(Points lib.Some[int]) lib.Some[string] {

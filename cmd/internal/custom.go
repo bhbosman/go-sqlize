@@ -6,142 +6,53 @@ import (
 	"reflect"
 )
 
-type TrailRecord struct {
-	Position token.Pos     // identifier position
-	Value    reflect.Value // identifier name
-}
-
-func (value *TrailRecord) Pos() token.Pos {
-	return value.Position
-}
-
-func (value *TrailRecord) End() token.Pos {
-	return value.Position
-}
-
-type TrailSource struct {
-	Position token.Pos // identifier position
-	Alias    string
-}
-
-func (value *TrailSource) Pos() token.Pos {
-	return value.Position
-}
-
-func (value *TrailSource) End() token.Pos {
-	return value.Position
-}
-
-type EntityField struct {
-	Position token.Pos // identifier position
-	alias    string
-	field    string
-}
-
-func (entityField *EntityField) Pos() token.Pos {
-	return entityField.Position
-}
-
-func (entityField *EntityField) End() token.Pos {
-	return entityField.Position
-}
-
-type coercion struct {
-	Position token.Pos
-	to       string
-	Node     Node[ast.Node]
-	rt       reflect.Type
-}
-
-func (coercion *coercion) Pos() token.Pos {
-	return coercion.Position
-}
-
-func (coercion *coercion) End() token.Pos {
-	return coercion.Position
-}
-
-type BinaryExpr struct {
-	OpPos token.Pos   // position of Op
-	Op    token.Token // operator
-	left  Node[ast.Node]
-	right Node[ast.Node]
-}
-
-func (binop *BinaryExpr) Pos() token.Pos {
-	return binop.OpPos
-}
-
-func (binop *BinaryExpr) End() token.Pos {
-	return binop.OpPos
-}
-
-type nullValue struct{}
-
-type NilExpression struct {
-}
-
-func (nilExpression *NilExpression) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (nilExpression *NilExpression) End() token.Pos {
-	return token.NoPos
-}
-
-type ReflectValueExpression struct {
-	Rv reflect.Value
-}
-
-func (rv *ReflectValueExpression) String() string {
-	return rv.Rv.String()
-}
-
-func (rv *ReflectValueExpression) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (rv *ReflectValueExpression) End() token.Pos {
-	return token.NoPos
-}
-
-type SupportedFunction struct {
-	functionName string
-	params       []Node[ast.Node]
-	rt           reflect.Type
-}
-
-func (supportedFunction *SupportedFunction) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (supportedFunction *SupportedFunction) End() token.Pos {
-	return token.NoPos
-}
-
-type MultiValueCondition struct {
-	condition Node[ast.Node]
-	values    []Node[ast.Node]
-}
-
-type SingleValueCondition struct {
-	condition Node[ast.Node]
-	value     Node[ast.Node]
-}
-
-type IfThenElseMultiValueCondition struct {
-	conditionalStatement []MultiValueCondition
-}
-
-func (ite *IfThenElseMultiValueCondition) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (ite *IfThenElseMultiValueCondition) End() token.Pos {
-	return token.NoPos
-}
-
 type (
+	TrailRecord struct {
+		Position token.Pos     // identifier position
+		Value    reflect.Value // identifier name
+	}
+	TrailSource struct {
+		Position token.Pos // identifier position
+		Alias    string
+	}
+	EntityField struct {
+		Position token.Pos // identifier position
+		alias    string
+		field    string
+	}
+	coercion struct {
+		Position token.Pos
+		to       string
+		Node     Node[ast.Node]
+		rt       reflect.Type
+	}
+	BinaryExpr struct {
+		OpPos token.Pos   // position of Op
+		Op    token.Token // operator
+		left  Node[ast.Node]
+		right Node[ast.Node]
+	}
+	NilExpression struct {
+	}
+	ReflectValueExpression struct {
+		Rv reflect.Value
+	}
+	MultiValueCondition struct {
+		condition Node[ast.Node]
+		values    []Node[ast.Node]
+	}
+	SingleValueCondition struct {
+		condition Node[ast.Node]
+		value     Node[ast.Node]
+	}
+	SupportedFunction struct {
+		functionName string
+		params       []Node[ast.Node]
+		rt           reflect.Type
+	}
+	IfThenElseMultiValueCondition struct {
+		conditionalStatement []MultiValueCondition
+	}
 	IfThenElseSingleValueCondition struct {
 		conditionalStatement []SingleValueCondition
 	}
@@ -185,7 +96,61 @@ func (de *DictionaryExpression) Pos() token.Pos {
 func (iteSingleCondition *IfThenElseSingleValueCondition) Pos() token.Pos {
 	return token.NoPos
 }
+func (ite *IfThenElseMultiValueCondition) Pos() token.Pos {
+	return token.NoPos
+}
+func (supportedFunction *SupportedFunction) Pos() token.Pos {
+	return token.NoPos
+}
+func (rv *ReflectValueExpression) Pos() token.Pos {
+	return token.NoPos
+}
+func (value *TrailRecord) Pos() token.Pos {
+	return value.Position
+}
+func (value *TrailSource) Pos() token.Pos {
+	return value.Position
+}
+func (entityField *EntityField) Pos() token.Pos {
+	return entityField.Position
+}
+func (coercion *coercion) Pos() token.Pos {
+	return coercion.Position
+}
+func (nilExpression *NilExpression) Pos() token.Pos {
+	return token.NoPos
+}
+func (binop *BinaryExpr) Pos() token.Pos {
+	return binop.OpPos
+}
 
+func (binop *BinaryExpr) End() token.Pos {
+	return binop.OpPos
+}
+func (nilExpression *NilExpression) End() token.Pos {
+	return token.NoPos
+}
+func (coercion *coercion) End() token.Pos {
+	return coercion.Position
+}
+func (entityField *EntityField) End() token.Pos {
+	return entityField.Position
+}
+func (value *TrailSource) End() token.Pos {
+	return value.Position
+}
+func (value *TrailRecord) End() token.Pos {
+	return value.Position
+}
+func (rv *ReflectValueExpression) End() token.Pos {
+	return token.NoPos
+}
+func (supportedFunction *SupportedFunction) End() token.Pos {
+	return token.NoPos
+}
+func (ite *IfThenElseMultiValueCondition) End() token.Pos {
+	return token.NoPos
+}
 func (iteSingleCondition *IfThenElseSingleValueCondition) End() token.Pos {
 	return token.NoPos
 }
@@ -224,4 +189,8 @@ func (ite *IfThenElseMultiValueCondition) Expand(parentNode Node[ast.Node]) []No
 		}
 	}
 	return result
+}
+
+func (rv *ReflectValueExpression) String() string {
+	return rv.Rv.String()
 }

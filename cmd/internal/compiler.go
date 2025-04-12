@@ -31,8 +31,8 @@ type OnCreateExecuteStatement func(state State, typeParams []Node[ast.Expr], arg
 type OnCreateType func(State, []Node[ast.Expr]) ITypeMapper
 
 type TypeMapperForStruct struct {
-	rt                 reflect.Type
-	rtWithTrueTypes    reflect.Type
+	rt reflect.Type
+	//rtWithTrueTypes    reflect.Type
 	typeMapperInstance reflect.Value
 }
 
@@ -130,7 +130,7 @@ func (compiler *Compiler) Init(
 						type usage int
 						const (
 							usageActual usage = iota
-							usageTrueTypes
+							//usageTrueTypes
 							usageTypeMapper
 						)
 						rtFunc := func(List []*ast.Field, useActual usage) reflect.Type {
@@ -138,10 +138,10 @@ func (compiler *Compiler) Init(
 								switch useActual {
 								case usageActual:
 									return reflect.TypeFor[Node[ast.Node]]()
-								case usageTrueTypes:
-									param := ChangeParamNode(state.currentNode, Type)
-									typeMapper := compiler.findType(state, param)
-									return typeMapper.Type(state)
+								//case usageTrueTypes:
+								//	param := ChangeParamNode(state.currentNode, Type)
+								//	typeMapper := compiler.findType(state, param)
+								//	return typeMapper.Type(state)
 								case usageTypeMapper:
 									return reflect.TypeFor[ITypeMapper]()
 								default:
@@ -175,7 +175,7 @@ func (compiler *Compiler) Init(
 						}
 						if v.Fields != nil {
 							rt := rtFunc(v.Fields.List, usageActual)
-							rtWithTrueTypes := rtFunc(v.Fields.List, usageTrueTypes)
+							//rtWithTrueTypes := rtFunc(v.Fields.List, usageTrueTypes)
 							rtWithITypeMapper := rtFunc(v.Fields.List, usageTypeMapper)
 							typeMapperInstance := reflect.New(rtWithITypeMapper).Elem()
 							for _, field := range v.Fields.List {
@@ -186,7 +186,9 @@ func (compiler *Compiler) Init(
 								}
 							}
 							state = RemoveCompilerState[TypeMapper](state)
-							return &TypeMapperForStruct{rt, rtWithTrueTypes, typeMapperInstance}
+							return &TypeMapperForStruct{rt,
+								//rtWithTrueTypes,
+								typeMapperInstance}
 						}
 					}
 				}

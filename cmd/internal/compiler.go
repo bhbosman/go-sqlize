@@ -130,7 +130,6 @@ func (compiler *Compiler) Init(
 						type usage int
 						const (
 							usageActual usage = iota
-							//usageTrueTypes
 							usageTypeMapper
 						)
 						rtFunc := func(List []*ast.Field, useActual usage) reflect.Type {
@@ -138,10 +137,6 @@ func (compiler *Compiler) Init(
 								switch useActual {
 								case usageActual:
 									return reflect.TypeFor[Node[ast.Node]]()
-								//case usageTrueTypes:
-								//	param := ChangeParamNode(state.currentNode, Type)
-								//	typeMapper := compiler.findType(state, param)
-								//	return typeMapper.Type(state)
 								case usageTypeMapper:
 									return reflect.TypeFor[ITypeMapper]()
 								default:
@@ -175,7 +170,6 @@ func (compiler *Compiler) Init(
 						}
 						if v.Fields != nil {
 							rt := rtFunc(v.Fields.List, usageActual)
-							//rtWithTrueTypes := rtFunc(v.Fields.List, usageTrueTypes)
 							rtWithITypeMapper := rtFunc(v.Fields.List, usageTypeMapper)
 							typeMapperInstance := reflect.New(rtWithITypeMapper).Elem()
 							for _, field := range v.Fields.List {
@@ -186,9 +180,7 @@ func (compiler *Compiler) Init(
 								}
 							}
 							state = RemoveCompilerState[TypeMapper](state)
-							return &TypeMapperForStruct{rt,
-								//rtWithTrueTypes,
-								typeMapperInstance}
+							return &TypeMapperForStruct{rt, typeMapperInstance}
 						}
 					}
 				}
@@ -286,12 +278,10 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 		paramKey := ChangeParamNode[ast.Expr, ast.Expr](node, item.Key)
 		rtKeyTypeMapper := compiler.findType(state, paramKey)
 		rtKey := rtKeyTypeMapper.Type(state)
-		//sss
+
 		paramValue := ChangeParamNode[ast.Expr, ast.Expr](node, item.Value)
 		rtValueTypeMapper := compiler.findType(state, paramValue)
 		rtValue := rtValueTypeMapper.Type(state)
-
-		//rtValue := reflect.TypeFor[Node[*ReflectValueExpression]]()
 
 		rt := reflect.MapOf(rtKey, rtValue)
 		var dd OnCreateType

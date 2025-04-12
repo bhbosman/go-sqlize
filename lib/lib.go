@@ -105,3 +105,11 @@ func DictionaryLookup[TKey comparable, TValue interface{}](Dictionary[TKey, TVal
 func DictionaryDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TValue]) TValue {
 	panic("implement DictionaryDefault")
 }
+
+func DictionarySetDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TValue], TValue) Dictionary[TKey, TValue] {
+	panic("implement DictionaryDefault")
+}
+
+func DictionaryAddValue[TKey comparable, TValue interface{}](Dictionary[TKey, TValue], TKey, TValue) Dictionary[TKey, TValue] {
+	panic("implement DictionaryDefault")
+}

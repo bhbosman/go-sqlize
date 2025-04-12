@@ -109,6 +109,21 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		return reflect.Value{}, false
 	case *LhsToMultipleRhsOperator:
 		return reflect.Value{}, false
+	case *TrailRecord:
+		rv := item.Value
+		for idx := range rv.NumField() {
+			switch rvIdxField := rv.Field(idx).Interface().(type) {
+			case Node[ast.Node]:
+				if !rvIdxField.Valid {
+					continue
+				}
+				if _, b := isLiterateValue(rvIdxField); !b {
+					return reflect.Value{}, false
+				}
+			}
+		}
+		return item.Value, true
+
 	default:
 		panic(notFound(reflect.TypeOf(item).String(), "isLiterateValue"))
 	}

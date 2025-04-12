@@ -7,9 +7,9 @@ import (
 )
 
 func (compiler *Compiler) addBuiltInFunctions() {
-	compiler.GlobalTypes[ValueKey{"", "int"}] = compiler.registerInt
-	compiler.GlobalTypes[ValueKey{"", "string"}] = compiler.registerString
-	compiler.GlobalTypes[ValueKey{"", "float64"}] = compiler.registerFloat64
+	compiler.GlobalTypes[ValueKey{"", "int"}] = compiler.registerInt()
+	compiler.GlobalTypes[ValueKey{"", "string"}] = compiler.registerString()
+	compiler.GlobalTypes[ValueKey{"", "float64"}] = compiler.registerFloat64()
 
 	compiler.GlobalFunctions[ValueKey{"", "float64"}] = compiler.coercionFloat64
 	compiler.GlobalFunctions[ValueKey{"", "float32"}] = compiler.coercionFloat32
@@ -23,20 +23,105 @@ func (compiler *Compiler) addBuiltInFunctions() {
 	compiler.GlobalFunctions[ValueKey{"", "print"}] = compiler.builtInPrint
 }
 
-func (compiler *Compiler) registerLibType(state State, i []Node[ast.Expr]) reflect.Type {
-	panic("dfgdfgfd")
+func (compiler *Compiler) registerLibType() OnCreateType {
+	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+		return &ReflectTypeHolder{
+			func(state State, rv reflect.Value) reflect.Value {
+				panic("dfgdfgf")
+			},
+			func(state State) reflect.Type {
+				panic("dfgdfgf")
+			},
+		}
+	}
 }
 
-func (compiler *Compiler) registerFloat64(State, []Node[ast.Expr]) reflect.Type {
-	return reflect.TypeFor[float64]()
+type SomeData struct {
+	rv       reflect.Value
+	assigned bool
 }
 
-func (compiler *Compiler) registerString(State, []Node[ast.Expr]) reflect.Type {
-	return reflect.TypeFor[string]()
+func (compiler *Compiler) registerSomeType() OnCreateType {
+	return func(state State, typeParams []Node[ast.Expr]) ITypeMapper {
+		fnCreateSomeType := func(state State) reflect.Type {
+			return reflect.TypeFor[SomeData]()
+		}
+		return &ReflectTypeHolder{
+			func(state State, rv reflect.Value) reflect.Value {
+				v := SomeData{rv, true}
+				return reflect.ValueOf(v)
+			},
+			fnCreateSomeType,
+		}
+	}
 }
 
-func (compiler *Compiler) registerInt(State, []Node[ast.Expr]) reflect.Type {
-	return reflect.TypeFor[int]()
+func (compiler *Compiler) registerFloat64() OnCreateType {
+	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+		return &ReflectTypeHolder{
+			func(state State, rv reflect.Value) reflect.Value {
+				return rv
+			},
+			func(state State) reflect.Type {
+				return reflect.TypeFor[float64]()
+			},
+		}
+	}
+}
+
+func (compiler *Compiler) registerString() OnCreateType {
+	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+		return &ReflectTypeHolder{
+			func(state State, rv reflect.Value) reflect.Value {
+				return rv
+			},
+			func(state State) reflect.Type {
+				return reflect.TypeFor[string]()
+			},
+		}
+	}
+}
+
+type ITypeMapper interface {
+	Create(state State, rv reflect.Value) reflect.Value
+	Type(state State) reflect.Type
+}
+
+type ReflectTypeHolder struct {
+	fnCreate func(state State, rv reflect.Value) reflect.Value
+	fnType   func(state State) reflect.Type
+}
+
+func (rth *ReflectTypeHolder) Type(state State) reflect.Type {
+	return rth.fnType(state)
+}
+
+func (rth *ReflectTypeHolder) Create(state State, rv reflect.Value) reflect.Value {
+	return rth.fnCreate(state, rv)
+}
+
+func (compiler *Compiler) registerInt() OnCreateType {
+	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+		return &ReflectTypeHolder{
+			func(state State, rv reflect.Value) reflect.Value {
+				return rv
+			},
+			func(state State) reflect.Type {
+				return reflect.TypeFor[int]()
+			}}
+	}
+}
+
+func (compiler *Compiler) registerBool() OnCreateType {
+	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+		return &ReflectTypeHolder{
+			func(state State, rv reflect.Value) reflect.Value {
+				return rv
+			},
+			func(state State) reflect.Type {
+				return reflect.TypeFor[bool]()
+			}}
+	}
 }
 
 func (compiler *Compiler) builtInNil(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {

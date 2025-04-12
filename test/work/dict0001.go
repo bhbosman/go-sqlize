@@ -9,7 +9,7 @@ func init() {
 			dict := lib.CreateDictionary[int, lib.Some[string]](
 				map[int]lib.Some[string]{
 					1: lib.SetSomeValue("1"),
-					2: lib.SetSomeValue("2"),
+					2: lib.SetSomeNone[string](),
 					3: lib.SetSomeValue("3"),
 					4: lib.SetSomeValue("4"),
 					5: lib.SetSomeValue("5"),
@@ -25,11 +25,11 @@ func init() {
 		l2 := func(Points lib.Some[int]) string {
 			dict := lib.CreateDictionary[int, string](
 				map[int]string{
-					1: "1",
-					2: "2",
-					3: "3",
-					4: "4",
-					5: "5",
+					1: "11",
+					2: "22",
+					3: "33",
+					4: "44",
+					5: "55",
 				},
 				"99")
 			if p, ok := lib.GetSomeData(Points); ok {
@@ -41,11 +41,11 @@ func init() {
 		l3 := func(Points lib.Some[int]) string {
 			dict := lib.CreateDictionary[int, string](
 				map[int]string{
-					1: "1",
-					2: "2",
-					3: "3",
-					4: "4",
-					5: "5",
+					1: "111",
+					2: "222",
+					3: "333",
+					4: "444",
+					5: "555",
 				},
 				"99")
 			if p, ok := lib.GetSomeData(Points); ok {

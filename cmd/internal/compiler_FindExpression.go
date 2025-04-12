@@ -388,77 +388,9 @@ func (compiler *Compiler) builtInStructMethods(rv reflect.Value) OnCreateExecute
 	}
 }
 
-func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.CompositeLit]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		param := ChangeParamNode(node, node.Node.Type)
-		rt := compiler.findType(state, param)
-		rtKind := rt.Kind()
-		switch rtKind {
-		case reflect.Struct:
-			rv := reflect.New(rt).Elem()
-			for idx, elt := range node.Node.Elts {
-				switch expr := elt.(type) {
-				case *ast.KeyValueExpr:
-					param = ChangeParamNode(node, expr.Value)
-					tempState := state.setCurrentNode(ChangeParamNode[*ast.CompositeLit, ast.Node](node, expr.Value))
-					es := compiler.findRhsExpression(tempState, param)
-					vv, _ := compiler.executeAndExpandStatement(tempState, es)
-					switch key := expr.Key.(type) {
-					case *ast.Ident:
-						rv.FieldByName(key.Name).Set(reflect.ValueOf(vv[0]))
-					default:
-						panic("unhandled key")
-					}
-				default:
-					param = ChangeParamNode(node, elt)
-					tempState := state.setCurrentNode(ChangeParamNode[*ast.CompositeLit, ast.Node](node, elt))
-					es := compiler.findRhsExpression(tempState, param)
-					vv, _ := compiler.executeAndExpandStatement(tempState, es)
-					itemRv := reflect.ValueOf(vv[0])
-					rv.Field(idx).Set(itemRv)
-
-				}
-			}
-			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](
-				node,
-				&TrailRecord{
-					node.Node.Pos(),
-					rv,
-				},
-			)
-			return []Node[ast.Node]{nodeValue}, artValue
-		case reflect.Map:
-			rv := reflect.MakeMap(rt)
-			for _, elt := range node.Node.Elts {
-				switch expr := elt.(type) {
-				case *ast.KeyValueExpr:
-					fn := func(state State, expression ast.Expr) ([]Node[ast.Node], CallArrayResultType) {
-						param = ChangeParamNode(node, expression)
-						tempState := state.setCurrentNode(ChangeParamNode[*ast.CompositeLit, ast.Node](node, expression))
-						es := compiler.findRhsExpression(tempState, param)
-						return compiler.executeAndExpandStatement(tempState, es)
-					}
-					nodeValue, _ := fn(state, expr.Value)
-					nodeKey, _ := fn(state, expr.Key)
-					rvValue, okValue := isLiterateValue(nodeValue[0])
-					rvKey, okKey := isLiterateValue(nodeKey[0])
-					if okValue && okKey {
-						dd := reflect.ValueOf(ChangeParamNode[ast.Node, *ReflectValueExpression](state.currentNode, &ReflectValueExpression{rvValue}))
-						rv.SetMapIndex(rvKey.Convert(rt.Key()), dd.Convert(rt.Elem()))
-						continue
-					}
-					panic("must be literal values")
-				default:
-					panic("unhandled key")
-				}
-			}
-
-			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, &ReflectValueExpression{rv})
-			return []Node[ast.Node]{nodeValue}, artValue
-		default:
-			panic("dsfsfds")
-		}
-	}
+type CurrentCompositeCreateType struct {
+	rt         reflect.Type
+	typeMapper ITypeMapper
 }
 
 func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallExpr]) ExecuteStatement {

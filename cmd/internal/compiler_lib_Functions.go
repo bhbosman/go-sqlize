@@ -41,7 +41,8 @@ func (compiler *Compiler) libQueryImplementation(_ State, typeParams []Node[ast.
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
 		var arr []reflect.Type
 		for _, expr := range typeParams {
-			rt := compiler.findType(state, expr)
+			typeMapper := compiler.findType(state, expr)
+			rt := typeMapper.Type(state)
 			arr = append(arr, rt)
 		}
 		rt := arr[0]

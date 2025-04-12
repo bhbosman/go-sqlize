@@ -28,7 +28,32 @@ type AssignStatement func(state State, value Node[ast.Node])
 
 type OnCreateExecuteStatement func(state State, typeParams []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement
 
-type OnCreateType func(State, []Node[ast.Expr]) reflect.Type
+type OnCreateType func(State, []Node[ast.Expr]) ITypeMapper
+
+type TypeMapperForStruct struct {
+	rt              reflect.Type
+	rtWithTrueTypes reflect.Type
+}
+
+func (typeMapperForStruct *TypeMapperForStruct) Create(state State, rv reflect.Value) reflect.Value {
+	return rv
+}
+
+func (typeMapperForStruct *TypeMapperForStruct) Type(state State) reflect.Type {
+	return typeMapperForStruct.rt
+}
+
+func (typeMapperForStruct *TypeMapperForStruct) createDefaultType(parentNode Node[ast.Node]) reflect.Value {
+	rv := reflect.New(typeMapperForStruct.rt).Elem()
+	for idx := range typeMapperForStruct.rt.NumField() {
+		typ := typeMapperForStruct.rtWithTrueTypes.Field(idx).Type
+		rvZero := reflect.Zero(typ)
+		node := ChangeParamNode[ast.Node, ast.Node](parentNode, &ReflectValueExpression{rvZero})
+		rv.Field(idx).Set(reflect.ValueOf(node))
+	}
+	return rv
+
+}
 
 type Compiler struct {
 	CompilerState   CompilerState
@@ -45,14 +70,16 @@ func (compiler *Compiler) Init(
 	TypeSpecMap TypeSpecMap,
 	InitFunctions []Node[*ast.FuncDecl],
 ) {
+
 	compiler.CompilerState |= CompilerState_InitCalled
 	compiler.Sources = map[string]interface{}{}
 	compiler.GlobalTypes = map[ValueKey]OnCreateType{
-		ValueKey{"", "int"}:               compiler.registerInt,
-		ValueKey{"", "string"}:            compiler.registerString,
-		ValueKey{"", "float64"}:           compiler.registerFloat64,
-		ValueKey{libFolder, "Some"}:       compiler.registerLibType,
-		ValueKey{libFolder, "Dictionary"}: compiler.registerLibType,
+		ValueKey{"", "bool"}:              compiler.registerBool(),
+		ValueKey{"", "int"}:               compiler.registerInt(),
+		ValueKey{"", "string"}:            compiler.registerString(),
+		ValueKey{"", "float64"}:           compiler.registerFloat64(),
+		ValueKey{libFolder, "Some"}:       compiler.registerSomeType(),
+		ValueKey{libFolder, "Dictionary"}: compiler.registerLibType(),
 	}
 
 	compiler.GlobalFunctions = map[ValueKey]OnCreateExecuteStatement{
@@ -89,8 +116,8 @@ func (compiler *Compiler) Init(
 		}
 
 		fn := func(vk ValueKey, node Node[*ast.TypeSpec]) OnCreateType {
-			return func(state State, exprs []Node[ast.Expr]) reflect.Type {
-				if node.Node.TypeParams == nil || node.Node.TypeParams.NumFields() == len(exprs) {
+			return func(state State, expressions []Node[ast.Expr]) ITypeMapper {
+				if node.Node.TypeParams == nil || node.Node.TypeParams.NumFields() == len(expressions) {
 					var dd []*ast.Ident
 					if node.Node.TypeParams != nil {
 						for _, field := range node.Node.TypeParams.List {
@@ -99,9 +126,19 @@ func (compiler *Compiler) Init(
 					}
 					switch v := value.Node.Type.(type) {
 					case *ast.StructType:
-						if v.Fields != nil {
+						rtFunc := func(List []*ast.Field, useActual bool) reflect.Type {
 							var structFields []reflect.StructField
-							for _, field := range v.Fields.List {
+							for _, field := range List {
+								fieldTypeFn := func(Type ast.Expr, useActual bool) reflect.Type {
+									if !useActual {
+										return reflect.TypeFor[Node[ast.Node]]()
+									}
+									param := ChangeParamNode(state.currentNode, Type)
+									typeMapper := compiler.findType(state, param)
+									return typeMapper.Type(state)
+								}
+								fieldType := fieldTypeFn(field.Type, useActual)
+
 								for _, fieldName := range field.Names {
 									structField := reflect.StructField{
 										Name: fieldName.Name,
@@ -113,7 +150,7 @@ func (compiler *Compiler) Init(
 												return "PkgPath" // required for unexported items
 											}
 										}(),
-										Type:      reflect.TypeFor[Node[ast.Node]](),
+										Type:      fieldType,
 										Tag:       reflect.StructTag(""),
 										Offset:    0,
 										Index:     nil,
@@ -122,9 +159,13 @@ func (compiler *Compiler) Init(
 									structFields = append(structFields, structField)
 								}
 							}
+							return reflect.StructOf(structFields)
+						}
+						if v.Fields != nil {
+							rt := rtFunc(v.Fields.List, false)
+							rtWithTrueTypes := rtFunc(v.Fields.List, true)
 							state = RemoveCompilerState[TypeMapper](state)
-							rt := reflect.StructOf(structFields)
-							return rt
+							return &TypeMapperForStruct{rt, rtWithTrueTypes}
 						}
 					}
 				}
@@ -180,8 +221,26 @@ func (compiler *Compiler) CompileFunc(state State, fn Node[*ast.FuncDecl]) ([]No
 	return compiler.executeBlockStmt(state, param)
 }
 
-func (compiler *Compiler) findType(state State, node Node[ast.Expr]) reflect.Type {
-	return compiler.internalFindType(0, state, node).(reflect.Type)
+func (compiler *Compiler) findType(state State, node Node[ast.Expr]) ITypeMapper {
+	if node.Node == nil {
+		panic("node cannot be nil")
+	}
+	return compiler.internalFindType(0, state, node).(ITypeMapper)
+}
+
+type TypeMapperForMap struct {
+	keyTypeMapper   ITypeMapper
+	valueTypeMapper ITypeMapper
+	mapRt           reflect.Type
+}
+
+func (tyfm *TypeMapperForMap) Create(state State, rv reflect.Value) reflect.Value {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (tyfm *TypeMapperForMap) Type(state State) reflect.Type {
+	return tyfm.mapRt
 }
 
 func (compiler *Compiler) internalFindType(stackIndex int, state State, node Node[ast.Expr]) interface{} {
@@ -202,15 +261,21 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 	switch item := node.Node.(type) {
 	case *ast.MapType:
 		paramKey := ChangeParamNode[ast.Expr, ast.Expr](node, item.Key)
-		rtKey := compiler.findType(state, paramKey)
+		rtKeyTypeMapper := compiler.findType(state, paramKey)
+		rtKey := rtKeyTypeMapper.Type(state)
+		//sss
+		paramValue := ChangeParamNode[ast.Expr, ast.Expr](node, item.Value)
+		rtValueTypeMapper := compiler.findType(state, paramValue)
+		rtValue := rtValueTypeMapper.Type(state)
 
-		//paramValue := ChangeParamNode[ast.Expr, ast.Expr](node, item.Value)
-		//rtValue := compiler.findType(state, paramValue)
-
-		rtValue := reflect.TypeFor[Node[*ReflectValueExpression]]()
+		//rtValue := reflect.TypeFor[Node[*ReflectValueExpression]]()
 
 		rt := reflect.MapOf(rtKey, rtValue)
-		return initOnCreateType(0, rt, nil)
+		var dd OnCreateType
+		dd = func(state State, i []Node[ast.Expr]) ITypeMapper {
+			return &TypeMapperForMap{rtKeyTypeMapper, rtValueTypeMapper, rt}
+		}
+		return initOnCreateType(0, dd, nil)
 
 	case *ast.IndexExpr:
 		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)

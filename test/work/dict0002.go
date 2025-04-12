@@ -13,6 +13,7 @@ func init() {
 	mapFn := func(inputData Switch01InputValues) Switch01InputValuesView {
 		d := lib.CreateDictionary(map[int]LevelData{
 			1: {lib.SetSomeValue("1"), "2", lib.SetSomeValue("3")},
+			2: {lib.SetSomeNone[string](), "32", lib.SetSomeNone[string]()},
 		}, LevelData{})
 
 		l1 := func(Points01 lib.Some[int]) lib.Some[string] {
@@ -21,7 +22,6 @@ func init() {
 			} else {
 				return lib.DictionaryDefault(d).Level1
 			}
-
 		}(inputData.Points01)
 
 		return Switch01InputValuesView{

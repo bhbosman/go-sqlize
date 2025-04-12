@@ -31,8 +31,9 @@ type OnCreateExecuteStatement func(state State, typeParams []Node[ast.Expr], arg
 type OnCreateType func(State, []Node[ast.Expr]) ITypeMapper
 
 type TypeMapperForStruct struct {
-	rt              reflect.Type
-	rtWithTrueTypes reflect.Type
+	rt                 reflect.Type
+	rtWithTrueTypes    reflect.Type
+	typeMapperInstance reflect.Value
 }
 
 func (typeMapperForStruct *TypeMapperForStruct) Create(state State, rv reflect.Value) reflect.Value {
@@ -43,11 +44,11 @@ func (typeMapperForStruct *TypeMapperForStruct) Type(state State) reflect.Type {
 	return typeMapperForStruct.rt
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) createDefaultType(parentNode Node[ast.Node]) reflect.Value {
+func (typeMapperForStruct *TypeMapperForStruct) createDefaultType(state State, parentNode Node[ast.Node]) reflect.Value {
 	rv := reflect.New(typeMapperForStruct.rt).Elem()
 	for idx := range typeMapperForStruct.rt.NumField() {
-		typ := typeMapperForStruct.rtWithTrueTypes.Field(idx).Type
-		rvZero := reflect.Zero(typ)
+		typeMapper := typeMapperForStruct.typeMapperInstance.Field(idx).Interface().(ITypeMapper)
+		rvZero := reflect.Zero(typeMapper.Type(state))
 		node := ChangeParamNode[ast.Node, ast.Node](parentNode, &ReflectValueExpression{rvZero})
 		rv.Field(idx).Set(reflect.ValueOf(node))
 	}
@@ -126,19 +127,30 @@ func (compiler *Compiler) Init(
 					}
 					switch v := value.Node.Type.(type) {
 					case *ast.StructType:
-						rtFunc := func(List []*ast.Field, useActual bool) reflect.Type {
-							var structFields []reflect.StructField
-							for _, field := range List {
-								fieldTypeFn := func(Type ast.Expr, useActual bool) reflect.Type {
-									if !useActual {
-										return reflect.TypeFor[Node[ast.Node]]()
-									}
+						type usage int
+						const (
+							usageActual usage = iota
+							usageTrueTypes
+							usageTypeMapper
+						)
+						rtFunc := func(List []*ast.Field, useActual usage) reflect.Type {
+							fieldTypeFn := func(Type ast.Expr, useActual usage) reflect.Type {
+								switch useActual {
+								case usageActual:
+									return reflect.TypeFor[Node[ast.Node]]()
+								case usageTrueTypes:
 									param := ChangeParamNode(state.currentNode, Type)
 									typeMapper := compiler.findType(state, param)
 									return typeMapper.Type(state)
+								case usageTypeMapper:
+									return reflect.TypeFor[ITypeMapper]()
+								default:
+									panic("fsdfds")
 								}
+							}
+							var structFields []reflect.StructField
+							for _, field := range List {
 								fieldType := fieldTypeFn(field.Type, useActual)
-
 								for _, fieldName := range field.Names {
 									structField := reflect.StructField{
 										Name: fieldName.Name,
@@ -162,10 +174,19 @@ func (compiler *Compiler) Init(
 							return reflect.StructOf(structFields)
 						}
 						if v.Fields != nil {
-							rt := rtFunc(v.Fields.List, false)
-							rtWithTrueTypes := rtFunc(v.Fields.List, true)
+							rt := rtFunc(v.Fields.List, usageActual)
+							rtWithTrueTypes := rtFunc(v.Fields.List, usageTrueTypes)
+							rtWithITypeMapper := rtFunc(v.Fields.List, usageTypeMapper)
+							typeMapperInstance := reflect.New(rtWithITypeMapper).Elem()
+							for _, field := range v.Fields.List {
+								param := ChangeParamNode(state.currentNode, field.Type)
+								fieldType := compiler.findType(state, param)
+								for _, fieldName := range field.Names {
+									typeMapperInstance.FieldByName(fieldName.Name).Set(reflect.ValueOf(fieldType))
+								}
+							}
 							state = RemoveCompilerState[TypeMapper](state)
-							return &TypeMapperForStruct{rt, rtWithTrueTypes}
+							return &TypeMapperForStruct{rt, rtWithTrueTypes, typeMapperInstance}
 						}
 					}
 				}
@@ -411,4 +432,27 @@ func (compiler *Compiler) executeAndExpandStatement(state State, executeStatemen
 		}
 	}
 	return result, v
+}
+
+func (compiler *Compiler) expandNodeWithSelector(node Node[ast.Node], sel *ast.Ident) (Node[ast.Node], bool) {
+	switch nodeItem := node.Node.(type) {
+	case *ReflectValueExpression:
+		if nodeItem.Rv.Kind() == reflect.Struct {
+			return nodeItem.Rv.FieldByName(sel.Name).Interface().(Node[ast.Node]), true
+		}
+
+	case *IfThenElseSingleValueCondition:
+		var singleValueConditions []SingleValueCondition
+		for _, conditionalStatement := range nodeItem.conditionalStatement {
+			if rve, ok00 := conditionalStatement.value.Node.(*ReflectValueExpression); ok00 && rve.Rv.Kind() == reflect.Struct {
+				singleValueCondition := SingleValueCondition{conditionalStatement.condition, rve.Rv.FieldByName(sel.Name).Interface().(Node[ast.Node])}
+				singleValueConditions = append(singleValueConditions, singleValueCondition)
+			} else {
+				return node, false
+			}
+		}
+		ifThenElseSingleValueCondition := &IfThenElseSingleValueCondition{singleValueConditions}
+		return ChangeParamNode[ast.Node, ast.Node](node, ifThenElseSingleValueCondition), true
+	}
+	return node, false
 }

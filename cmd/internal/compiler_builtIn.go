@@ -43,15 +43,14 @@ type SomeData struct {
 
 func (compiler *Compiler) registerSomeType() OnCreateType {
 	return func(state State, typeParams []Node[ast.Expr]) ITypeMapper {
-		fnCreateSomeType := func(state State) reflect.Type {
-			return reflect.TypeFor[SomeData]()
-		}
 		return &ReflectTypeHolder{
 			func(state State, rv reflect.Value) reflect.Value {
 				v := SomeData{rv, true}
 				return reflect.ValueOf(v)
 			},
-			fnCreateSomeType,
+			func(state State) reflect.Type {
+				return reflect.TypeFor[SomeData]()
+			},
 		}
 	}
 }

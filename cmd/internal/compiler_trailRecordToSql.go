@@ -87,6 +87,7 @@ func (compiler *Compiler) internalProjectRv(w io.Writer, tabCount int, last bool
 			unk := rv.Interface()
 			switch expr := unk.(type) {
 			case SomeData:
+				_, _ = io.WriteString(w, fmt.Sprintf(" /*SomeData(assigned:%v) */ ", expr.assigned))
 				compiler.internalProjectRv(w, tabCount, last, stackCount+1, name, expr.rv)
 			case Node[ast.Node]:
 				compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, expr)

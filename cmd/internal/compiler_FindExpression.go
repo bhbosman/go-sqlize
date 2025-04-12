@@ -43,7 +43,18 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 				return es
 			}
 			panic("implement me")
+		case ExecuteStatement:
+			return func(es ExecuteStatement, sel *ast.Ident) ExecuteStatement {
+				return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+					arr, art := compiler.executeAndExpandStatement(state, es)
+					if selector, ok := compiler.expandNodeWithSelector(arr[0], sel); ok {
+						return []Node[ast.Node]{selector}, art
+					}
+					return arr, art
+				}
+			}(vv, item.Sel)
 		default:
+			panic("implement me")
 			return unk
 		}
 	case *ast.CallExpr:

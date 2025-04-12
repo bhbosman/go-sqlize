@@ -13,26 +13,17 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 				return compiler.findType(state, param)
 			}
 			currentCompositeCreateType := GetCompilerState[*CurrentCompositeCreateType](state)
-			return &ReflectTypeHolder{
-				func(state State, rv reflect.Value) reflect.Value {
-					panic("ddddd")
-				},
-				func(state State) reflect.Type {
-					return currentCompositeCreateType.rt
-				},
-			}
+			return currentCompositeCreateType.typeMapper
 		}
 		typeMapper := typeMapperFn(state, node, node.Node.Type)
 		rt := typeMapper.Type(state)
 		rtKind := rt.Kind()
 		switch rtKind {
 		case reflect.Struct:
-
 			if len(node.Node.Elts) == 0 {
-				param := ChangeParamNode[*ast.CompositeLit, ast.Node](node, node.Node.Type)
 				typeMapperForStruct := typeMapper.(*TypeMapperForStruct)
-
-				rv := typeMapperForStruct.createDefaultType(param)
+				param := ChangeParamNode[*ast.CompositeLit, ast.Node](node, node.Node.Type)
+				rv := typeMapperForStruct.createDefaultType(state, param)
 				nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](
 					node,
 					&TrailRecord{
@@ -52,7 +43,8 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 					vv, _ := compiler.executeAndExpandStatement(tempState, es)
 					switch key := expr.Key.(type) {
 					case *ast.Ident:
-						rv.FieldByName(key.Name).Set(reflect.ValueOf(vv[0]))
+						itemRv := reflect.ValueOf(vv[0])
+						rv.FieldByName(key.Name).Set(itemRv)
 					default:
 						panic("unhandled key")
 					}

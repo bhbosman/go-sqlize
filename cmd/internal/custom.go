@@ -133,6 +133,82 @@ type IfThenElseMultiValueCondition struct {
 	conditionalStatement []MultiValueCondition
 }
 
+func (ite *IfThenElseMultiValueCondition) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (ite *IfThenElseMultiValueCondition) End() token.Pos {
+	return token.NoPos
+}
+
+type (
+	IfThenElseSingleValueCondition struct {
+		conditionalStatement []SingleValueCondition
+	}
+	NilValueExpression struct {
+	}
+	MultiBinaryExpr struct {
+		Op          token.Token // operator
+		expressions []Node[ast.Node]
+	}
+	CaseClauseNode struct {
+		arr   []Node[ast.Node]
+		nodes []Node[ast.Node]
+	}
+	LhsToMultipleRhsOperator struct {
+		LhsToRhsOp         token.Token
+		betweenTerminalsOp token.Token // operator
+		Lhs                Node[ast.Node]
+		Rhs                []Node[ast.Node]
+	}
+	DictionaryExpression struct {
+		m            reflect.Value
+		defaultValue reflect.Value
+	}
+)
+
+func (rv *NilValueExpression) Pos() token.Pos {
+	return token.NoPos
+}
+func (multiBinOp *MultiBinaryExpr) Pos() token.Pos {
+	return token.NoPos
+}
+func (ccn *CaseClauseNode) Pos() token.Pos {
+	return token.NoPos
+}
+func (lhsRhsOperator *LhsToMultipleRhsOperator) Pos() token.Pos {
+	return token.NoPos
+}
+func (de *DictionaryExpression) Pos() token.Pos {
+	return token.NoPos
+}
+func (iteSingleCondition *IfThenElseSingleValueCondition) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (iteSingleCondition *IfThenElseSingleValueCondition) End() token.Pos {
+	return token.NoPos
+}
+func (de *DictionaryExpression) End() token.Pos {
+	return token.NoPos
+}
+func (lhsRhsOperator *LhsToMultipleRhsOperator) End() token.Pos {
+	return token.NoPos
+}
+func (ccn *CaseClauseNode) End() token.Pos {
+	return token.NoPos
+}
+func (rv *NilValueExpression) End() token.Pos {
+	return token.NoPos
+}
+func (multiBinOp *MultiBinaryExpr) End() token.Pos {
+	return token.NoPos
+}
+
+type IExpand interface {
+	Expand(parentNode Node[ast.Node]) []Node[ast.Node]
+}
+
 func (ite *IfThenElseMultiValueCondition) Expand(parentNode Node[ast.Node]) []Node[ast.Node] {
 	var result []Node[ast.Node]
 	for range ite.conditionalStatement[0].values {
@@ -148,93 +224,4 @@ func (ite *IfThenElseMultiValueCondition) Expand(parentNode Node[ast.Node]) []No
 		}
 	}
 	return result
-}
-
-func (ite *IfThenElseMultiValueCondition) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (ite *IfThenElseMultiValueCondition) End() token.Pos {
-	return token.NoPos
-}
-
-type IfThenElseSingleValueCondition struct {
-	conditionalStatement []SingleValueCondition
-}
-
-func (iteSingleCondition *IfThenElseSingleValueCondition) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (iteSingleCondition *IfThenElseSingleValueCondition) End() token.Pos {
-	return token.NoPos
-}
-
-type NilValueExpression struct {
-}
-
-func (rv *NilValueExpression) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (rv *NilValueExpression) End() token.Pos {
-	return token.NoPos
-}
-
-type MultiBinaryExpr struct {
-	Op          token.Token // operator
-	expressions []Node[ast.Node]
-}
-
-func (multiBinOp *MultiBinaryExpr) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (multiBinOp *MultiBinaryExpr) End() token.Pos {
-	return token.NoPos
-}
-
-type IExpand interface {
-	Expand(parentNode Node[ast.Node]) []Node[ast.Node]
-}
-
-type CaseClauseNode struct {
-	arr   []Node[ast.Node]
-	nodes []Node[ast.Node]
-}
-
-func (ccn *CaseClauseNode) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (ccn *CaseClauseNode) End() token.Pos {
-	return token.NoPos
-}
-
-type LhsToMultipleRhsOperator struct {
-	LhsToRhsOp         token.Token
-	betweenTerminalsOp token.Token // operator
-	Lhs                Node[ast.Node]
-	Rhs                []Node[ast.Node]
-}
-
-func (lhsRhsOperator *LhsToMultipleRhsOperator) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (lhsRhsOperator *LhsToMultipleRhsOperator) End() token.Pos {
-	return token.NoPos
-}
-
-type DictionaryExpression struct {
-	m            reflect.Value
-	defaultValue reflect.Value
-}
-
-func (de *DictionaryExpression) Pos() token.Pos {
-	return token.NoPos
-}
-
-func (de *DictionaryExpression) End() token.Pos {
-	return token.NoPos
 }

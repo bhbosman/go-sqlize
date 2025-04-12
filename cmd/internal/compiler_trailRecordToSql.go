@@ -124,9 +124,14 @@ func (compiler *Compiler) internalProjectTrailRecord(w io.Writer, tabCount int, 
 		case kind == reflect.Bool:
 			_, _ = io.WriteString(w, fmt.Sprintf("%v", nodeItem.Rv.Bool()))
 		case kind == reflect.Struct:
-			if nodeRv, ok := nodeItem.Rv.Interface().(Node[*ReflectValueExpression]); ok {
-				param := ChangeParamNode[*ReflectValueExpression, ast.Node](nodeRv, nodeRv.Node)
+			unk := nodeItem.Rv.Interface()
+			switch expr := unk.(type) {
+			case Node[*ReflectValueExpression]:
+				param := ChangeParamNode[*ReflectValueExpression, ast.Node](expr, expr.Node)
 				compiler.internalProjectTrailRecord(w, tabCount, last, stackCount+1, name, param)
+				break
+			default:
+				panic("????")
 			}
 		case kind == reflect.Invalid:
 			_, _ = io.WriteString(w, "nil")

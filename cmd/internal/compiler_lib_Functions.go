@@ -137,13 +137,17 @@ func (compiler *Compiler) libSetSomeValueImplementation(state State, params []No
 		panic(fmt.Errorf("SetSomeValue implementation requires 1 arguments, got %d", len(arguments)))
 	}
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		return arguments[0:1], artValue
+		sd := SomeDataWithNode{arguments[0], true}
+		param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(sd)})
+		return []Node[ast.Node]{param}, artValue
 	}
 }
 
 func (compiler *Compiler) libSetSomeNoneImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &NilValueExpression{})}, artValue
+		sd := SomeDataWithNode{assigned: false}
+		param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(sd)})
+		return []Node[ast.Node]{param}, artValue
 	}
 }
 
@@ -153,13 +157,20 @@ func (compiler *Compiler) libIsSomeAssignedImplementation(state State, params []
 	}
 	// Todo: do some optimize when arguments[0] is a literal
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		binExpr := &BinaryExpr{
-			OpPos: 0,
-			Op:    token.NEQ,
-			left:  arguments[0],
-			right: ChangeParamNode[ast.Node, ast.Node](state.currentNode, &NilValueExpression{}),
+		switch nodeItem := arguments[0].Node.(type) {
+		case *ReflectValueExpression:
+			unk := nodeItem.Rv.Interface()
+			switch rvInstance := unk.(type) {
+			case SomeDataWithNode:
+				param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(rvInstance.assigned)})
+				return []Node[ast.Node]{param}, artValue
+			default:
+				panic("ddddd")
+			}
+		default:
+			param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &CheckForNotNullExpression{arguments[0]})
+			return []Node[ast.Node]{param}, artValue
 		}
-		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, binExpr)}, artValue
 	}
 }
 
@@ -177,7 +188,6 @@ func (compiler *Compiler) libSomeData2Implementation(state State, params []Node[
 		panic(fmt.Errorf("SomeData2 implementation requires 1 arguments, got %d", len(arguments)))
 	}
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-
 		v, _ := compiler.libIsSomeAssignedImplementation(state, params, arguments)(state)
 		result := append(arguments, v[0])
 		return result, artValue
@@ -197,12 +207,28 @@ func (compiler *Compiler) libGetSomeDataImplementation(state State, params []Nod
 
 func (compiler *Compiler) getGetSomeDataN(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		var binaryOperations []Node[ast.Node]
-		for _, arg := range arguments {
-			v, _ := compiler.libIsSomeAssignedImplementation(state, params, []Node[ast.Node]{arg})(state)
-			binaryOperations = append(binaryOperations, v...)
+		fn := func() Node[ast.Node] {
+			var binaryOperations []Node[ast.Node]
+			for _, arg := range arguments {
+				arr, _ := compiler.libIsSomeAssignedImplementation(state, params, []Node[ast.Node]{arg})(state)
+				for _, item := range arr {
+					switch nodeItem := item.Node.(type) {
+					case *ReflectValueExpression:
+						if nodeItem.Rv.Kind() == reflect.Bool {
+							if nodeItem.Rv.Bool() {
+								continue
+							} else {
+								return item
+							}
+						}
+					}
+					binaryOperations = append(binaryOperations, item)
+				}
+
+			}
+			return ChangeParamNode[ast.Node, ast.Node](state.currentNode, &MultiBinaryExpr{token.LAND, binaryOperations})
 		}
-		v := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &MultiBinaryExpr{token.LAND, binaryOperations})
+		v := fn()
 		result := append(arguments, v)
 		return result, artValue
 	}

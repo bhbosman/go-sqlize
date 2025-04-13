@@ -26,13 +26,17 @@ type (
 		Node     Node[ast.Node]
 		rt       reflect.Type
 	}
+
+	CheckForNotNullExpression struct {
+		node Node[ast.Node]
+	}
 	BinaryExpr struct {
 		OpPos token.Pos   // position of Op
 		Op    token.Token // operator
 		left  Node[ast.Node]
 		right Node[ast.Node]
 	}
-	NilExpression struct {
+	builtInNil struct {
 	}
 	ReflectValueExpression struct {
 		Rv reflect.Value
@@ -56,8 +60,8 @@ type (
 	IfThenElseSingleValueCondition struct {
 		conditionalStatement []SingleValueCondition
 	}
-	NilValueExpression struct {
-	}
+	//NilValueExpression struct {
+	//}
 	MultiBinaryExpr struct {
 		Op          token.Token // operator
 		expressions []Node[ast.Node]
@@ -78,9 +82,17 @@ type (
 	}
 )
 
-func (rv *NilValueExpression) Pos() token.Pos {
+func (c *CheckForNotNullExpression) Pos() token.Pos {
 	return token.NoPos
 }
+
+func (c *CheckForNotNullExpression) End() token.Pos {
+	return token.NoPos
+}
+
+//	func (rv *NilValueExpression) Pos() token.Pos {
+//		return token.NoPos
+//	}
 func (multiBinOp *MultiBinaryExpr) Pos() token.Pos {
 	return token.NoPos
 }
@@ -117,7 +129,7 @@ func (entityField *EntityField) Pos() token.Pos {
 func (coercion *coercion) Pos() token.Pos {
 	return coercion.Position
 }
-func (nilExpression *NilExpression) Pos() token.Pos {
+func (nilExpression *builtInNil) Pos() token.Pos {
 	return token.NoPos
 }
 func (binop *BinaryExpr) Pos() token.Pos {
@@ -127,7 +139,7 @@ func (binop *BinaryExpr) Pos() token.Pos {
 func (binop *BinaryExpr) End() token.Pos {
 	return binop.OpPos
 }
-func (nilExpression *NilExpression) End() token.Pos {
+func (nilExpression *builtInNil) End() token.Pos {
 	return token.NoPos
 }
 func (coercion *coercion) End() token.Pos {
@@ -163,9 +175,10 @@ func (lhsRhsOperator *LhsToMultipleRhsOperator) End() token.Pos {
 func (ccn *CaseClauseNode) End() token.Pos {
 	return token.NoPos
 }
-func (rv *NilValueExpression) End() token.Pos {
-	return token.NoPos
-}
+
+//	func (rv *NilValueExpression) End() token.Pos {
+//		return token.NoPos
+//	}
 func (multiBinOp *MultiBinaryExpr) End() token.Pos {
 	return token.NoPos
 }

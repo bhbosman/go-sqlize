@@ -67,6 +67,9 @@ func (compiler *Compiler) createBlockStmtExecution(node Node[*ast.BlockStmt]) Ex
 
 func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 	switch item := node.Node.(type) {
+	case *CheckForNotNullExpression:
+		return isLiterateValue(item.node)
+
 	case *coercion:
 		rv, isLiterate := isLiterateValue(item.Node)
 		if isLiterate {
@@ -97,10 +100,8 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		default:
 			panic(notFound(item.Kind.String(), "isLiterateValue"))
 		}
-	case *NilValueExpression:
-		return reflect.Value{}, true
 
-	case *NilExpression:
+	case *builtInNil:
 		return reflect.Value{}, true
 		// TODO: *BinaryExpr: should always be false, this needs to be fixed where *BinaryExpr: is created
 	case *BinaryExpr:

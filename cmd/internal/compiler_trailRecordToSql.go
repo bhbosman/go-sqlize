@@ -86,8 +86,15 @@ func (compiler *Compiler) internalProjectRv(w io.Writer, tabCount int, last bool
 		if rv.CanInterface() {
 			unk := rv.Interface()
 			switch expr := unk.(type) {
-			case SomeData:
-				_, _ = io.WriteString(w, fmt.Sprintf(" /*SomeData(assigned:%v) */ ", expr.assigned))
+			case SomeDataWithNode:
+				_, _ = io.WriteString(w, fmt.Sprintf(" /*SomeDataWithNode(assigned:%v) */ ", expr.assigned))
+				if expr.assigned {
+					compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, expr.node)
+				} else {
+					_, _ = io.WriteString(w, fmt.Sprintf("nil"))
+				}
+			case SomeDataWithRv:
+				_, _ = io.WriteString(w, fmt.Sprintf(" /*SomeDataWithRv(assigned:%v)*/ ", expr.assigned))
 				compiler.internalProjectRv(w, tabCount, last, stackCount+1, name, expr.rv)
 			case Node[ast.Node]:
 				compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, expr)
@@ -118,6 +125,10 @@ func (compiler *Compiler) internalProjectNode(w io.Writer, tabCount int, last bo
 		_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
 	}
 	switch nodeItem := node.Node.(type) {
+	case *CheckForNotNullExpression:
+		_, _ = io.WriteString(w, "(")
+		compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, nodeItem.node)
+		_, _ = io.WriteString(w, " is not null)")
 	case *EntityField:
 		_, _ = io.WriteString(w, fmt.Sprintf("[%v].[%v]", nodeItem.alias, nodeItem.field))
 	case *coercion:
@@ -162,8 +173,8 @@ func (compiler *Compiler) internalProjectNode(w io.Writer, tabCount int, last bo
 	case *ReflectValueExpression:
 		kind := nodeItem.Rv.Kind()
 		switch kind {
-		case reflect.Invalid:
-			_, _ = io.WriteString(w, fmt.Sprintf("nil"))
+		//case reflect.Invalid:
+		//	_, _ = io.WriteString(w, fmt.Sprintf("nil"))
 		default:
 			compiler.internalProjectRv(w, tabCount, last, stackCount+1, name, nodeItem.Rv)
 		}
@@ -200,8 +211,6 @@ func (compiler *Compiler) internalProjectNode(w io.Writer, tabCount int, last bo
 		}
 		_, _ = io.WriteString(w, fmt.Sprintf("%vend", strings.Repeat("\t", tabCount)))
 
-	case *NilValueExpression:
-		_, _ = io.WriteString(w, fmt.Sprintf("nil"))
 	case *LhsToMultipleRhsOperator:
 		_, _ = io.WriteString(w, "(")
 		for idx, rhs := range nodeItem.Rhs {

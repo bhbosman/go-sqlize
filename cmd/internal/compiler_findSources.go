@@ -24,6 +24,9 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 		return
 	}
 	switch nodeItem := node.Node.(type) {
+	case *CheckForNotNullExpression:
+		compiler.internalFindSources(nodeItem.node, m)
+
 	case *EntityField:
 		m[nodeItem.alias] = true
 		break
@@ -43,9 +46,6 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 		for _, param := range nodeItem.params {
 			compiler.internalFindSources(param, m)
 		}
-		break
-	case *NilValueExpression:
-		// nothing to do
 		break
 	case *MultiBinaryExpr:
 		for _, expression := range nodeItem.expressions {

@@ -6,6 +6,16 @@ import (
 	"reflect"
 )
 
+type SomeDataWithRv struct {
+	rv       reflect.Value
+	assigned bool
+}
+
+type SomeDataWithNode struct {
+	node     Node[ast.Node]
+	assigned bool
+}
+
 func (compiler *Compiler) addBuiltInFunctions() {
 	compiler.GlobalTypes[ValueKey{"", "int"}] = compiler.registerInt()
 	compiler.GlobalTypes[ValueKey{"", "string"}] = compiler.registerString()
@@ -36,20 +46,28 @@ func (compiler *Compiler) registerLibType() OnCreateType {
 	}
 }
 
-type SomeData struct {
-	rv       reflect.Value
-	assigned bool
-}
-
 func (compiler *Compiler) registerSomeType() OnCreateType {
 	return func(state State, typeParams []Node[ast.Expr]) ITypeMapper {
 		return &ReflectTypeHolder{
 			func(state State, rv reflect.Value) reflect.Value {
-				v := SomeData{rv, true}
+				switch unk := rv.Interface().(type) {
+				case SomeDataWithNode:
+					if !unk.assigned {
+						rt := reflect.TypeFor[SomeDataWithRv]()
+						return reflect.Zero(rt)
+					}
+					switch nodeItem := unk.node.Node.(type) {
+					case *ReflectValueExpression:
+						v := SomeDataWithRv{nodeItem.Rv, true}
+						return reflect.ValueOf(v)
+					}
+				default:
+				}
+				v := SomeDataWithRv{rv, true}
 				return reflect.ValueOf(v)
 			},
 			func(state State) reflect.Type {
-				return reflect.TypeFor[SomeData]()
+				return reflect.TypeFor[SomeDataWithRv]()
 			},
 		}
 	}
@@ -107,7 +125,8 @@ func (compiler *Compiler) registerInt() OnCreateType {
 			},
 			func(state State) reflect.Type {
 				return reflect.TypeFor[int]()
-			}}
+			},
+		}
 	}
 }
 
@@ -119,13 +138,14 @@ func (compiler *Compiler) registerBool() OnCreateType {
 			},
 			func(state State) reflect.Type {
 				return reflect.TypeFor[bool]()
-			}}
+			},
+		}
 	}
 }
 
 func (compiler *Compiler) builtInNil(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &NilExpression{})}, artValue
+		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &builtInNil{})}, artValue
 	}
 }
 
@@ -147,6 +167,7 @@ func (compiler *Compiler) builtInPrintln(State, []Node[ast.Expr], []Node[ast.Nod
 		return nil, artNone
 	}
 }
+
 func (compiler *Compiler) builtInPrint(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
 		// todo: implement at some point

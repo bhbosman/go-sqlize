@@ -9,6 +9,8 @@ type LevelData struct {
 }
 
 func init() {
+	//v := lib.SetSomeNone[string]()
+	v := lib.SetSomeValue("ddd")
 	query := lib.Query[Switch01InputValues]()
 	mapFn := func(inputData Switch01InputValues) Switch01InputValuesView {
 		d := lib.CreateDictionary(map[int]LevelData{
@@ -17,7 +19,7 @@ func init() {
 		}, LevelData{})
 
 		l1 := func(Points01 lib.Some[int]) lib.Some[string] {
-			if p1, ok := lib.GetSomeData(Points01); ok {
+			if p1, _, ok := lib.GetSomeData02(Points01, v); ok {
 				return lib.DictionaryLookup(d, p1).Level1
 			} else {
 				return lib.DictionaryDefault(d).Level1

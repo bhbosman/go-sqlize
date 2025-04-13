@@ -42,7 +42,7 @@ func (compiler *Compiler) libQueryImplementation(_ State, typeParams []Node[ast.
 		var arr []reflect.Type
 		for _, expr := range typeParams {
 			typeMapper := compiler.findType(state, expr)
-			rt := typeMapper.Type(state)
+			rt := typeMapper.NodeType(state)
 			arr = append(arr, rt)
 		}
 		rt := arr[0]
@@ -198,11 +198,7 @@ func (compiler *Compiler) libGetSomeDataImplementation(state State, params []Nod
 	if len(arguments) != 1 {
 		panic(fmt.Errorf("GetSomeData implementation requires 1 arguments, got %d", len(arguments)))
 	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		v, _ := compiler.libIsSomeAssignedImplementation(state, params, arguments)(state)
-		result := append(arguments, v[0])
-		return result, artValue
-	}
+	return compiler.getGetSomeDataN(state, params, arguments)
 }
 
 func (compiler *Compiler) getGetSomeDataN(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
@@ -224,13 +220,10 @@ func (compiler *Compiler) getGetSomeDataN(state State, params []Node[ast.Expr], 
 					}
 					binaryOperations = append(binaryOperations, item)
 				}
-
 			}
 			return ChangeParamNode[ast.Node, ast.Node](state.currentNode, &MultiBinaryExpr{token.LAND, binaryOperations})
 		}
-		v := fn()
-		result := append(arguments, v)
-		return result, artValue
+		return append(arguments, fn()), artValue
 	}
 }
 
@@ -267,11 +260,10 @@ func (compiler *Compiler) libCreateDictionaryImplementation(state State, params 
 		panic(fmt.Errorf("CreateDictionary implementation requires 2 arguments, got %d", len(arguments)))
 	}
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		rv00, ok00 := isLiterateValue(arguments[0])
-		rv01, ok01 := isLiterateValue(arguments[1])
-		if ok00 && ok01 {
-			n := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{rv00, rv01})
-			return []Node[ast.Node]{n}, artValue
+		if rv00, ok00 := isLiterateValue(arguments[0]); ok00 {
+			if rv01, ok01 := isLiterateValue(arguments[1]); ok01 {
+				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{rv00, rv01})}, artValue
+			}
 		}
 		panic(fmt.Errorf("createDictionary implementation requires literal values"))
 	}
@@ -323,7 +315,34 @@ func (compiler *Compiler) libDictionaryLookupImplementation(state State, params 
 
 			for _, rvKey := range keyArr {
 				rvValue := rvMap.MapIndex(rvKey)
-				condition := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &BinaryExpr{token.NoPos, token.EQL, inputData, ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvKey})})
+				fn := func() Node[ast.Node] {
+					switch {
+					case rvKey.CanFloat() || rvKey.CanInt() || rvKey.Kind() == reflect.String:
+						left := inputData
+						right := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvKey})
+						be := &BinaryExpr{token.NoPos, token.EQL, left, right}
+						return ChangeParamNode[ast.Node, ast.Node](state.currentNode, be)
+					case rvKey.Kind() == reflect.Struct:
+						switch leftItem := inputData.Node.(type) {
+						case *TrailRecord:
+							if leftItem.Value.NumField() == rvKey.NumField() {
+								var expressions []Node[ast.Node]
+								for idx := 0; idx < rvKey.NumField(); idx++ {
+									left := leftItem.Value.Field(idx).Interface().(Node[ast.Node])
+									right := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvKey.Field(idx)})
+									be := &BinaryExpr{token.NoPos, token.EQL, left, right}
+									expressions = append(expressions, ChangeParamNode[ast.Node, ast.Node](state.currentNode, be))
+								}
+								mbe := &MultiBinaryExpr{token.LAND, expressions}
+								return ChangeParamNode[ast.Node, ast.Node](state.currentNode, mbe)
+							}
+						}
+						panic("sdsfdsfd")
+					default:
+						panic("find out")
+					}
+				}
+				condition := fn()
 				singleValueCondition := SingleValueCondition{condition: condition, value: ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvValue})}
 				conditionalStatement = append(conditionalStatement, singleValueCondition)
 			}

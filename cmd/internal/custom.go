@@ -7,6 +7,9 @@ import (
 )
 
 type (
+	EntitySource struct {
+		rt reflect.Type
+	}
 	TrailRecord struct {
 		Position token.Pos     // identifier position
 		Value    reflect.Value // identifier name
@@ -60,8 +63,6 @@ type (
 	IfThenElseSingleValueCondition struct {
 		conditionalStatement []SingleValueCondition
 	}
-	//NilValueExpression struct {
-	//}
 	MultiBinaryExpr struct {
 		Op          token.Token // operator
 		expressions []Node[ast.Node]

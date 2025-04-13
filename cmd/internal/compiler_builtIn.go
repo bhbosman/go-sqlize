@@ -36,7 +36,19 @@ func (compiler *Compiler) addBuiltInFunctions() {
 func (compiler *Compiler) registerLibType() OnCreateType {
 	return func(state State, i []Node[ast.Expr]) ITypeMapper {
 		return &ReflectTypeHolder{
-			func(state State, rv reflect.Value) reflect.Value {
+			func(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
+				panic("dfgdfgf")
+			},
+			func(state State) reflect.Type {
+				panic("dfgdfgf")
+			},
+			func(state State) reflect.Type {
+				panic("dfgdfgf")
+			},
+			func() reflect.Kind {
+				return reflect.Invalid
+			},
+			func(state State) reflect.Type {
 				panic("dfgdfgf")
 			},
 			func(state State) reflect.Type {
@@ -48,8 +60,11 @@ func (compiler *Compiler) registerLibType() OnCreateType {
 
 func (compiler *Compiler) registerSomeType() OnCreateType {
 	return func(state State, typeParams []Node[ast.Expr]) ITypeMapper {
+		fn := func(state State) reflect.Type {
+			return reflect.TypeFor[SomeDataWithRv]()
+		}
 		return &ReflectTypeHolder{
-			func(state State, rv reflect.Value) reflect.Value {
+			func(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
 				switch unk := rv.Interface().(type) {
 				case SomeDataWithNode:
 					if !unk.assigned {
@@ -66,79 +81,143 @@ func (compiler *Compiler) registerSomeType() OnCreateType {
 				v := SomeDataWithRv{rv, true}
 				return reflect.ValueOf(v)
 			},
-			func(state State) reflect.Type {
-				return reflect.TypeFor[SomeDataWithRv]()
+			fn,
+			fn,
+			func() reflect.Kind {
+				return reflect.Struct
 			},
+			fn,
+			fn,
 		}
 	}
 }
 
 func (compiler *Compiler) registerFloat64() OnCreateType {
 	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+		fn := func(state State) reflect.Type {
+			return reflect.TypeFor[float64]()
+		}
 		return &ReflectTypeHolder{
-			func(state State, rv reflect.Value) reflect.Value {
+			func(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
 				return rv
 			},
-			func(state State) reflect.Type {
-				return reflect.TypeFor[float64]()
+			fn,
+			fn,
+			func() reflect.Kind {
+				return reflect.Float64
 			},
+			fn,
+			fn,
 		}
 	}
 }
 
 func (compiler *Compiler) registerString() OnCreateType {
 	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+		fn := func(state State) reflect.Type {
+			return reflect.TypeFor[string]()
+		}
 		return &ReflectTypeHolder{
-			func(state State, rv reflect.Value) reflect.Value {
+			func(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
 				return rv
 			},
-			func(state State) reflect.Type {
-				return reflect.TypeFor[string]()
+			fn,
+			fn,
+			func() reflect.Kind {
+				return reflect.String
 			},
+			fn,
+			fn,
 		}
 	}
 }
 
+type TypeMapperCreateOption int
+
+const (
+	tmcoDefault TypeMapperCreateOption = iota
+	tmcoMapKey
+	tmcoMapValue
+)
+
 type ITypeMapper interface {
-	Create(state State, rv reflect.Value) reflect.Value
-	Type(state State) reflect.Type
+	Create(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value
+	NodeType(state State) reflect.Type
+	ActualType(state State) reflect.Type
+	MapperKeyType(state State) reflect.Type
+	MapperValueType(state State) reflect.Type
+	Kind() reflect.Kind
 }
 
 type ReflectTypeHolder struct {
-	fnCreate func(state State, rv reflect.Value) reflect.Value
-	fnType   func(state State) reflect.Type
+	fnCreate          func(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value
+	fnNodeType        func(state State) reflect.Type
+	fnActualType      func(state State) reflect.Type
+	fnKind            func() reflect.Kind
+	fnMapperKeyType   func(state State) reflect.Type
+	fnMapperValueType func(state State) reflect.Type
 }
 
-func (rth *ReflectTypeHolder) Type(state State) reflect.Type {
-	return rth.fnType(state)
+func (rth *ReflectTypeHolder) ActualType(state State) reflect.Type {
+	return rth.fnActualType(state)
 }
 
-func (rth *ReflectTypeHolder) Create(state State, rv reflect.Value) reflect.Value {
-	return rth.fnCreate(state, rv)
+func (rth *ReflectTypeHolder) MapperValueType(state State) reflect.Type {
+	return rth.fnMapperValueType(state)
+}
+
+func (rth *ReflectTypeHolder) MapperKeyType(state State) reflect.Type {
+	return rth.fnMapperKeyType(state)
+}
+
+func (rth *ReflectTypeHolder) Kind() reflect.Kind {
+	return rth.fnKind()
+}
+
+func (rth *ReflectTypeHolder) NodeType(state State) reflect.Type {
+	return rth.fnNodeType(state)
+}
+
+func (rth *ReflectTypeHolder) Create(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
+	return rth.fnCreate(state, option, rv)
 }
 
 func (compiler *Compiler) registerInt() OnCreateType {
 	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+		fn := func(state State) reflect.Type {
+			return reflect.TypeFor[int]()
+		}
 		return &ReflectTypeHolder{
-			func(state State, rv reflect.Value) reflect.Value {
+			func(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
 				return rv
 			},
-			func(state State) reflect.Type {
-				return reflect.TypeFor[int]()
+			fn,
+			fn,
+			func() reflect.Kind {
+				return reflect.Int
 			},
+			fn,
+			fn,
 		}
 	}
 }
 
 func (compiler *Compiler) registerBool() OnCreateType {
 	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+		fn := func(state State) reflect.Type {
+			return reflect.TypeFor[bool]()
+		}
 		return &ReflectTypeHolder{
-			func(state State, rv reflect.Value) reflect.Value {
+			func(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
 				return rv
 			},
-			func(state State) reflect.Type {
-				return reflect.TypeFor[bool]()
+			fn,
+			fn,
+			func() reflect.Kind {
+				return reflect.Bool
 			},
+			fn,
+			fn,
 		}
 	}
 }

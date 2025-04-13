@@ -35,6 +35,17 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 			panic(notFound(fmt.Sprintf("%v", vk), "internalFindRhsExpression"))
 		case Node[ast.Node]:
 			switch vvv := vv.Node.(type) {
+			case *IfThenElseSingleValueCondition:
+				return func(node Node[ast.Node], sel *ast.Ident) ExecuteStatement {
+					return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+
+						if selector, ok := compiler.expandNodeWithSelector(node, sel); ok {
+							return []Node[ast.Node]{selector}, artValue
+						}
+						panic("fsdfdsfd")
+					}
+				}(vv, item.Sel)
+
 			case *TrailSource:
 				var es ExecuteStatement = func(state State) ([]Node[ast.Node], CallArrayResultType) {
 					result := ChangeParamNode[ast.Expr, ast.Node](node, &EntityField{node.Node.Pos(), vvv.Alias, item.Sel.Name})
@@ -400,7 +411,6 @@ func (compiler *Compiler) builtInStructMethods(rv reflect.Value) OnCreateExecute
 }
 
 type CurrentCompositeCreateType struct {
-	rt         reflect.Type
 	typeMapper ITypeMapper
 }
 

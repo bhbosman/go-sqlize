@@ -62,6 +62,17 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 		for _, rhs := range nodeItem.Rhs {
 			compiler.internalFindSources(rhs, m)
 		}
+	case *TrailRecord:
+		rv := nodeItem.Value
+		for idx := range rv.NumField() {
+			switch rvIdxField := rv.Field(idx).Interface().(type) {
+			case Node[ast.Node]:
+				if !rvIdxField.Valid {
+					continue
+				}
+				compiler.internalFindSources(rvIdxField, m)
+			}
+		}
 	default:
 		panic(reflect.TypeOf(node.Node).String())
 	}

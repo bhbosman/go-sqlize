@@ -23,6 +23,7 @@ func TestName(t *testing.T) {
 		{"switch test 02", false, "./work/switchStmt002.go", ""},
 		{"Dictionary Test 01", false, "./work/dict0001.go", ""},
 		{"Dictionary Test 02", false, "./work/dict0002.go", ""},
+		{"Dictionary Test 03", false, "./work/dict0003.go", ""},
 	}
 	for _, s := range ss {
 		t.Run(

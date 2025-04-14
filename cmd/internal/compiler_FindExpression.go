@@ -52,8 +52,9 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 					return []Node[ast.Node]{result}, artValue
 				}
 				return es
+			default:
+				panic("implement me")
 			}
-			panic("implement me")
 		case ExecuteStatement:
 			return func(es ExecuteStatement, sel *ast.Ident) ExecuteStatement {
 				return func(state State) ([]Node[ast.Node], CallArrayResultType) {

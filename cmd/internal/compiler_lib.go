@@ -6,7 +6,6 @@ import (
 	"go/token"
 	"io"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -300,63 +299,7 @@ func (rvArray *rvArraySorter) Swap(i, j int) {
 }
 
 func (compiler *Compiler) libDictionaryLookupImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 2 {
-		panic(fmt.Errorf("DictionaryLookup implementation requires 2 arguments, got %d", len(arguments)))
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		var conditionalStatement []SingleValueCondition
-		dictionaryExpression := arguments[0].Node.(*DictionaryExpression)
-		{
-			inputData := arguments[1]
-			rvMap := dictionaryExpression.m
-			keyArr := rvMap.MapKeys()
-			sorter := &rvArraySorter{keyArr}
-			sort.Sort(sorter)
-
-			for _, rvKey := range keyArr {
-				rvValue := rvMap.MapIndex(rvKey)
-				fn := func() Node[ast.Node] {
-					switch {
-					case rvKey.CanFloat() || rvKey.CanInt() || rvKey.Kind() == reflect.String:
-						left := inputData
-						right := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvKey})
-						be := &BinaryExpr{token.NoPos, token.EQL, left, right}
-						return ChangeParamNode[ast.Node, ast.Node](state.currentNode, be)
-					case rvKey.Kind() == reflect.Struct:
-						switch leftItem := inputData.Node.(type) {
-						case *TrailRecord:
-							if leftItem.Value.NumField() == rvKey.NumField() {
-								var expressions []Node[ast.Node]
-								for idx := 0; idx < rvKey.NumField(); idx++ {
-									left := leftItem.Value.Field(idx).Interface().(Node[ast.Node])
-									right := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvKey.Field(idx)})
-									be := &BinaryExpr{token.NoPos, token.EQL, left, right}
-									expressions = append(expressions, ChangeParamNode[ast.Node, ast.Node](state.currentNode, be))
-								}
-								mbe := &MultiBinaryExpr{token.LAND, expressions}
-								return ChangeParamNode[ast.Node, ast.Node](state.currentNode, mbe)
-							}
-						}
-						panic("sdsfdsfd")
-					default:
-						panic("find out")
-					}
-				}
-				condition := fn()
-				singleValueCondition := SingleValueCondition{condition: condition, value: ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvValue})}
-				conditionalStatement = append(conditionalStatement, singleValueCondition)
-			}
-		}
-		{
-			rvDefault := dictionaryExpression.defaultValue
-			condition := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(true)})
-			singleValueCondition := SingleValueCondition{condition: condition, value: ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvDefault})}
-			conditionalStatement = append(conditionalStatement, singleValueCondition)
-		}
-		ite := &IfThenElseSingleValueCondition{conditionalStatement}
-		resultValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, ite)
-		return []Node[ast.Node]{resultValue}, artReturn
-	}
+	return libDictionaryLookupImplementation{state, params, arguments}.ExecuteStatement()
 }
 
 func (compiler *Compiler) libDictionaryDefaultImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {

@@ -58,13 +58,7 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 					rv.Field(idx).Set(itemRv)
 				}
 			}
-			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](
-				node,
-				&TrailRecord{
-					node.Node.Pos(),
-					rv,
-				},
-			)
+			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, &TrailRecord{node.Node.Pos(), rv})
 			return []Node[ast.Node]{nodeValue}, artValue
 		case reflect.Map:
 			typeMapperForMap := typeMapper.(*TypeMapperForMap)

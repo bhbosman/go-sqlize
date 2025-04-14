@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+
 	"go/ast"
 	"go/token"
 	"io"
@@ -31,6 +32,8 @@ func (compiler *Compiler) addLibFunctions() {
 	compiler.GlobalFunctions[ValueKey{libFolder, "CreateDictionary"}] = compiler.libCreateDictionaryImplementation
 	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryLookup"}] = compiler.libDictionaryLookupImplementation
 	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryDefault"}] = compiler.libDictionaryDefaultImplementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "CoreRelationship"}] = compiler.libCoreRelationshipImplementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "Relationship"}] = compiler.libRelationshipImplementation
 }
 
 func (compiler *Compiler) libQueryImplementation(_ State, typeParams []Node[ast.Expr], _ []Node[ast.Node]) ExecuteStatement {
@@ -52,6 +55,25 @@ func (compiler *Compiler) libQueryImplementation(_ State, typeParams []Node[ast.
 	}
 }
 
+func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	nameAndParams := findAllParamNameAndTypes(funcLit.Type.Params)
+	mm := map[string]Node[ast.Node]{}
+	for i, param := range nameAndParams {
+		mm[param.name] = arguments[i]
+	}
+
+	newContext := &CurrentContext{
+		mm,
+		LocalTypesMap{},
+		GetCompilerState[*CurrentContext](state),
+	}
+	state = SetCompilerState(newContext, state)
+	param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, funcLit.Body)
+	values, _ := compiler.executeBlockStmt(state, param)
+	state = SetCompilerState(newContext.Parent, state)
+	return values, artValue
+}
+
 func (compiler *Compiler) libMapImplementation(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
 	if len(arguments) != 2 {
 		panic(fmt.Errorf("Lib.Map implementation requires 2 arguments, got %d", len(arguments)))
@@ -60,21 +82,10 @@ func (compiler *Compiler) libMapImplementation(_ State, _ []Node[ast.Expr], argu
 		panic("map implementation requires function literal")
 	}
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		funcLit, _ := arguments[1].Node.(*ast.FuncLit)
-		var names []*ast.Ident
-		if funcLit.Type.Params != nil {
-			for _, field := range funcLit.Type.Params.List {
-				names = append(names, field.Names...)
-			}
+		if funcLit, ok := arguments[1].Node.(*ast.FuncLit); ok {
+			return compiler.executeFuncLit(state, funcLit, arguments)
 		}
-		m := map[string]Node[ast.Node]{}
-		m[names[0].Name] = arguments[0]
-		newContext := &CurrentContext{m, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
-		state = SetCompilerState(newContext, state)
-		param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, funcLit.Body)
-		values, _ := compiler.executeBlockStmt(state, param)
-		state = SetCompilerState(newContext.Parent, state)
-		return values, artValue
+		panic("map implementation argument 1 is not a function literal")
 	}
 }
 
@@ -304,7 +315,7 @@ func (compiler *Compiler) libDictionaryLookupImplementation(state State, params 
 
 func (compiler *Compiler) libDictionaryDefaultImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
 	if len(arguments) != 1 {
-		panic(fmt.Errorf("DictionaryLookup implementation requires 2 arguments, got %d", len(arguments)))
+		panic(fmt.Errorf("DictionaryLookup implementation requires 1 arguments, got %d", len(arguments)))
 	}
 	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
 		dictionaryExpression := arguments[0].Node.(*DictionaryExpression)
@@ -312,4 +323,82 @@ func (compiler *Compiler) libDictionaryDefaultImplementation(state State, params
 		resultValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, rve)
 		return []Node[ast.Node]{resultValue}, artReturn
 	}
+}
+
+func findAllParamNameAndTypes(Params *ast.FieldList) []struct {
+	name string
+	node ast.Expr
+} {
+	result := make([]struct {
+		name string
+		node ast.Expr
+	}, 0, Params.NumFields())
+
+	if Params != nil {
+		for _, g := range Params.List {
+			for _, n := range g.Names {
+				result = append(result, struct {
+					name string
+					node ast.Expr
+				}{name: n.Name, node: g.Type})
+			}
+		}
+	}
+
+	return result
+}
+
+func (compiler *Compiler) libCoreRelationshipImplementation(state State, typeParams []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	typeParams = func() []Node[ast.Expr] {
+		if len(typeParams) == 0 && len(arguments) == 2 {
+			if ft, ok := arguments[1].Node.(*ast.FuncLit); ok {
+				allParams := findAllParamNameAndTypes(ft.Type.Params)
+				param := ChangeParamNode(arguments[1], allParams[0].node)
+				return []Node[ast.Expr]{param}
+			} else {
+				panic(fmt.Errorf("calculation of relationship typeParams fails"))
+			}
+		}
+		return typeParams
+	}()
+
+	if len(typeParams) != 1 {
+		panic(fmt.Errorf("relationship implementation requires 1 typeParams, got %d", len(typeParams)))
+	}
+
+	if len(arguments) != 2 {
+		panic(fmt.Errorf("relationship implementation requires 2 arguments, got %d", len(arguments)))
+	}
+
+	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+		// todo: do some more here, register the callack argument[1] someshere
+		return arguments[0:1], artValue
+	}
+}
+
+func (compiler *Compiler) libRelationshipImplementation(state State, typeParams []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+	typeParams = func() []Node[ast.Expr] {
+		if len(typeParams) == 0 && len(arguments) == 1 {
+			if ft, ok := arguments[0].Node.(*ast.FuncLit); ok {
+				allParams := findAllParamNameAndTypes(ft.Type.Params)
+				param := ChangeParamNode(arguments[0], allParams[0].node)
+				return []Node[ast.Expr]{param}
+			} else {
+				panic(fmt.Errorf("calculation of relationship typeParams fails"))
+			}
+		}
+		return typeParams
+	}()
+
+	if len(typeParams) != 1 {
+		panic(fmt.Errorf("relationship implementation requires 1 typeParams, got %d", len(typeParams)))
+	}
+
+	if len(arguments) != 1 {
+		panic(fmt.Errorf("relationship implementation requires 1 arguments, got %d", len(arguments)))
+	}
+
+	es := compiler.libQueryImplementation(state, typeParams, nil)
+	arr, _ := compiler.executeAndExpandStatement(state, es)
+	return compiler.libCoreRelationshipImplementation(state, typeParams, append(arr, arguments...))
 }

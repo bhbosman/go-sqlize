@@ -106,10 +106,18 @@ func DictionaryDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TVa
 	panic("implement DictionaryDefault")
 }
 
-func DictionarySetDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TValue], TValue) Dictionary[TKey, TValue] {
-	panic("implement DictionaryDefault")
+func CoreRelationship[TTarget interface{}]([]TTarget, func(TTarget) bool) TTarget {
+	panic("implement CoreRelationship")
 }
 
-func DictionaryAddValue[TKey comparable, TValue interface{}](Dictionary[TKey, TValue], TKey, TValue) Dictionary[TKey, TValue] {
-	panic("implement DictionaryDefault")
+func OptionalCoreRelationship[TTarget interface{}]([]TTarget, func(TTarget) bool) Some[TTarget] {
+	panic("implement OptionalCoreRelationship")
+}
+
+func Relationship[TTarget interface{}](pred func(TTarget) bool) TTarget {
+	panic("implement Relationship")
+}
+
+func OptionalRelationship[TTarget interface{}](pred func(TTarget) bool) Some[TTarget] {
+	panic("implement OptionalRelationship")
 }

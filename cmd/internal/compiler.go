@@ -16,6 +16,10 @@ type GlobalMethodHandlerKey struct {
 
 type CompilerState int
 
+type CurrentCompositeCreateType struct {
+	typeMapper ITypeMapper
+}
+
 const (
 	CompilerState_InitCalled CompilerState = 1 << iota
 )
@@ -327,4 +331,15 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 		}
 	}
 	return &TypeMapperForStruct{nodeRt, actualTypeRt, typeMapperInstance}
+}
+
+func (compiler *Compiler) builtInStructMethods(rv reflect.Value) OnCreateExecuteStatement {
+	return func(state State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
+		return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+			if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
+				return outputNodes, art
+			}
+			panic(fmt.Errorf("builtInStructMethods only accept literal values"))
+		}
+	}
 }

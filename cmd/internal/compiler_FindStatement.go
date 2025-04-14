@@ -54,8 +54,36 @@ func (compiler *Compiler) findStatement(state State, node Node[ast.Stmt]) (Execu
 	case *ast.BlockStmt:
 		value := ChangeParamNode(node, item)
 		return compiler.createBlockStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+	case *ast.DeclStmt:
+		value := ChangeParamNode(node, item)
+		return compiler.createDeclStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
 	default:
 		panic(notFound(reflect.TypeOf(item).String(), "findStatement"))
+	}
+}
+
+func (compiler *Compiler) handleSpec(state State, node Node[ast.Spec]) {
+	switch expr := node.Node.(type) {
+	case *ast.TypeSpec:
+		param := ChangeParamNode(node, expr)
+		currentContext := GetCompilerState[*CurrentContext](state)
+		onCreateType := compiler.readTypeSpec(param)
+		currentContext.addLocalTypes(expr.Name.Name, onCreateType)
+	default:
+		panic(notFound(reflect.TypeOf(expr).String(), "spec"))
+	}
+}
+
+func (compiler *Compiler) createDeclStmtExecution(node Node[*ast.DeclStmt]) ExecuteStatement {
+	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+		switch nodeItem := node.Node.Decl.(type) {
+		case *ast.GenDecl:
+			for _, spec := range nodeItem.Specs {
+				param := ChangeParamNode(node, spec)
+				compiler.handleSpec(state, param)
+			}
+		}
+		return nil, artNone
 	}
 }
 
@@ -72,9 +100,6 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		for idx := range rv.NumField() {
 			switch rvIdxField := rv.Field(idx).Interface().(type) {
 			case Node[ast.Node]:
-				//if !rvIdxField.Valid {
-				//	continue
-				//}
 				if _, b := isLiterateValue(rvIdxField); !b {
 					return reflect.Value{}, false
 				}
@@ -85,15 +110,9 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		return reflect.Value{}, false
 	case *CheckForNotNullExpression:
 		return isLiterateValue(item.node)
-
 	case *coercion:
 		rv, isLiterate := isLiterateValue(item.Node)
-		if isLiterate {
-			panic("dsfsdfsd")
-			panic(rv)
-		}
 		return rv, isLiterate
-
 	case *EntityField:
 		return reflect.Value{}, false
 	case *ReflectValueExpression:
@@ -116,7 +135,6 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		default:
 			panic(notFound(item.Kind.String(), "isLiterateValue"))
 		}
-
 	case *builtInNil:
 		return reflect.Value{}, true
 		// TODO: *BinaryExpr: should always be false, this needs to be fixed where *BinaryExpr: is created

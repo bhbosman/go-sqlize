@@ -48,7 +48,8 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 	case *ast.IndexExpr:
 		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
 		indexParam := ChangeParamNode(node, item.Index)
-		return initOnCreateType(0, compiler.internalFindType(stackIndex+1, state, param), []Node[ast.Expr]{indexParam})
+		unk := compiler.internalFindType(stackIndex+1, state, param)
+		return initOnCreateType(0, unk, []Node[ast.Expr]{indexParam})
 	case *ast.IndexListExpr:
 		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
 		var arrIndices []Node[ast.Expr]
@@ -75,15 +76,20 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 		if path, ok := node.ImportMap[item.Name]; ok {
 			return initOnCreateType(stackIndex, path, nil)
 		}
+		typeMapper := GetCompilerState[TypeMapper](state)
+		if rt, ok := typeMapper[item.Name]; ok {
+			return initOnCreateType(stackIndex, rt, nil)
+		}
+		currentContext := GetCompilerState[*CurrentContext](state)
+		if onCreateType, ok := currentContext.findLocalType(item.Name); ok {
+			return initOnCreateType(stackIndex, onCreateType, nil)
+		}
+
 		if onCreateType, ok := compiler.GlobalTypes[ValueKey{"", item.Name}]; ok {
 			return initOnCreateType(stackIndex, onCreateType, nil)
 		}
 		if onCreateType, ok := compiler.GlobalTypes[ValueKey{node.RelPath, item.Name}]; ok {
 			return initOnCreateType(stackIndex, onCreateType, nil)
-		}
-		typeMapper := GetCompilerState[TypeMapper](state)
-		if rt, ok := typeMapper[item.Name]; ok {
-			return initOnCreateType(stackIndex, rt, nil)
 		}
 		panic(item.Name)
 	default:

@@ -7,7 +7,7 @@ import (
 func (compiler *Compiler) executeBlockStmt(state State, node Node[*ast.BlockStmt]) ([]Node[ast.Node], CallArrayResultType) {
 	var values []Node[ast.Node]
 	var vv CallArrayResultType = 0
-	newContext := &CurrentContext{map[string]Node[ast.Node]{}, GetCompilerState[*CurrentContext](state)}
+	newContext := &CurrentContext{map[string]Node[ast.Node]{}, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
 	state = SetCompilerState(newContext, state)
 	for _, item := range node.Node.List {
 		param := ChangeParamNode(node, item)

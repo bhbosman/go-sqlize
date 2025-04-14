@@ -44,6 +44,7 @@ func ReadAstFile(incomingState *ReadAstFileState, rawAst *RawAstRead, astFile *a
 			}
 		}
 	}
+
 	astutil.Apply(
 		astFile,
 		func(cursor *astutil.Cursor) bool { return true },
@@ -59,16 +60,7 @@ func ReadAstFile(incomingState *ReadAstFileState, rawAst *RawAstRead, astFile *a
 				case *ast.FuncDecl:
 					if node.Recv == nil {
 						key := ValueKey{relPath, node.Name.Name}
-						funcDecl := Node[*ast.FuncDecl]{
-							key,
-							node,
-							imports,
-							absPath,
-							relPath,
-							file,
-							fs,
-							true,
-						}
+						funcDecl := Node[*ast.FuncDecl]{key, node, imports, absPath, relPath, file, fs, true}
 						switch {
 						case node.Name != nil && node.Name.Name == "init":
 							if incomingState.InputFolder == absPath {
@@ -95,16 +87,7 @@ func ReadAstFile(incomingState *ReadAstFileState, rawAst *RawAstRead, astFile *a
 					key := ValueKey{relPath, node.Name.Name}
 					switch node.Type.(type) {
 					case *ast.StructType:
-						rawAst.TypeSpecMap[key] = Node[*ast.TypeSpec]{
-							key,
-							node,
-							imports,
-							absPath,
-							relPath,
-							file,
-							fs,
-							true,
-						}
+						rawAst.TypeSpecMap[key] = Node[*ast.TypeSpec]{key, node, imports, absPath, relPath, file, fs, true}
 						return true
 					}
 					return true

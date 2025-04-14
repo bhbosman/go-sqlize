@@ -88,9 +88,9 @@ var RootCmd = &cobra.Command{
 				map[string]internal.Node[ast.Node]{
 					"__stdOut__": {Node: &internal.ReflectValueExpression{reflect.ValueOf(cmd.OutOrStdout())}},
 				},
+				internal.LocalTypesMap{},
 				nil,
 			}
-
 			compiler.Compile(currentContext, ss...)
 		}
 	},

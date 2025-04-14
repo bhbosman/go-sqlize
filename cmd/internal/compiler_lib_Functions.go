@@ -70,7 +70,7 @@ func (compiler *Compiler) libMapImplementation(_ State, _ []Node[ast.Expr], argu
 		}
 		m := map[string]Node[ast.Node]{}
 		m[names[0].Name] = arguments[0]
-		newContext := &CurrentContext{m, GetCompilerState[*CurrentContext](state)}
+		newContext := &CurrentContext{m, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
 		state = SetCompilerState(newContext, state)
 		param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, funcLit.Body)
 		values, _ := compiler.executeBlockStmt(state, param)

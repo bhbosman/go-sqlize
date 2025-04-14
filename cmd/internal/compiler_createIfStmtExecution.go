@@ -10,7 +10,7 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 		var conditionalStatement []MultiValueCondition
 		var whatIsReturned CallArrayResultType = 0
 
-		newContext := &CurrentContext{map[string]Node[ast.Node]{}, GetCompilerState[*CurrentContext](state)}
+		newContext := &CurrentContext{map[string]Node[ast.Node]{}, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
 		state = SetCompilerState(newContext, state)
 
 		if node.Node.Init != nil {
@@ -34,7 +34,7 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 		} else {
 			if node.Node.Body != nil {
 				parent := GetCompilerState[*CurrentContext](state)
-				newBodyContext := &CurrentContext{map[string]Node[ast.Node]{}, parent}
+				newBodyContext := &CurrentContext{map[string]Node[ast.Node]{}, LocalTypesMap{}, parent}
 				state = SetCompilerState(newBodyContext, state)
 				{
 					param := ChangeParamNode[*ast.IfStmt, ast.Stmt](node, node.Node.Body)
@@ -52,7 +52,7 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 			if node.Node.Else != nil {
 				parent := GetCompilerState[*CurrentContext](state)
 
-				newElseContext := &CurrentContext{map[string]Node[ast.Node]{}, parent}
+				newElseContext := &CurrentContext{map[string]Node[ast.Node]{}, LocalTypesMap{}, parent}
 				state = SetCompilerState(newElseContext, state)
 				{
 					param := ChangeParamNode[*ast.IfStmt, ast.Stmt](node, node.Node.Else)

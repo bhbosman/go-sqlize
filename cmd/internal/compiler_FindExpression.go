@@ -324,7 +324,7 @@ func (compiler *Compiler) onFuncLitExecutionStatement(node Node[*ast.FuncLit]) O
 				m[name.Name] = arguments[idx]
 			}
 
-			newContext := &CurrentContext{m, GetCompilerState[*CurrentContext](state)}
+			newContext := &CurrentContext{m, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
 			state = SetCompilerState(newContext, state)
 			param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, node.Node.Body)
 			values, art := compiler.executeBlockStmt(state, param)

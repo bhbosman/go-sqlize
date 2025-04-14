@@ -24,6 +24,7 @@ func TestName(t *testing.T) {
 		{"Dictionary Test 01", false, "./work/dict0001.go", ""},
 		{"Dictionary Test 02", false, "./work/dict0002.go", ""},
 		{"Dictionary Test 03", false, "./work/dict0003.go", ""},
+		{"Dictionary Test 04", false, "./work/dict0004.go", ""},
 	}
 	for _, s := range ss {
 		t.Run(

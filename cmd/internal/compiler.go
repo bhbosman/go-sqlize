@@ -20,8 +20,6 @@ const (
 	CompilerState_InitCalled CompilerState = 1 << iota
 )
 
-type TypeMapper map[string]ITypeMapper
-
 type ExecuteStatement func(state State) ([]Node[ast.Node], CallArrayResultType)
 
 type AssignStatement func(state State, value Node[ast.Node])
@@ -29,76 +27,6 @@ type AssignStatement func(state State, value Node[ast.Node])
 type OnCreateExecuteStatement func(state State, typeParams []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement
 
 type OnCreateType func(State, []Node[ast.Expr]) ITypeMapper
-
-type TypeMapperForStruct struct {
-	nodeRt             reflect.Type
-	actualTypeRt       reflect.Type
-	typeMapperInstance reflect.Value
-}
-
-func (typeMapperForStruct *TypeMapperForStruct) ActualType(state State) reflect.Type {
-	return typeMapperForStruct.actualTypeRt
-}
-
-func (typeMapperForStruct *TypeMapperForStruct) MapperValueType(state State) reflect.Type {
-	return typeMapperForStruct.nodeRt
-}
-
-func (typeMapperForStruct *TypeMapperForStruct) MapperKeyType(state State) reflect.Type {
-	return typeMapperForStruct.actualTypeRt
-}
-
-func (typeMapperForStruct *TypeMapperForStruct) Kind() reflect.Kind {
-	return reflect.Struct
-}
-
-func (typeMapperForStruct *TypeMapperForStruct) walk(newRt reflect.Type, newRv reflect.Value, oldValue reflect.Value) {
-	for fieldIdx := 0; fieldIdx < newRt.NumField(); fieldIdx++ {
-		fieldIdxRt := newRt.Field(fieldIdx).Type
-		node := oldValue.Field(fieldIdx).Interface().(Node[ast.Node])
-		if fieldRv, ok := isLiterateValue(node); ok {
-			newRv.Field(fieldIdx).Set(fieldRv.Convert(fieldIdxRt))
-		} else {
-			panic("to map to a map key, the value must be a literate value")
-		}
-	}
-}
-
-func (typeMapperForStruct *TypeMapperForStruct) Create(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-	switch option {
-	case tmcoMapKey:
-		if rv.Type() == typeMapperForStruct.nodeRt {
-			newRt := typeMapperForStruct.actualTypeRt
-			newRv := reflect.New(newRt).Elem()
-			typeMapperForStruct.walk(newRt, newRv, rv)
-			return newRv
-		}
-		panic("must be of type typeMapperForStruct.nodeRt")
-	case tmcoMapValue:
-		if rv.Type() == typeMapperForStruct.nodeRt {
-			return rv
-		}
-		panic("must be of type typeMapperForStruct.nodeRt")
-	default:
-		return rv
-	}
-}
-
-func (typeMapperForStruct *TypeMapperForStruct) NodeType(state State) reflect.Type {
-	return typeMapperForStruct.nodeRt
-}
-
-func (typeMapperForStruct *TypeMapperForStruct) createDefaultType(state State, parentNode Node[ast.Node]) reflect.Value {
-	rv := reflect.New(typeMapperForStruct.nodeRt).Elem()
-	for idx := range typeMapperForStruct.nodeRt.NumField() {
-		typeMapper := typeMapperForStruct.typeMapperInstance.Field(idx).Interface().(ITypeMapper)
-		rvZero := reflect.Zero(typeMapper.NodeType(state))
-		node := ChangeParamNode[ast.Node, ast.Node](parentNode, &ReflectValueExpression{rvZero})
-		rv.Field(idx).Set(reflect.ValueOf(node))
-	}
-	return rv
-
-}
 
 type Compiler struct {
 	CompilerState   CompilerState
@@ -155,38 +83,38 @@ func (compiler *Compiler) Init(
 		}
 	}
 
-	for key, value := range TypeSpecMap {
+	for key, typeSpecNode := range TypeSpecMap {
 		if key.Folder == libFolder && key.Key == "Some" {
 			continue
 		}
-
-		fn := func(vk ValueKey, node Node[*ast.TypeSpec]) OnCreateType {
-			return func(state State, expressions []Node[ast.Expr]) ITypeMapper {
-				if node.Node.TypeParams == nil || node.Node.TypeParams.NumFields() == len(expressions) {
-					var dd []*ast.Ident
-					if node.Node.TypeParams != nil {
-						for _, field := range node.Node.TypeParams.List {
-							dd = append(dd, field.Names...)
-						}
-					}
-					typeMapper := TypeMapper{}
-					for i := 0; i < len(dd); i++ {
-						typeMapper[dd[i].Name] = compiler.findType(state, expressions[i])
-					}
-					state = SetCompilerState(typeMapper, state)
-
-					switch v := value.Node.Type.(type) {
-					case *ast.StructType:
-						param := ChangeParamNode(value, v)
-						return compiler.createStructTypeMapper(state, param)
-					}
-				}
-				panic("sdfdsfs")
-			}
-		}
-		compiler.GlobalTypes[key] = fn(key, value)
+		compiler.GlobalTypes[key] = compiler.readTypeSpec(typeSpecNode)
 	}
 	compiler.InitFunctions = InitFunctions
+}
+
+func (compiler *Compiler) readTypeSpec(node Node[*ast.TypeSpec]) OnCreateType {
+	return func(state State, expressions []Node[ast.Expr]) ITypeMapper {
+		if node.Node.TypeParams == nil || node.Node.TypeParams.NumFields() == len(expressions) {
+			var dd []*ast.Ident
+			if node.Node.TypeParams != nil {
+				for _, field := range node.Node.TypeParams.List {
+					dd = append(dd, field.Names...)
+				}
+			}
+			typeMapper := TypeMapper{}
+			for i := 0; i < len(dd); i++ {
+				typeMapper[dd[i].Name] = compiler.findType(state, expressions[i])
+			}
+			state = SetCompilerState[TypeMapper](typeMapper, state)
+
+			switch v := node.Node.Type.(type) {
+			case *ast.StructType:
+				param := ChangeParamNode(node, v)
+				return compiler.createStructTypeMapper(state, param)
+			}
+		}
+		panic("sdfdsfs")
+	}
 }
 
 func (compiler *Compiler) genericCall(state State, rv reflect.Value, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType, bool) {
@@ -208,7 +136,7 @@ func (compiler *Compiler) Compile(currentContext *CurrentContext, fileNames ...s
 			currentNode := ChangeParamNode[*ast.FuncDecl, ast.Node](initFunction, initFunction.Node)
 			compiler.CompileFunc(
 				State{
-					[]IABC{&CurrentContext{map[string]Node[ast.Node]{}, currentContext}},
+					[]IABC{&CurrentContext{map[string]Node[ast.Node]{}, LocalTypesMap{}, currentContext}},
 					currentNode}, initFunction)
 		}
 	}
@@ -228,37 +156,6 @@ const (
 func (compiler *Compiler) CompileFunc(state State, fn Node[*ast.FuncDecl]) ([]Node[ast.Node], CallArrayResultType) {
 	param := ChangeParamNode(fn, fn.Node.Body)
 	return compiler.executeBlockStmt(state, param)
-}
-
-type TypeMapperForMap struct {
-	keyTypeMapper   ITypeMapper
-	valueTypeMapper ITypeMapper
-	mapRt           reflect.Type
-}
-
-func (tyfm *TypeMapperForMap) ActualType(state State) reflect.Type {
-	return tyfm.mapRt
-}
-
-func (tyfm *TypeMapperForMap) MapperValueType(state State) reflect.Type {
-	return tyfm.valueTypeMapper.MapperValueType(state)
-}
-
-func (tyfm *TypeMapperForMap) MapperKeyType(state State) reflect.Type {
-	return tyfm.keyTypeMapper.MapperKeyType(state)
-}
-
-func (tyfm *TypeMapperForMap) Kind() reflect.Kind {
-	return tyfm.mapRt.Kind()
-}
-
-func (tyfm *TypeMapperForMap) Create(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (tyfm *TypeMapperForMap) NodeType(state State) reflect.Type {
-	return tyfm.mapRt
 }
 
 func (compiler *Compiler) AddEntitySource(rt reflect.Type) string {

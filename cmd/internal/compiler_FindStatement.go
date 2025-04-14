@@ -26,7 +26,7 @@ func createError(methodName, message string) error {
 func (compiler *Compiler) findStatement(state State, node Node[ast.Stmt]) (ExecuteStatement, Node[ast.Node]) {
 	switch item := node.Node.(type) {
 	case *ast.FolderContextInformation:
-		return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 			value := ChangeParamNode[ast.Stmt, ast.Node](node, item)
 			return []Node[ast.Node]{value}, artFCI
 		}, ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
@@ -75,7 +75,7 @@ func (compiler *Compiler) handleSpec(state State, node Node[ast.Spec]) {
 }
 
 func (compiler *Compiler) createDeclStmtExecution(node Node[*ast.DeclStmt]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		switch nodeItem := node.Node.Decl.(type) {
 		case *ast.GenDecl:
 			for _, spec := range nodeItem.Specs {
@@ -88,8 +88,8 @@ func (compiler *Compiler) createDeclStmtExecution(node Node[*ast.DeclStmt]) Exec
 }
 
 func (compiler *Compiler) createBlockStmtExecution(node Node[*ast.BlockStmt]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		return compiler.executeBlockStmt(state, node)
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		return compiler.executeBlockStmt(state, node, typeParams)
 	}
 }
 
@@ -150,7 +150,7 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 }
 
 func (compiler *Compiler) createReturnStmtExecution(node Node[*ast.ReturnStmt]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		var result []Node[ast.Node]
 		for _, expr := range node.Node.Results {
 			param := ChangeParamNode(node, expr)
@@ -159,7 +159,7 @@ func (compiler *Compiler) createReturnStmtExecution(node Node[*ast.ReturnStmt]) 
 
 			param01 := ChangeParamNode[*ast.ReturnStmt, ast.Node](node, expr)
 			state = state.setCurrentNode(param01)
-			v, _ := compiler.executeAndExpandStatement(state, fn)
+			v, _ := compiler.executeAndExpandStatement(state, typeParams, unprocessedArgs, fn)
 			result = append(result, v...)
 		}
 		return result, artReturn
@@ -169,7 +169,7 @@ func (compiler *Compiler) createReturnStmtExecution(node Node[*ast.ReturnStmt]) 
 func (compiler *Compiler) createAssignStatementExecution(node Node[*ast.AssignStmt]) ExecuteStatement {
 	switch node.Node.Tok {
 	case token.DEFINE, token.ASSIGN:
-		return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 			var rhsArray []Node[ast.Node]
 
 			for _, rhsExpression := range node.Node.Rhs {
@@ -177,7 +177,7 @@ func (compiler *Compiler) createAssignStatementExecution(node Node[*ast.AssignSt
 				tempState := state.setCurrentNode(ChangeParamNode[*ast.AssignStmt, ast.Node](node, rhsExpression))
 				fn := compiler.findRhsExpression(tempState, param)
 				tempState = tempState.setCurrentNode(ChangeParamNode[*ast.AssignStmt, ast.Node](node, rhsExpression))
-				arr, _ := compiler.executeAndExpandStatement(tempState, fn)
+				arr, _ := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, fn)
 				rhsArray = append(rhsArray, arr...)
 			}
 

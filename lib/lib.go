@@ -115,7 +115,7 @@ func OptionalCoreRelationship[TTarget interface{}]([]TTarget, func(TTarget) bool
 }
 
 func Relationship[TTarget interface{}](pred func(TTarget) bool) TTarget {
-	panic("implement Relationship")
+	return CoreRelationship(Query[TTarget](), pred)
 }
 
 func OptionalRelationship[TTarget interface{}](pred func(TTarget) bool) Some[TTarget] {

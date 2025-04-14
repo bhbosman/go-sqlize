@@ -8,13 +8,13 @@ import (
 )
 
 func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		var nodes []Node[ast.Node]
 		for _, expr := range node.Node.List {
 			param := ChangeParamNode[*ast.CaseClause, ast.Expr](node, expr)
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.CaseClause, ast.Node](node, expr))
 			es := compiler.findRhsExpression(tempState, param)
-			nn, _ := compiler.executeAndExpandStatement(tempState, es)
+			nn, _ := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
 			nodes = append(nodes, nn...)
 		}
 		for _, stmt := range node.Node.Body {
@@ -22,7 +22,7 @@ func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) 
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.CaseClause, ast.Node](node, stmt))
 			statementFn, currentNode := compiler.findStatement(tempState, param)
 			tempState = state.setCurrentNode(currentNode)
-			arr, art := compiler.executeAndExpandStatement(tempState, statementFn)
+			arr, art := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, statementFn)
 			if art == artReturn {
 				returnNode := ChangeParamNode[*ast.CaseClause, ast.Node](node, &CaseClauseNode{arr, nodes})
 				return []Node[ast.Node]{returnNode}, artReturnAndContinue
@@ -33,12 +33,12 @@ func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) 
 }
 
 func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		expression := func(state State, parent Node[*ast.SwitchStmt], Tag ast.Expr) Node[ast.Node] {
 			if Tag != nil {
 				param := ChangeParamNode(node, Tag)
 				tempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](parent, Tag))
-				result, _ := compiler.findRhsExpression(tempState, param)(state)
+				result, _ := compiler.findRhsExpression(tempState, param)(state, typeParams, unprocessedArgs)
 				return result[0]
 			}
 			return Node[ast.Node]{}
@@ -46,7 +46,7 @@ func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) 
 
 		paramBody := ChangeParamNode(node, node.Node.Body)
 		tempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](node, node.Node.Body))
-		stmt, resultType := compiler.executeBlockStmt(tempState, paramBody)
+		stmt, resultType := compiler.executeBlockStmt(tempState, paramBody, typeParams)
 		if resultType != artReturnAndContinue {
 			panic("need a return statement")
 		}

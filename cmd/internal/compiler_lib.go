@@ -14,262 +14,297 @@ import (
 const libFolder = "github.com/bhbosman/go-sqlize/lib"
 
 func (compiler *Compiler) addLibFunctions() {
-	compiler.GlobalFunctions[ValueKey{libFolder, "Query"}] = compiler.libQueryImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "Map"}] = compiler.libMapImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "GenerateSql"}] = compiler.libGenerateSqlImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "GenerateSqlTest"}] = compiler.libGenerateSqlTestImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "Atoi"}] = compiler.libAtoiImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "SetSomeValue"}] = compiler.libSetSomeValueImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "SetSomeNone"}] = compiler.libSetSomeNoneImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "IsSomeAssigned"}] = compiler.libIsSomeAssignedImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "SomeData"}] = compiler.libSomeDataImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "SomeData2"}] = compiler.libSomeData2Implementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData"}] = compiler.libGetSomeDataImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData02"}] = compiler.libGetSomeData02Implementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData03"}] = compiler.libGetSomeData03Implementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData04"}] = compiler.libGetSomeData04Implementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData05"}] = compiler.libGetSomeData05Implementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "CreateDictionary"}] = compiler.libCreateDictionaryImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryLookup"}] = compiler.libDictionaryLookupImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryDefault"}] = compiler.libDictionaryDefaultImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "CoreRelationship"}] = compiler.libCoreRelationshipImplementation
-	compiler.GlobalFunctions[ValueKey{libFolder, "Relationship"}] = compiler.libRelationshipImplementation
+	compiler.GlobalFunctions[ValueKey{libFolder, "Query"}] = functionInformation{compiler.libQueryImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "Map"}] = functionInformation{compiler.libMapImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "GenerateSql"}] = functionInformation{compiler.libGenerateSqlImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "GenerateSqlTest"}] = functionInformation{compiler.libGenerateSqlTestImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "Atoi"}] = functionInformation{compiler.libAtoiImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "SetSomeValue"}] = functionInformation{compiler.libSetSomeValueImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "SetSomeNone"}] = functionInformation{compiler.libSetSomeNoneImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "IsSomeAssigned"}] = functionInformation{compiler.libIsSomeAssignedImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "SomeData"}] = functionInformation{compiler.libSomeDataImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "SomeData2"}] = functionInformation{compiler.libSomeData2Implementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData"}] = functionInformation{compiler.libGetSomeDataImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData02"}] = functionInformation{compiler.libGetSomeData02Implementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData03"}] = functionInformation{compiler.libGetSomeData03Implementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData04"}] = functionInformation{compiler.libGetSomeData04Implementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "GetSomeData05"}] = functionInformation{compiler.libGetSomeData05Implementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "CreateDictionary"}] = functionInformation{compiler.libCreateDictionaryImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryLookup"}] = functionInformation{compiler.libDictionaryLookupImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryDefault"}] = functionInformation{compiler.libDictionaryDefaultImplementation, Node[*ast.FuncType]{}, true}
+	//compiler.GlobalFunctions[ValueKey{libFolder, "CoreRelationship"}] = compiler.libCoreRelationshipImplementation
+	//compiler.GlobalFunctions[ValueKey{libFolder, "Relationship"}] = compiler.libRelationshipImplementation
 }
 
-func (compiler *Compiler) libQueryImplementation(_ State, typeParams []Node[ast.Expr], _ []Node[ast.Node]) ExecuteStatement {
-	if len(typeParams) != 1 {
-		panic(fmt.Errorf("Lib.Query implementation requires 1 type argument, got %d", len(typeParams)))
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		var arr []reflect.Type
-		for _, expr := range typeParams {
-			typeMapper := compiler.findType(state, expr)
-			rt := typeMapper.NodeType(state)
-			arr = append(arr, rt)
+func (compiler *Compiler) libQueryImplementation(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		if len(typeParams) != 1 {
+			panic(fmt.Errorf("Lib.Query implementation requires 1 type argument, got %d", len(typeParams)))
 		}
-		rt := arr[0]
-		alias := compiler.AddEntitySource(rt)
-		qt := &TrailSource{state.currentNode.Node.Pos(), alias}
+
+		typeMapper := typeParams[0]
+		alias := compiler.AddEntitySource(typeMapper)
+		qt := &TrailSource{state.currentNode.Node.Pos(), alias, typeMapper}
 		returnValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, qt)
 		return []Node[ast.Node]{returnValue}, artValue
 	}
 }
 
-func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, arguments []Node[ast.Node], typeParams []ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
 	nameAndParams := findAllParamNameAndTypes(funcLit.Type.Params)
-	mm := map[string]Node[ast.Node]{}
+	mm := ValueInformationMap{}
 	for i, param := range nameAndParams {
-		mm[param.name] = arguments[i]
+		mm[param.name] = ValueInformation{arguments[i]}
 	}
 
 	newContext := &CurrentContext{
 		mm,
+		map[string]ITypeMapper{},
 		LocalTypesMap{},
 		GetCompilerState[*CurrentContext](state),
 	}
 	state = SetCompilerState(newContext, state)
 	param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, funcLit.Body)
-	values, _ := compiler.executeBlockStmt(state, param)
+	values, _ := compiler.executeBlockStmt(state, param, typeParams)
 	state = SetCompilerState(newContext.Parent, state)
 	return values, artValue
 }
 
-func (compiler *Compiler) libMapImplementation(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 2 {
-		panic(fmt.Errorf("Lib.Map implementation requires 2 arguments, got %d", len(arguments)))
-	}
-	if _, ok := arguments[1].Node.(*ast.FuncLit); !ok {
-		panic("map implementation requires function literal")
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		if funcLit, ok := arguments[1].Node.(*ast.FuncLit); ok {
-			return compiler.executeFuncLit(state, funcLit, arguments)
+func (compiler *Compiler) libMapImplementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+			if len(arguments) != 2 {
+				panic(fmt.Errorf("Lib.Map implementation requires 2 arguments, got %d", len(arguments)))
+			}
+			if _, ok := arguments[1].Node.(*ast.FuncLit); !ok {
+				panic("map implementation requires function literal")
+			}
+			if funcLit, ok := arguments[1].Node.(*ast.FuncLit); ok {
+				return compiler.executeFuncLit(state, funcLit, arguments, typeParams)
+			}
+			panic("map implementation argument 1 is not a function literal")
+
 		}
-		panic("map implementation argument 1 is not a function literal")
+	}
+	return es()
+}
+
+func (compiler *Compiler) libGenerateSql(state State, argument Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	switch item := argument.Node.(type) {
+	case *TrailRecord:
+		s := compiler.trailRecordToSql(item)
+		basicLit := &ast.BasicLit{state.currentNode.Node.Pos(), token.STRING, strconv.Quote(s)}
+		nodeValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, basicLit)
+		return []Node[ast.Node]{nodeValue}, artValue
+	default:
+		panic("implementation required")
 	}
 }
 
-func (compiler *Compiler) libGenerateSqlImplementation(state State, i []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("Lib.GenerateSql implementation requires 1 arguments, got %d", len(arguments)))
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		switch item := arguments[0].Node.(type) {
-		case *TrailRecord:
-			s := compiler.trailRecordToSql(item)
-			basicLit := &ast.BasicLit{state.currentNode.Node.Pos(), token.STRING, strconv.Quote(s)}
-			nodeValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, basicLit)
-			return []Node[ast.Node]{nodeValue}, artValue
-		default:
-			panic("implementation required")
+func (compiler *Compiler) libGenerateSqlImplementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+			if len(arguments) != 1 {
+				panic(fmt.Errorf("Lib.GenerateSql implementation requires 1 arguments, got %d", len(arguments)))
+			}
+
+			return compiler.libGenerateSql(state, arguments[0])
 		}
 	}
+	return es()
 }
 
-func (compiler *Compiler) libGenerateSqlTestImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("Lib.GenerateSqlTest implementation requires 1 arguments, got %d", len(arguments)))
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		args := arguments[0:1]
-		ans, _ := compiler.libGenerateSqlImplementation(state, params, args)(state)
-		if rv, isLiterate := isLiterateValue(ans[0]); isLiterate && rv.Kind() == reflect.String {
-			currentContext := GetCompilerState[*CurrentContext](state)
-			if value, b := currentContext.FindValue("__stdOut__"); b {
-				switch nodeValue := value.Node.(type) {
-				case *ReflectValueExpression:
-					if wr, ok := nodeValue.Rv.Interface().(io.Writer); ok {
-						_, _ = wr.Write([]byte(rv.String()))
+func (compiler *Compiler) libGenerateSqlTestImplementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+			if len(arguments) != 1 {
+				panic(fmt.Errorf("Lib.GenerateSqlTest implementation requires 1 arguments, got %d", len(arguments)))
+			}
+			args := arguments[0]
+			ans, _ := compiler.libGenerateSql(state, args)
+			if rv, isLiterate := isLiterateValue(ans[0]); isLiterate && rv.Kind() == reflect.String {
+				currentContext := GetCompilerState[*CurrentContext](state)
+				if value, b := currentContext.FindValue("__stdOut__"); b {
+					switch nodeValue := value.Node.(type) {
+					case *ReflectValueExpression:
+						if wr, ok := nodeValue.Rv.Interface().(io.Writer); ok {
+							_, _ = wr.Write([]byte(rv.String()))
+						}
+						return nil, artNone
+					default:
+						panic(fmt.Sprintf("libGenerateSqlTestImplementation *ReflectValueExpression not found"))
 					}
-					return nil, artNone
-				default:
-					panic(fmt.Sprintf("libGenerateSqlTestImplementation *ReflectValueExpression not found"))
 				}
+				panic(fmt.Sprintf("libGenerateSqlTestImplementation __stdOut__ not found"))
 			}
-			panic(fmt.Sprintf("libGenerateSqlTestImplementation __stdOut__ not found"))
+			panic(fmt.Sprintf("libGenerateSqlTestImplementation value from GenerateSql not literal"))
 		}
-		panic(fmt.Sprintf("libGenerateSqlTestImplementation value from GenerateSql not literal"))
 	}
+	return es()
 }
 
-func (compiler *Compiler) libAtoiImplementation(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("Lib.Atoi implementation requires 1 arguments, got %d", len(arguments)))
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		nodes, resultType := compiler.strconvAtoiImplementation(state, nil, arguments)(state)
-		return nodes[:1], resultType
-	}
-}
-
-func (compiler *Compiler) libSetSomeValueImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("SetSomeValue implementation requires 1 arguments, got %d", len(arguments)))
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		sd := SomeDataWithNode{arguments[0], true}
-		param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(sd)})
-		return []Node[ast.Node]{param}, artValue
-	}
-}
-
-func (compiler *Compiler) libSetSomeNoneImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		sd := SomeDataWithNode{assigned: false}
-		param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(sd)})
-		return []Node[ast.Node]{param}, artValue
-	}
-}
-
-func (compiler *Compiler) libIsSomeAssignedImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("IsSomeAssigned implementation requires 1 arguments, got %d", len(arguments)))
-	}
-	// Todo: do some optimize when arguments[0] is a literal
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		switch nodeItem := arguments[0].Node.(type) {
-		case *ReflectValueExpression:
-			unk := nodeItem.Rv.Interface()
-			switch rvInstance := unk.(type) {
-			case SomeDataWithNode:
-				param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(rvInstance.assigned)})
-				return []Node[ast.Node]{param}, artValue
-			default:
-				panic("ddddd")
+func (compiler *Compiler) libAtoiImplementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+			if len(arguments) != 1 {
+				panic(fmt.Errorf("Lib.Atoi implementation requires 1 arguments, got %d", len(arguments)))
 			}
-		default:
-			param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &CheckForNotNullExpression{arguments[0]})
+			nodes, resultType := compiler.strconvAtoiImplementation(state)(state, typeParams, unprocessedArgs)
+			return nodes[:1], resultType
+		}
+	}
+	return es()
+}
+
+func (compiler *Compiler) libSetSomeValueImplementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+			if len(arguments) != 1 {
+				panic(fmt.Errorf("SetSomeValue implementation requires 1 arguments, got %d", len(arguments)))
+			}
+
+			sd := SomeDataWithNode{arguments[0], true}
+			param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(sd)})
 			return []Node[ast.Node]{param}, artValue
 		}
 	}
+	return es()
 }
 
-func (compiler *Compiler) libSomeDataImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("SomeData implementation requires 1 arguments, got %d", len(arguments)))
+func (compiler *Compiler) libSetSomeNoneImplementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			sd := SomeDataWithNode{assigned: false}
+			param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(sd)})
+			return []Node[ast.Node]{param}, artValue
+		}
 	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		return arguments[0:1], artValue
+	return es()
+}
+
+func (compiler *Compiler) IsSomeAssigned(state State, argument Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	switch nodeItem := argument.Node.(type) {
+	case *ReflectValueExpression:
+		unk := nodeItem.Rv.Interface()
+		switch rvInstance := unk.(type) {
+		case SomeDataWithNode:
+			param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(rvInstance.assigned)})
+			return []Node[ast.Node]{param}, artValue
+		default:
+			panic("ddddd")
+		}
+	default:
+		param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &CheckForNotNullExpression{argument})
+		return []Node[ast.Node]{param}, artValue
 	}
 }
 
-func (compiler *Compiler) libSomeData2Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("SomeData2 implementation requires 1 arguments, got %d", len(arguments)))
+func (compiler *Compiler) libIsSomeAssignedImplementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		// Todo: do some optimize when arguments[0] is a literal
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+			if len(arguments) != 1 {
+				panic(fmt.Errorf("IsSomeAssigned implementation requires 1 arguments, got %d", len(arguments)))
+			}
+
+			return compiler.IsSomeAssigned(state, arguments[0])
+		}
 	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		v, _ := compiler.libIsSomeAssignedImplementation(state, params, arguments)(state)
-		result := append(arguments, v[0])
-		return result, artValue
-	}
+	return es()
 }
 
-func (compiler *Compiler) libGetSomeDataImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("GetSomeData implementation requires 1 arguments, got %d", len(arguments)))
+func (compiler *Compiler) libSomeDataImplementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+			if len(arguments) != 1 {
+				panic(fmt.Errorf("SomeData implementation requires 1 arguments, got %d", len(arguments)))
+			}
+			return arguments[0:1], artValue
+		}
 	}
-	return compiler.getGetSomeDataN(state, params, arguments)
+	return es()
 }
 
-func (compiler *Compiler) getGetSomeDataN(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		fn := func() Node[ast.Node] {
-			var binaryOperations []Node[ast.Node]
-			for _, arg := range arguments {
-				arr, _ := compiler.libIsSomeAssignedImplementation(state, params, []Node[ast.Node]{arg})(state)
-				for _, item := range arr {
-					switch nodeItem := item.Node.(type) {
-					case *ReflectValueExpression:
-						if nodeItem.Rv.Kind() == reflect.Bool {
-							if nodeItem.Rv.Bool() {
-								continue
-							} else {
-								return item
+func (compiler *Compiler) libSomeData2Implementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+			if len(arguments) != 1 {
+				panic(fmt.Errorf("SomeData2 implementation requires 1 arguments, got %d", len(arguments)))
+			}
+
+			v, _ := compiler.IsSomeAssigned(state, arguments[0])
+			result := append(arguments, v[0])
+			return result, artValue
+		}
+	}
+	return es()
+}
+
+func (compiler *Compiler) libGetSomeDataImplementation(state State) ExecuteStatement {
+	es := func() ExecuteStatement {
+		return compiler.getGetSomeDataN()
+	}
+	return es()
+}
+
+func (compiler *Compiler) getGetSomeDataN() ExecuteStatement {
+	es := func() ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+			fn := func() Node[ast.Node] {
+				var binaryOperations []Node[ast.Node]
+				for _, arg := range arguments {
+					arr, _ := compiler.IsSomeAssigned(state, arg)
+					for _, item := range arr {
+						switch nodeItem := item.Node.(type) {
+						case *ReflectValueExpression:
+							if nodeItem.Rv.Kind() == reflect.Bool {
+								if nodeItem.Rv.Bool() {
+									continue
+								} else {
+									return item
+								}
 							}
 						}
+						binaryOperations = append(binaryOperations, item)
 					}
-					binaryOperations = append(binaryOperations, item)
 				}
+				return ChangeParamNode[ast.Node, ast.Node](state.currentNode, &MultiBinaryExpr{token.LAND, binaryOperations})
 			}
-			return ChangeParamNode[ast.Node, ast.Node](state.currentNode, &MultiBinaryExpr{token.LAND, binaryOperations})
+			return append(arguments, fn()), artValue
 		}
-		return append(arguments, fn()), artValue
 	}
+	return es()
 }
 
-func (compiler *Compiler) libGetSomeData02Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 2 {
-		panic(fmt.Errorf("GetSomeData02 implementation requires 2 arguments, got %d", len(arguments)))
-	}
-	return compiler.getGetSomeDataN(state, params, arguments)
+func (compiler *Compiler) libGetSomeData02Implementation(state State) ExecuteStatement {
+	return compiler.getGetSomeDataN()
+
 }
 
-func (compiler *Compiler) libGetSomeData03Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 3 {
-		panic(fmt.Errorf("GetSomeData03 implementation requires 3 arguments, got %d", len(arguments)))
-	}
-	return compiler.getGetSomeDataN(state, params, arguments)
+func (compiler *Compiler) libGetSomeData03Implementation(state State) ExecuteStatement {
+	return compiler.getGetSomeDataN()
 }
 
-func (compiler *Compiler) libGetSomeData04Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 4 {
-		panic(fmt.Errorf("GetSomeData04 implementation requires 4 arguments, got %d", len(arguments)))
-	}
-	return compiler.getGetSomeDataN(state, params, arguments)
+func (compiler *Compiler) libGetSomeData04Implementation(state State) ExecuteStatement {
+	return compiler.getGetSomeDataN()
 }
 
-func (compiler *Compiler) libGetSomeData05Implementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 5 {
-		panic(fmt.Errorf("GetSomeData05 implementation requires 5 arguments, got %d", len(arguments)))
-	}
-	return compiler.getGetSomeDataN(state, params, arguments)
+func (compiler *Compiler) libGetSomeData05Implementation(state State) ExecuteStatement {
+	return compiler.getGetSomeDataN()
 }
 
-func (compiler *Compiler) libCreateDictionaryImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 2 {
-		panic(fmt.Errorf("CreateDictionary implementation requires 2 arguments, got %d", len(arguments)))
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libCreateDictionaryImplementation(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 		if rv00, ok00 := isLiterateValue(arguments[0]); ok00 {
 			if rv01, ok01 := isLiterateValue(arguments[1]); ok01 {
 				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{rv00, rv01})}, artValue
@@ -309,15 +344,16 @@ func (rvArray *rvArraySorter) Swap(i, j int) {
 	rvArray.rvArray[i], rvArray.rvArray[j] = rvArray.rvArray[j], rvArray.rvArray[i]
 }
 
-func (compiler *Compiler) libDictionaryLookupImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return libDictionaryLookupImplementation{state, params, arguments}.ExecuteStatement()
+func (compiler *Compiler) libDictionaryLookupImplementation(state State) ExecuteStatement {
+	return libDictionaryLookupImplementation{compiler, state}.ExecuteStatement()
 }
 
-func (compiler *Compiler) libDictionaryDefaultImplementation(state State, params []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("DictionaryLookup implementation requires 1 arguments, got %d", len(arguments)))
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libDictionaryDefaultImplementation(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+		if len(arguments) != 1 {
+			panic(fmt.Errorf("DictionaryLookup implementation requires 1 arguments, got %d", len(arguments)))
+		}
 		dictionaryExpression := arguments[0].Node.(*DictionaryExpression)
 		rve := &ReflectValueExpression{dictionaryExpression.defaultValue}
 		resultValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, rve)
@@ -336,11 +372,19 @@ func findAllParamNameAndTypes(Params *ast.FieldList) []struct {
 
 	if Params != nil {
 		for _, g := range Params.List {
-			for _, n := range g.Names {
+			if len(g.Names) == 0 {
 				result = append(result, struct {
 					name string
 					node ast.Expr
-				}{name: n.Name, node: g.Type})
+				}{name: "_", node: g.Type})
+
+			} else {
+				for _, n := range g.Names {
+					result = append(result, struct {
+						name string
+						node ast.Expr
+					}{name: n.Name, node: g.Type})
+				}
 			}
 		}
 	}
@@ -348,57 +392,59 @@ func findAllParamNameAndTypes(Params *ast.FieldList) []struct {
 	return result
 }
 
-func (compiler *Compiler) libCoreRelationshipImplementation(state State, typeParams []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	typeParams = func() []Node[ast.Expr] {
-		if len(typeParams) == 0 && len(arguments) == 2 {
-			if ft, ok := arguments[1].Node.(*ast.FuncLit); ok {
-				allParams := findAllParamNameAndTypes(ft.Type.Params)
-				param := ChangeParamNode(arguments[1], allParams[0].node)
-				return []Node[ast.Expr]{param}
-			} else {
-				panic(fmt.Errorf("calculation of relationship typeParams fails"))
-			}
-		}
-		return typeParams
-	}()
+//func (compiler *Compiler) libCoreRelationshipImplementation(state State, parentNode Node[ast.Node], unprocessedArgs []ast.Expr, typeParams []Node[ast.Expr]) ExecuteStatement {
+//	arguments := compiler.compileArguments(state, parentNode, unprocessedArgs)
+//	typeParams = func() []Node[ast.Expr] {
+//		if len(typeParams) == 0 && len(arguments) == 2 {
+//			if ft, ok := arguments[1].Node.(*ast.FuncLit); ok {
+//				allParams := findAllParamNameAndTypes(ft.Type.Params)
+//				param := ChangeParamNode(arguments[1], allParams[0].node)
+//				return []Node[ast.Expr]{param}
+//			} else {
+//				panic(fmt.Errorf("calculation of relationship typeParams fails"))
+//			}
+//		}
+//		return typeParams
+//	}()
+//
+//	if len(typeParams) != 1 {
+//		panic(fmt.Errorf("relationship implementation requires 1 typeParams, got %d", len(typeParams)))
+//	}
+//
+//	if len(arguments) != 2 {
+//		panic(fmt.Errorf("relationship implementation requires 2 arguments, got %d", len(arguments)))
+//	}
+//
+//	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+//		// todo: do some more here, register the callack argument[1] someshere
+//		return arguments[0:1], artValue
+//	}
+//}
 
-	if len(typeParams) != 1 {
-		panic(fmt.Errorf("relationship implementation requires 1 typeParams, got %d", len(typeParams)))
-	}
-
-	if len(arguments) != 2 {
-		panic(fmt.Errorf("relationship implementation requires 2 arguments, got %d", len(arguments)))
-	}
-
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-		// todo: do some more here, register the callack argument[1] someshere
-		return arguments[0:1], artValue
-	}
-}
-
-func (compiler *Compiler) libRelationshipImplementation(state State, typeParams []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	typeParams = func() []Node[ast.Expr] {
-		if len(typeParams) == 0 && len(arguments) == 1 {
-			if ft, ok := arguments[0].Node.(*ast.FuncLit); ok {
-				allParams := findAllParamNameAndTypes(ft.Type.Params)
-				param := ChangeParamNode(arguments[0], allParams[0].node)
-				return []Node[ast.Expr]{param}
-			} else {
-				panic(fmt.Errorf("calculation of relationship typeParams fails"))
-			}
-		}
-		return typeParams
-	}()
-
-	if len(typeParams) != 1 {
-		panic(fmt.Errorf("relationship implementation requires 1 typeParams, got %d", len(typeParams)))
-	}
-
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("relationship implementation requires 1 arguments, got %d", len(arguments)))
-	}
-
-	es := compiler.libQueryImplementation(state, typeParams, nil)
-	arr, _ := compiler.executeAndExpandStatement(state, es)
-	return compiler.libCoreRelationshipImplementation(state, typeParams, append(arr, arguments...))
-}
+//func (compiler *Compiler) libRelationshipImplementation(state State, parentNode Node[ast.Node], unprocessedArgs []ast.Expr, typeParams []Node[ast.Expr]) ExecuteStatement {
+//	arguments := compiler.compileArguments(state, parentNode, unprocessedArgs)
+//	typeParams = func() []Node[ast.Expr] {
+//		if len(typeParams) == 0 && len(arguments) == 1 {
+//			if ft, ok := arguments[0].Node.(*ast.FuncLit); ok {
+//				allParams := findAllParamNameAndTypes(ft.Type.Params)
+//				param := ChangeParamNode(arguments[0], allParams[0].node)
+//				return []Node[ast.Expr]{param}
+//			} else {
+//				panic(fmt.Errorf("calculation of relationship typeParams fails"))
+//			}
+//		}
+//		return typeParams
+//	}()
+//
+//	if len(typeParams) != 1 {
+//		panic(fmt.Errorf("relationship implementation requires 1 typeParams, got %d", len(typeParams)))
+//	}
+//
+//	if len(arguments) != 1 {
+//		panic(fmt.Errorf("relationship implementation requires 1 arguments, got %d", len(arguments)))
+//	}
+//
+//	es := compiler.libQueryImplementation(state, parentNode, unprocessedArgs, typeParams)
+//	arr, _ := compiler.executeAndExpandStatement(state, es)
+//	return compiler.libCoreRelationshipImplementation(state, typeParams, append(arr, arguments...))
+//}

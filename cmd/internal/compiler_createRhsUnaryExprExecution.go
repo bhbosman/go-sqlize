@@ -7,13 +7,13 @@ import (
 )
 
 func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		switch node.Node.Op {
 		case token.SUB:
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.UnaryExpr, ast.Node](node, node.Node.X))
 			param := ChangeParamNode(node, node.Node.X)
 			es := compiler.findRhsExpression(tempState, param)
-			arr, _ := compiler.executeAndExpandStatement(tempState, es)
+			arr, _ := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
 
 			rve := &ReflectValueExpression{reflect.ValueOf(-1)}
 			rveNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, rve)
@@ -26,7 +26,7 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.UnaryExpr, ast.Node](node, node.Node.X))
 			param := ChangeParamNode(node, node.Node.X)
 			es := compiler.findRhsExpression(tempState, param)
-			arr, _ := compiler.executeAndExpandStatement(tempState, es)
+			arr, _ := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
 			switch nodeItem := arr[0].Node.(type) {
 			case *BinaryExpr:
 				switch nodeItem.Op {

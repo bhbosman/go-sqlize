@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 	"reflect"
@@ -9,21 +8,18 @@ import (
 )
 
 type libDictionaryLookupImplementation struct {
-	state     State
-	params    []Node[ast.Expr]
-	arguments []Node[ast.Node]
+	compiler *Compiler
+	state    State
 }
 
 func (impl libDictionaryLookupImplementation) ExecuteStatement() ExecuteStatement {
-	if len(impl.arguments) != 2 {
-		panic(fmt.Errorf("DictionaryLookup implementation requires 2 arguments, got %d", len(impl.arguments)))
-	}
 	return impl.Run
 }
 
-func (impl libDictionaryLookupImplementation) Run(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (impl libDictionaryLookupImplementation) Run(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+	arguments := impl.compiler.compileArguments(state, unprocessedArgs, typeParams)
 	var conditionalStatement []SingleValueCondition
-	dictionaryExpression := impl.arguments[0].Node.(*DictionaryExpression)
+	dictionaryExpression := arguments[0].Node.(*DictionaryExpression)
 	{
 		rvMap := dictionaryExpression.m
 		keyArr := rvMap.MapKeys()
@@ -32,7 +28,7 @@ func (impl libDictionaryLookupImplementation) Run(state State) ([]Node[ast.Node]
 
 		for _, rvKey := range keyArr {
 			rvValue := rvMap.MapIndex(rvKey)
-			inputData := impl.arguments[1]
+			inputData := arguments[1]
 			expressions := impl.walk(inputData, rvKey)
 
 			mbe := &MultiBinaryExpr{token.LAND, expressions}

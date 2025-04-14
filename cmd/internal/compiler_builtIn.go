@@ -21,20 +21,20 @@ func (compiler *Compiler) addBuiltInFunctions() {
 	compiler.GlobalTypes[ValueKey{"", "string"}] = compiler.registerString()
 	compiler.GlobalTypes[ValueKey{"", "float64"}] = compiler.registerFloat64()
 
-	compiler.GlobalFunctions[ValueKey{"", "float64"}] = compiler.coercionFloat64
-	compiler.GlobalFunctions[ValueKey{"", "float32"}] = compiler.coercionFloat32
-	compiler.GlobalFunctions[ValueKey{"", "int"}] = compiler.coercionInt
-	compiler.GlobalFunctions[ValueKey{"", "string"}] = compiler.coercionString
-	compiler.GlobalFunctions[ValueKey{"", "panic"}] = compiler.builtInPanic
-	compiler.GlobalFunctions[ValueKey{"", "nil"}] = compiler.builtInNil
-	compiler.GlobalFunctions[ValueKey{"", "true"}] = compiler.builtInTrue
-	compiler.GlobalFunctions[ValueKey{"", "false"}] = compiler.builtInFalse
-	compiler.GlobalFunctions[ValueKey{"", "println"}] = compiler.builtInPrintln
-	compiler.GlobalFunctions[ValueKey{"", "print"}] = compiler.builtInPrint
+	compiler.GlobalFunctions[ValueKey{"", "float64"}] = functionInformation{compiler.coercionFloat64, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"", "float32"}] = functionInformation{compiler.coercionFloat32, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"", "int"}] = functionInformation{compiler.coercionInt, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"", "string"}] = functionInformation{compiler.coercionString, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"", "panic"}] = functionInformation{compiler.builtInPanic, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"", "nil"}] = functionInformation{compiler.builtInNil, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"", "true"}] = functionInformation{compiler.builtInTrue, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"", "false"}] = functionInformation{compiler.builtInFalse, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"", "println"}] = functionInformation{compiler.builtInPrintln, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"", "print"}] = functionInformation{compiler.builtInPrint, Node[*ast.FuncType]{}, false}
 }
 
 func (compiler *Compiler) registerLibType() OnCreateType {
-	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+	return func(state State, i []Node[ast.Node]) ITypeMapper {
 		return &ReflectTypeHolder{
 			func(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
 				panic("dfgdfgf")
@@ -59,7 +59,7 @@ func (compiler *Compiler) registerLibType() OnCreateType {
 }
 
 func (compiler *Compiler) registerSomeType() OnCreateType {
-	return func(state State, typeParams []Node[ast.Expr]) ITypeMapper {
+	return func(state State, typeParams []Node[ast.Node]) ITypeMapper {
 		fn := func(state State) reflect.Type {
 			return reflect.TypeFor[SomeDataWithRv]()
 		}
@@ -93,7 +93,7 @@ func (compiler *Compiler) registerSomeType() OnCreateType {
 }
 
 func (compiler *Compiler) registerFloat64() OnCreateType {
-	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+	return func(state State, i []Node[ast.Node]) ITypeMapper {
 		fn := func(state State) reflect.Type {
 			return reflect.TypeFor[float64]()
 		}
@@ -113,7 +113,7 @@ func (compiler *Compiler) registerFloat64() OnCreateType {
 }
 
 func (compiler *Compiler) registerString() OnCreateType {
-	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+	return func(state State, i []Node[ast.Node]) ITypeMapper {
 		fn := func(state State) reflect.Type {
 			return reflect.TypeFor[string]()
 		}
@@ -147,6 +147,36 @@ type ITypeMapper interface {
 	MapperKeyType(state State) reflect.Type
 	MapperValueType(state State) reflect.Type
 	Kind() reflect.Kind
+}
+
+type WrapReflectTypeInMapper struct {
+	rt reflect.Type
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) Create(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
+	return rv
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) NodeType(state State) reflect.Type {
+	return typeWrapper.rt
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) ActualType(state State) reflect.Type {
+	return typeWrapper.rt
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) MapperKeyType(state State) reflect.Type {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) MapperValueType(state State) reflect.Type {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) Kind() reflect.Kind {
+	return typeWrapper.rt.Kind()
 }
 
 type ReflectTypeHolder struct {
@@ -183,7 +213,7 @@ func (rth *ReflectTypeHolder) Create(state State, option TypeMapperCreateOption,
 }
 
 func (compiler *Compiler) registerInt() OnCreateType {
-	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+	return func(state State, i []Node[ast.Node]) ITypeMapper {
 		fn := func(state State) reflect.Type {
 			return reflect.TypeFor[int]()
 		}
@@ -203,7 +233,7 @@ func (compiler *Compiler) registerInt() OnCreateType {
 }
 
 func (compiler *Compiler) registerBool() OnCreateType {
-	return func(state State, i []Node[ast.Expr]) ITypeMapper {
+	return func(state State, i []Node[ast.Node]) ITypeMapper {
 		fn := func(state State) reflect.Type {
 			return reflect.TypeFor[bool]()
 		}
@@ -222,51 +252,54 @@ func (compiler *Compiler) registerBool() OnCreateType {
 	}
 }
 
-func (compiler *Compiler) builtInNil(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) builtInNil(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &builtInNil{})}, artValue
 	}
 }
 
-func (compiler *Compiler) builtInTrue(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) builtInTrue(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(true)})}, artValue
 	}
 }
 
-func (compiler *Compiler) builtInFalse(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) builtInFalse(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(false)})}, artValue
 	}
 }
 
-func (compiler *Compiler) builtInPrintln(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) builtInPrintln(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		// todo: implement at some point
 		return nil, artNone
 	}
 }
 
-func (compiler *Compiler) builtInPrint(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) builtInPrint(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		// todo: implement at some point
 		return nil, artNone
 	}
 }
 
-func (compiler *Compiler) coercionInt(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return compiler.genericCoercion(reflect.TypeFor[int](), arguments)
+func (compiler *Compiler) coercionInt(state State) ExecuteStatement {
+
+	return compiler.genericCoercion(reflect.TypeFor[int]())
 }
 
-func (compiler *Compiler) coercionString(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return compiler.genericCoercion(reflect.TypeFor[string](), arguments)
+func (compiler *Compiler) coercionString(state State) ExecuteStatement {
+	return compiler.genericCoercion(reflect.TypeFor[string]())
 }
 
-func (compiler *Compiler) genericCoercion(rt reflect.Type, arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("coercion panic requires 1 argument, got %d", len(arguments)))
-	}
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) genericCoercion(rt reflect.Type) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+		if len(arguments) != 1 {
+			panic(fmt.Errorf("coercion panic requires 1 argument, got %d", len(arguments)))
+		}
+
 		rv, isLiterate := isLiterateValue(arguments[0])
 		if isLiterate {
 			returnValue := ChangeParamNode[ast.Node, ast.Node](
@@ -283,20 +316,20 @@ func (compiler *Compiler) genericCoercion(rt reflect.Type, arguments []Node[ast.
 	}
 }
 
-func (compiler *Compiler) coercionFloat32(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return compiler.genericCoercion(reflect.TypeFor[float32](), arguments)
+func (compiler *Compiler) coercionFloat32(state State) ExecuteStatement {
+	return compiler.genericCoercion(reflect.TypeFor[float32]())
 }
 
-func (compiler *Compiler) coercionFloat64(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return compiler.genericCoercion(reflect.TypeFor[float64](), arguments)
+func (compiler *Compiler) coercionFloat64(state State) ExecuteStatement {
+	return compiler.genericCoercion(reflect.TypeFor[float64]())
 }
 
-func (compiler *Compiler) builtInPanic(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	if len(arguments) != 1 {
-		panic(fmt.Errorf("built-in panic requires 1 argument, got %d", len(arguments)))
-	}
-
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) builtInPanic(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+		if len(arguments) != 1 {
+			panic(fmt.Errorf("built-in panic requires 1 argument, got %d", len(arguments)))
+		}
 		switch arg := arguments[0].Node.(type) {
 		case *ast.BasicLit:
 			panic(fmt.Errorf(arg.Value))

@@ -7,12 +7,14 @@ import (
 )
 
 func (compiler *Compiler) addMathFunctions() {
-	compiler.GlobalFunctions[ValueKey{"math", "Sin"}] = compiler.mathSinImplementation
-	compiler.GlobalFunctions[ValueKey{"math", "Cos"}] = compiler.mathCosImplementation
+	compiler.GlobalFunctions[ValueKey{"math", "Sin"}] = functionInformation{compiler.mathSinImplementation, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"math", "Cos"}] = functionInformation{compiler.mathCosImplementation, Node[*ast.FuncType]{}, false}
 }
 
-func (compiler *Compiler) mathSinImplementation(state State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) mathSinImplementation(state State) ExecuteStatement {
+
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 		rv := reflect.ValueOf(math.Sin)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art
@@ -22,8 +24,10 @@ func (compiler *Compiler) mathSinImplementation(state State, _ []Node[ast.Expr],
 	}
 }
 
-func (compiler *Compiler) mathCosImplementation(state State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) mathCosImplementation(state State) ExecuteStatement {
+
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 		rv := reflect.ValueOf(math.Cos)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art

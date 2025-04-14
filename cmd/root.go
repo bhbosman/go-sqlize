@@ -78,6 +78,7 @@ var RootCmd = &cobra.Command{
 				rawAst.StructMethodMap,
 				rawAst.TypeSpecMap,
 				rawAst.InitFunctions,
+				fs,
 			)
 			var ss []string
 			if inputFile != "" {
@@ -85,9 +86,10 @@ var RootCmd = &cobra.Command{
 			}
 
 			currentContext := &internal.CurrentContext{
-				map[string]internal.Node[ast.Node]{
-					"__stdOut__": {Node: &internal.ReflectValueExpression{reflect.ValueOf(cmd.OutOrStdout())}},
+				internal.ValueInformationMap{
+					"__stdOut__": internal.ValueInformation{internal.Node[ast.Node]{Node: &internal.ReflectValueExpression{reflect.ValueOf(cmd.OutOrStdout())}}},
 				},
+				map[string]internal.ITypeMapper{},
 				internal.LocalTypesMap{},
 				nil,
 			}

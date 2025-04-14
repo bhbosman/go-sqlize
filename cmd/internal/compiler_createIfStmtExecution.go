@@ -6,24 +6,24 @@ import (
 )
 
 func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		var conditionalStatement []MultiValueCondition
 		var whatIsReturned CallArrayResultType = 0
 
-		newContext := &CurrentContext{map[string]Node[ast.Node]{}, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
+		newContext := &CurrentContext{ValueInformationMap{}, map[string]ITypeMapper{}, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
 		state = SetCompilerState(newContext, state)
 
 		if node.Node.Init != nil {
 			param := ChangeParamNode(node, node.Node.Init)
 			es, n := compiler.findStatement(state, param)
 			tempState := state.setCurrentNode(n)
-			_, _ = compiler.executeAndExpandStatement(tempState, es)
+			_, _ = compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
 		}
 
 		fnBoolExpression := func(state State, Cond ast.Expr) ([]Node[ast.Node], CallArrayResultType) {
 			param := ChangeParamNode(node, Cond)
 			es := compiler.findRhsExpression(state, param)
-			return compiler.executeAndExpandStatement(state, es)
+			return compiler.executeAndExpandStatement(state, typeParams, unprocessedArgs, es)
 		}
 		boolExpression, _ := fnBoolExpression(state, node.Node.Cond)
 
@@ -34,13 +34,13 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 		} else {
 			if node.Node.Body != nil {
 				parent := GetCompilerState[*CurrentContext](state)
-				newBodyContext := &CurrentContext{map[string]Node[ast.Node]{}, LocalTypesMap{}, parent}
+				newBodyContext := &CurrentContext{ValueInformationMap{}, map[string]ITypeMapper{}, LocalTypesMap{}, parent}
 				state = SetCompilerState(newBodyContext, state)
 				{
 					param := ChangeParamNode[*ast.IfStmt, ast.Stmt](node, node.Node.Body)
 					es, n := compiler.findStatement(state, param)
 					tempState := state.setCurrentNode(n)
-					bodyValues, resultTypeForBodyPart := compiler.executeAndExpandStatement(tempState, es)
+					bodyValues, resultTypeForBodyPart := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
 					whatIsReturned |= resultTypeForBodyPart
 					if resultTypeForBodyPart == artReturn {
 						conditionalStatementInstance := MultiValueCondition{boolExpression[0], bodyValues}
@@ -52,13 +52,13 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 			if node.Node.Else != nil {
 				parent := GetCompilerState[*CurrentContext](state)
 
-				newElseContext := &CurrentContext{map[string]Node[ast.Node]{}, LocalTypesMap{}, parent}
+				newElseContext := &CurrentContext{ValueInformationMap{}, map[string]ITypeMapper{}, LocalTypesMap{}, parent}
 				state = SetCompilerState(newElseContext, state)
 				{
 					param := ChangeParamNode[*ast.IfStmt, ast.Stmt](node, node.Node.Else)
 					es, n := compiler.findStatement(state, param)
 					tempState := state.setCurrentNode(n)
-					bodyElseValues, resultTypeForBodyElsePart := compiler.executeAndExpandStatement(tempState, es)
+					bodyElseValues, resultTypeForBodyElsePart := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
 					whatIsReturned |= resultTypeForBodyElsePart
 					if resultTypeForBodyElsePart == artReturn {
 						switch item := bodyElseValues[0].Node.(type) {

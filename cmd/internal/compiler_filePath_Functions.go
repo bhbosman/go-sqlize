@@ -6,8 +6,9 @@ import (
 	"reflect"
 )
 
-func (compiler *Compiler) pathFilepathJoinImplementation(state State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) pathFilepathJoinImplementation(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 		rv := reflect.ValueOf(filepath.Join)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art
@@ -16,8 +17,10 @@ func (compiler *Compiler) pathFilepathJoinImplementation(state State, _ []Node[a
 	}
 }
 
-func (compiler *Compiler) pathFilepathDirImplementation(state State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) pathFilepathDirImplementation(state State) ExecuteStatement {
+
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 		rv := reflect.ValueOf(filepath.Dir)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art

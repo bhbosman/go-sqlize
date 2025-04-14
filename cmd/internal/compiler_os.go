@@ -8,33 +8,35 @@ import (
 )
 
 func (compiler *Compiler) addOsFunctions() {
-	compiler.GlobalFunctions[ValueKey{"os", "Getwd"}] = compiler.osGetWdImplementation
-	compiler.GlobalFunctions[ValueKey{"os", "ModePerm"}] = compiler.osModePermImplementation
-	compiler.GlobalFunctions[ValueKey{"os", "MkdirAll"}] = compiler.osMkdirAllImplementation
-	compiler.GlobalFunctions[ValueKey{"os", "Create"}] = compiler.osCreateImplementation
-	compiler.GlobalFunctions[ValueKey{"os", "Stdout"}] = compiler.osStdout
+	compiler.GlobalFunctions[ValueKey{"os", "Getwd"}] = functionInformation{compiler.osGetWdImplementation, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"os", "ModePerm"}] = functionInformation{compiler.osModePermImplementation, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"os", "MkdirAll"}] = functionInformation{compiler.osMkdirAllImplementation, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"os", "Create"}] = functionInformation{compiler.osCreateImplementation, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"os", "Stdout"}] = functionInformation{compiler.osStdout, Node[*ast.FuncType]{}, false}
 }
 
 func (compiler *Compiler) genericValue(rv reflect.Value) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		rvNode := &ReflectValueExpression{rv}
 		vv := ChangeParamNode[ast.Node, ast.Node](state.currentNode, rvNode)
 		return []Node[ast.Node]{vv}, artValue
 	}
 }
 
-func (compiler *Compiler) osModePermImplementation(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {
+func (compiler *Compiler) osModePermImplementation(state State) ExecuteStatement {
 	rv := reflect.ValueOf(os.ModePerm)
 	return compiler.genericValue(rv)
 }
 
-func (compiler *Compiler) osStdout(State, []Node[ast.Expr], []Node[ast.Node]) ExecuteStatement {
+func (compiler *Compiler) osStdout(state State) ExecuteStatement {
 	rv := reflect.ValueOf(os.Stdout)
 	return compiler.genericValue(rv)
 }
 
-func (compiler *Compiler) osGetWdImplementation(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) osGetWdImplementation(state State) ExecuteStatement {
+
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 		rv := reflect.ValueOf(os.Getwd)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art
@@ -43,8 +45,9 @@ func (compiler *Compiler) osGetWdImplementation(_ State, _ []Node[ast.Expr], arg
 	}
 }
 
-func (compiler *Compiler) osMkdirAllImplementation(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) osMkdirAllImplementation(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 		rv := reflect.ValueOf(os.MkdirAll)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art
@@ -53,8 +56,9 @@ func (compiler *Compiler) osMkdirAllImplementation(_ State, _ []Node[ast.Expr], 
 	}
 }
 
-func (compiler *Compiler) osCreateImplementation(_ State, _ []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) osCreateImplementation(state State) ExecuteStatement {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 		rv := reflect.ValueOf(os.Create)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art

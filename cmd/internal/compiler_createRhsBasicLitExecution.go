@@ -8,7 +8,7 @@ import (
 )
 
 func (compiler *Compiler) createRhsBasicLitExecution(node Node[*ast.BasicLit]) ExecuteStatement {
-	return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 		switch node.Node.Kind {
 		case token.INT:
 			intValue, _ := strconv.ParseInt(node.Node.Value, 10, 64)

@@ -12,7 +12,7 @@ type ValueKey struct {
 }
 
 type FunctionMap map[ValueKey]Node[*ast.FuncDecl]
-type SqlizeSelectMap map[ValueKey]Node[*ast.FuncDecl]
+
 type StructMethodMap map[ValueKey]map[string]*ast.FuncDecl
 type TypeSpecMap map[ValueKey]Node[*ast.TypeSpec]
 

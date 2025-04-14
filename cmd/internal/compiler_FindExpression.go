@@ -27,20 +27,20 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 		case ast.ImportMapEntry:
 			vk := ValueKey{vv.Path, item.Sel.Name}
 			if globalFunction, ok := compiler.GlobalFunctions[vk]; ok {
-				return globalFunction(state, nil, nil)
+				return globalFunction.fn(state)
 			}
 			panic(notFound(fmt.Sprintf("%v", vk), "internalFindRhsExpression"))
 		case Node[ast.Node]:
 			switch vvv := vv.Node.(type) {
 			case *TrailRecord:
 				return func(trailRecord *TrailRecord, sel *ast.Ident) ExecuteStatement {
-					return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+					return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 						return []Node[ast.Node]{trailRecord.Value.FieldByName(sel.Name).Interface().(Node[ast.Node])}, artValue
 					}
 				}(vvv, item.Sel)
 			case *IfThenElseSingleValueCondition:
 				return func(node Node[ast.Node], sel *ast.Ident) ExecuteStatement {
-					return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+					return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 
 						if selector, ok := compiler.expandNodeWithSelector(node, sel); ok {
 							return []Node[ast.Node]{selector}, artValue
@@ -49,8 +49,8 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 					}
 				}(vv, item.Sel)
 			case *TrailSource:
-				var es ExecuteStatement = func(state State) ([]Node[ast.Node], CallArrayResultType) {
-					result := ChangeParamNode[ast.Expr, ast.Node](node, &EntityField{node.Node.Pos(), vvv.Alias, item.Sel.Name})
+				var es ExecuteStatement = func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+					result := ChangeParamNode[ast.Expr, ast.Node](node, &EntityField{node.Node.Pos(), vvv.Alias, vvv.typeMapper, item.Sel.Name})
 					return []Node[ast.Node]{result}, artValue
 				}
 				return es
@@ -59,8 +59,8 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 			}
 		case ExecuteStatement:
 			return func(es ExecuteStatement, sel *ast.Ident) ExecuteStatement {
-				return func(state State) ([]Node[ast.Node], CallArrayResultType) {
-					arr, art := compiler.executeAndExpandStatement(state, es)
+				return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+					arr, art := compiler.executeAndExpandStatement(state, typeParams, unprocessedArgs, es)
 					if selector, ok := compiler.expandNodeWithSelector(arr[0], sel); ok {
 						return []Node[ast.Node]{selector}, art
 					}
@@ -87,7 +87,7 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 		currentContext := GetCompilerState[*CurrentContext](state)
 		if value, b := currentContext.FindValue(item.Name); b {
 			if stackIndex == 0 {
-				var es ExecuteStatement = func(state State) ([]Node[ast.Node], CallArrayResultType) {
+				var es ExecuteStatement = func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 					return []Node[ast.Node]{value}, artValue
 				}
 				return es
@@ -95,10 +95,10 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 			return value
 		}
 		if globalFunction, ok := compiler.GlobalFunctions[ValueKey{node.RelPath, item.Name}]; ok {
-			return globalFunction(state, nil, nil)
+			return globalFunction.fn(state)
 		}
 		if globalFunction, ok := compiler.GlobalFunctions[ValueKey{"", item.Name}]; ok {
-			return globalFunction(state, nil, nil)
+			return globalFunction.fn(state)
 		}
 		if path, ok := node.ImportMap[item.Name]; ok {
 			return path
@@ -110,45 +110,25 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 	}
 }
 
-func (compiler *Compiler) initExecutionStatement(state State, stackIndex int, unk interface{}, typeParams []Node[ast.Expr], arguments []Node[ast.Node]) interface{} {
-	if stackIndex != 0 {
-		return unk
-	}
-	switch value := unk.(type) {
-	case OnCreateExecuteStatement:
-		return value(state, typeParams, arguments)
-	case Node[ast.Node]:
-		switch value02 := value.Node.(type) {
-		case ast.Expr:
-			param := ChangeParamNode(value, value02)
-			unkValue := compiler.internalFindFunction(stackIndex+1, state, param, arguments)
-			return compiler.initExecutionStatement(state, stackIndex, unkValue, typeParams, arguments)
-		default:
-			panic(unk)
-		}
-	default:
-		panic(unk)
-	}
-}
-
 func (compiler *Compiler) onFuncLitExecutionStatement(node Node[*ast.FuncLit]) OnCreateExecuteStatement {
-	return func(state State, typeParams []Node[ast.Expr], arguments []Node[ast.Node]) ExecuteStatement {
-		return func(state State) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State) ExecuteStatement {
+		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 			var names []*ast.Ident
 			if node.Node.Type.Params != nil {
 				for _, field := range node.Node.Type.Params.List {
 					names = append(names, field.Names...)
 				}
 			}
-			m := map[string]Node[ast.Node]{}
+			m := ValueInformationMap{}
 			for idx, name := range names {
-				m[name.Name] = arguments[idx]
+				m[name.Name] = ValueInformation{arguments[idx]}
 			}
 
-			newContext := &CurrentContext{m, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
+			newContext := &CurrentContext{m, map[string]ITypeMapper{}, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
 			state = SetCompilerState(newContext, state)
 			param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, node.Node.Body)
-			values, art := compiler.executeBlockStmt(state, param)
+			values, art := compiler.executeBlockStmt(state, param, typeParams)
 			state = SetCompilerState(newContext.Parent, state)
 			return values, art
 		}

@@ -22,7 +22,7 @@ func (compiler *Compiler) internalFindLhsExpression(state State, node Node[ast.E
 		}
 		fn := func(currentContext *CurrentContext, key string) AssignStatement {
 			return func(state State, value Node[ast.Node]) {
-				currentContext.Mm[key] = value
+				currentContext.Mm[key] = ValueInformation{value}
 			}
 		}
 		switch tok {

@@ -7,21 +7,30 @@ import (
 )
 
 type (
+	IFindTypeMapper interface {
+		ast.Node
+		GetTypeMapper() ([]ITypeMapper, bool)
+	}
+
 	EntitySource struct {
-		rt reflect.Type
+		rt ITypeMapper
 	}
 	TrailRecord struct {
-		Position token.Pos     // identifier position
-		Value    reflect.Value // identifier name
+		Position   token.Pos     // identifier position
+		Value      reflect.Value // identifier name
+		typeMapper ITypeMapper
 	}
+
 	TrailSource struct {
-		Position token.Pos // identifier position
-		Alias    string
+		Position   token.Pos
+		Alias      string
+		typeMapper ITypeMapper
 	}
 	EntityField struct {
-		Position token.Pos // identifier position
-		alias    string
-		field    string
+		Position        token.Pos // identifier position
+		alias           string
+		aliasTypeMapper ITypeMapper
+		field           string
 	}
 	coercion struct {
 		Position token.Pos
@@ -82,6 +91,25 @@ type (
 		defaultValue reflect.Value
 	}
 )
+
+func (entityField *EntityField) GetTypeMapper() ([]ITypeMapper, bool) {
+	typemapper := entityField.aliasTypeMapper
+	switch typemapper.Kind() {
+	case reflect.Struct:
+		typeMapperForStruct := typemapper.(*TypeMapperForStruct)
+		return []ITypeMapper{typeMapperForStruct.typeMapperInstance.FieldByName(entityField.field).Interface().(ITypeMapper)}, true
+	default:
+		panic("dfgdfgfd")
+	}
+}
+
+func (value *TrailRecord) GetTypeMapper() ([]ITypeMapper, bool) {
+	return []ITypeMapper{value.typeMapper}, true
+}
+
+func (value *TrailSource) GetTypeMapper() ([]ITypeMapper, bool) {
+	return []ITypeMapper{value.typeMapper}, true
+}
 
 func (c *CheckForNotNullExpression) Pos() token.Pos {
 	return token.NoPos

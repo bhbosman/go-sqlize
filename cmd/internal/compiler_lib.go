@@ -31,19 +31,19 @@ func (compiler *Compiler) addLibFunctions() {
 	compiler.GlobalFunctions[ValueKey{libFolder, "CreateDictionary"}] = functionInformation{compiler.libCreateDictionaryImplementation, Node[*ast.FuncType]{}, true}
 	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryLookup"}] = functionInformation{compiler.libDictionaryLookupImplementation, Node[*ast.FuncType]{}, true}
 	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryDefault"}] = functionInformation{compiler.libDictionaryDefaultImplementation, Node[*ast.FuncType]{}, true}
-	compiler.GlobalFunctions[ValueKey{libFolder, "TypeFor"}] = functionInformation{compiler.libTypeForImplementation, Node[*ast.FuncType]{}, true}
-	compiler.GlobalFunctions[ValueKey{libFolder, "TestType"}] = functionInformation{compiler.libTestTypeImplementation, Node[*ast.FuncType]{}, true}
+	//compiler.GlobalFunctions[ValueKey{libFolder, "TypeFor"}] = functionInformation{compiler.libTypeForImplementation, Node[*ast.FuncType]{}, true}
+	//compiler.GlobalFunctions[ValueKey{libFolder, "TestType"}] = functionInformation{compiler.libTestTypeImplementation, Node[*ast.FuncType]{}, true}
 	//compiler.GlobalFunctions[ValueKey{libFolder, "CoreRelationship"}] = compiler.libCoreRelationshipImplementation
 	//compiler.GlobalFunctions[ValueKey{libFolder, "Relationship"}] = compiler.libRelationshipImplementation
 }
 
-func (compiler *Compiler) libQueryImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libQueryImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(typeParams) != 1 {
 			panic(fmt.Errorf("Lib.Query implementation requires 1 type argument, got %d", len(typeParams)))
 		}
 
-		typeMapper := typeParams[0]
+		typeMapper := typeParams[funcTypeNode.Node.TypeParams.List[0].Names[0].Name]
 		alias := compiler.AddEntitySource(typeMapper)
 		qt := &TrailSource{state.currentNode.Node.Pos(), alias, typeMapper}
 		returnValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, qt)
@@ -51,7 +51,7 @@ func (compiler *Compiler) libQueryImplementation(state State) ExecuteStatement {
 	}
 }
 
-func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, arguments []Node[ast.Node], typeParams ITypeMapperArray) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, arguments []Node[ast.Node], typeParams map[string]ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
 	nameAndParams := findAllParamNameAndTypes(funcLit.Type.Params)
 	mm := ValueInformationMap{}
 	for i, param := range nameAndParams {
@@ -71,8 +71,8 @@ func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, argu
 	return values, artValue
 }
 
-func (compiler *Compiler) libMapImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libMapImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 2 {
 			panic(fmt.Errorf("Lib.Map implementation requires 2 arguments, got %d", len(arguments)))
 		}
@@ -99,8 +99,8 @@ func (compiler *Compiler) libGenerateSql(state State, argument Node[ast.Node]) (
 	}
 }
 
-func (compiler *Compiler) libGenerateSqlImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libGenerateSqlImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 1 {
 			panic(fmt.Errorf("Lib.GenerateSql implementation requires 1 arguments, got %d", len(arguments)))
 		}
@@ -109,8 +109,8 @@ func (compiler *Compiler) libGenerateSqlImplementation(state State) ExecuteState
 	}
 }
 
-func (compiler *Compiler) libGenerateSqlTestImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libGenerateSqlTestImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 1 {
 			panic(fmt.Errorf("Lib.GenerateSqlTest implementation requires 1 arguments, got %d", len(arguments)))
 		}
@@ -135,8 +135,8 @@ func (compiler *Compiler) libGenerateSqlTestImplementation(state State) ExecuteS
 	}
 }
 
-func (compiler *Compiler) libAtoiImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libAtoiImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 1 {
 			panic(fmt.Errorf("Lib.Atoi implementation requires 1 arguments, got %d", len(arguments)))
 		}
@@ -145,13 +145,13 @@ func (compiler *Compiler) libAtoiImplementation(state State) ExecuteStatement {
 	}
 }
 
-func (compiler *Compiler) libSetSomeValueImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libSetSomeValueImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 1 {
 			panic(fmt.Errorf("SetSomeValue implementation requires 1 arguments, got %d", len(arguments)))
 		}
 		if value, ok := isLiterateValue(arguments[0]); ok {
-			rt := typeParams[0].ActualType()
+			rt := typeParams["TData"].ActualType()
 			value = value.Convert(rt)
 			sd := SomeDataWithRv{rt, value.Interface(), true}
 			param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(sd)})
@@ -164,8 +164,8 @@ func (compiler *Compiler) libSetSomeValueImplementation(state State) ExecuteStat
 	}
 }
 
-func (compiler *Compiler) libSetSomeNoneImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libSetSomeNoneImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		sd := SomeDataWithNode{assigned: false}
 		param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(sd)})
 		return []Node[ast.Node]{param}, artValue
@@ -192,9 +192,9 @@ func (compiler *Compiler) IsSomeAssigned(state State, argument Node[ast.Node]) (
 	}
 }
 
-func (compiler *Compiler) libIsSomeAssignedImplementation(state State) ExecuteStatement {
+func (compiler *Compiler) libIsSomeAssignedImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	// Todo: do some optimize when arguments[0] is a literal
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 1 {
 			panic(fmt.Errorf("IsSomeAssigned implementation requires 1 arguments, got %d", len(arguments)))
 		}
@@ -203,8 +203,8 @@ func (compiler *Compiler) libIsSomeAssignedImplementation(state State) ExecuteSt
 	}
 }
 
-func (compiler *Compiler) libSomeDataImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libSomeDataImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 1 {
 			panic(fmt.Errorf("SomeData implementation requires 1 arguments, got %d", len(arguments)))
 		}
@@ -212,8 +212,8 @@ func (compiler *Compiler) libSomeDataImplementation(state State) ExecuteStatemen
 	}
 }
 
-func (compiler *Compiler) libSomeData2Implementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libSomeData2Implementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 1 {
 			panic(fmt.Errorf("SomeData2 implementation requires 1 arguments, got %d", len(arguments)))
 		}
@@ -224,8 +224,8 @@ func (compiler *Compiler) libSomeData2Implementation(state State) ExecuteStateme
 	}
 }
 
-func (compiler *Compiler) libGetSomeDataImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libGetSomeDataImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		return compiler.getGetSomeDataNCompiled(state, arguments)
 	}
 }
@@ -254,45 +254,43 @@ func (compiler *Compiler) getGetSomeDataNCompiled(state State, compiledArguments
 	return append(compiledArguments, fn()), artValue
 }
 
-func (compiler *Compiler) libGetSomeData02Implementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libGetSomeData02Implementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		return compiler.getGetSomeDataNCompiled(state, arguments)
 	}
 }
 
-func (compiler *Compiler) libGetSomeData03Implementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libGetSomeData03Implementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		return compiler.getGetSomeDataNCompiled(state, arguments)
 	}
 }
 
-func (compiler *Compiler) libGetSomeData04Implementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libGetSomeData04Implementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		return compiler.getGetSomeDataNCompiled(state, arguments)
 	}
 }
 
-func (compiler *Compiler) libGetSomeData05Implementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libGetSomeData05Implementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		return compiler.getGetSomeDataNCompiled(state, arguments)
 	}
 }
 
-func (compiler *Compiler) libCreateDictionaryImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-		if len(typeParams) != 2 {
-			panic(fmt.Errorf("CreateDictionary implementation requires 2 type arguments, got %d", len(typeParams)))
-		}
+func (compiler *Compiler) libCreateDictionaryImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 2 {
 			panic(fmt.Errorf("CreateDictionary implementation requires 2 arguments, got %d", len(arguments)))
 		}
+
 		if rv00, ok00 := isLiterateValue(arguments[0]); ok00 {
 			if rv01, ok01 := isLiterateValue(arguments[1]); ok01 {
 				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{
 					rv00,
 					rv01,
-					typeParams[0],
-					typeParams[1],
+					typeParams["TKey"],
+					typeParams["TValue"],
 				})}, artValue
 			}
 		}
@@ -330,12 +328,12 @@ func (rvArray *rvArraySorter) Swap(i, j int) {
 	rvArray.rvArray[i], rvArray.rvArray[j] = rvArray.rvArray[j], rvArray.rvArray[i]
 }
 
-func (compiler *Compiler) libDictionaryLookupImplementation(state State) ExecuteStatement {
+func (compiler *Compiler) libDictionaryLookupImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	return libDictionaryLookupImplementation{compiler, state}.ExecuteStatement()
 }
 
-func (compiler *Compiler) libDictionaryDefaultImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) libDictionaryDefaultImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		if len(arguments) != 1 {
 			panic(fmt.Errorf("DictionaryLookup implementation requires 1 arguments, got %d", len(arguments)))
 		}
@@ -433,19 +431,19 @@ func findAllParamNameAndTypes(Params *ast.FieldList) []struct {
 //	return compiler.libCoreRelationshipImplementation(state, typeParams, append(arr, arguments...))
 //}
 
-func (compiler *Compiler) libTypeForImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(typeParams[0].ActualType())})}, artNone
-	}
-}
+//func (compiler *Compiler) libTypeForImplementation(state State) ExecuteStatement {
+//	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+//		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(typeParams[0].ActualType())})}, artNone
+//	}
+//}
 
-func (compiler *Compiler) libTestTypeImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-		nodes := append(typeParams.toNodeArray(), arguments...)
-		rv := reflect.ValueOf(TestType)
-		if outputNodes, art, b := compiler.genericCall(state, rv, nodes); b {
-			return outputNodes, art
-		}
-		panic("fsdds")
-	}
-}
+//func (compiler *Compiler) libTestTypeImplementation(state State) ExecuteStatement {
+//	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+//		nodes := append(typeParams.toNodeArray(), arguments...)
+//		rv := reflect.ValueOf(TestType)
+//		if outputNodes, art, b := compiler.genericCall(state, rv, nodes); b {
+//			return outputNodes, art
+//		}
+//		panic("fsdds")
+//	}
+//}

@@ -11,8 +11,8 @@ func (compiler *Compiler) addStrconvFunctions() {
 	compiler.GlobalFunctions[ValueKey{"strconv", "Atoi"}] = functionInformation{compiler.strconvAtoiImplementation, Node[*ast.FuncType]{}, false}
 }
 
-func (compiler *Compiler) strconvItoaImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) strconvItoaImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		return compiler.strconvItoaCompiled(state, arguments)
 	}
 }
@@ -25,8 +25,8 @@ func (compiler *Compiler) strconvItoaCompiled(state State, compiledArguments []N
 	return compiler.coercionStringCompiled(state, compiledArguments)
 }
 
-func (compiler *Compiler) strconvAtoiImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) strconvAtoiImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		return compiler.strconvAtoiCompiled(state, arguments)
 	}
 }

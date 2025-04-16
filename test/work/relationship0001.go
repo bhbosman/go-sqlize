@@ -14,7 +14,7 @@ func init() {
 
 	masterData := lib.Query[Master]()
 
-	lib.GenerateSqlTest(lib.Map(masterData, func(inputData Master) Master {
+	lib.GenerateSqlTest[Master](lib.Map(masterData, func(inputData Master) Master {
 		childData := lib.Relationship(func(target Master) bool {
 			if parentId, ok := lib.GetSomeData(target.ParentId); ok {
 				return parentId == inputData.Id

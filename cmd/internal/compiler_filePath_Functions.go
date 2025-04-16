@@ -6,8 +6,8 @@ import (
 	"reflect"
 )
 
-func (compiler *Compiler) pathFilepathJoinImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) pathFilepathJoinImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rv := reflect.ValueOf(filepath.Join)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art
@@ -16,8 +16,8 @@ func (compiler *Compiler) pathFilepathJoinImplementation(state State) ExecuteSta
 	}
 }
 
-func (compiler *Compiler) pathFilepathDirImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) pathFilepathDirImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rv := reflect.ValueOf(filepath.Dir)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art

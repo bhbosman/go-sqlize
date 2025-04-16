@@ -40,6 +40,10 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 	}
 
 	switch item := node.Node.(type) {
+	case *ast.FuncLit:
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.Type.Results.List[0].Type)
+		typeMapper := compiler.findType(state, param, flags)
+		return initOnCreateType(0, typeMapper, nil)
 	case *ast.StructType:
 		param := ChangeParamNode(node, item)
 		typeMapper := compiler.createStructTypeMapper(state, param)
@@ -109,6 +113,17 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 		}
 
 		panic(compiler.Fileset.Position(item.Pos()).String())
+	case *ReflectValueExpression:
+		kind := item.Rv.Kind()
+		switch kind {
+		case reflect.Map:
+			rt := item.Rv.Type()
+			return &WrapReflectTypeInMapper{rt}
+
+		default:
+			panic(compiler.Fileset.Position(item.Pos()).String())
+		}
+
 	default:
 		panic(node.Node)
 	}

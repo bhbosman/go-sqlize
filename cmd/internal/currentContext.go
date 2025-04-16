@@ -19,6 +19,21 @@ type CurrentContext struct {
 	Parent     *CurrentContext
 }
 
+func (self *CurrentContext) flattenTypeParams() map[string]ITypeMapper {
+	result := func() map[string]ITypeMapper {
+		if self.Parent == nil {
+			return map[string]ITypeMapper{}
+		} else {
+			return self.Parent.flattenTypeParams()
+		}
+	}()
+
+	for key, value := range self.TypeParams {
+		result[key] = value
+	}
+	return result
+}
+
 func (self *CurrentContext) addLocalTypes(key string, value OnCreateType) {
 	self.LocalTypes[key] = value
 }
@@ -45,7 +60,7 @@ func (self *CurrentContext) internalFindTypeFromNode(node Node[ast.Node]) (Node[
 	case *ast.Ident:
 		if value, b := self.FindValueByString(item.Name); b {
 			if findTypeMapper, ok := value.Node.(IFindTypeMapper); ok {
-				if mapper, ok := findTypeMapper.GetTypeMapper(); ok {
+				if mapper, ok := findTypeMapper.GetTypeMapper(""); ok {
 					return value, mapper, true
 				}
 			}

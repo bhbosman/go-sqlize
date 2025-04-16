@@ -7,7 +7,7 @@ import (
 )
 
 func (compiler *Compiler) createRhsBinaryExprExecution(node Node[*ast.BinaryExpr]) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		param := ChangeParamNode[*ast.BinaryExpr, ast.Node](node, node.Node.X)
 		tempState := state.setCurrentNode(ChangeParamNode[*ast.BinaryExpr, ast.Node](node, node.Node.X))
 		esX := compiler.findRhsExpression(tempState, param)

@@ -6,7 +6,7 @@ import (
 )
 
 func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		var conditionalStatement []MultiValueCondition
 		var whatIsReturned CallArrayResultType = 0
 

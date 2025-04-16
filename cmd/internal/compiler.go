@@ -25,11 +25,11 @@ const (
 	CompilerState_InitCalled CompilerState = 1 << iota
 )
 
-type ExecuteStatement func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType)
+type ExecuteStatement func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType)
 
 type AssignStatement func(state State, value Node[ast.Node])
 
-type OnCreateExecuteStatement func(state State) ExecuteStatement
+type OnCreateExecuteStatement func(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement
 
 type OnCreateType func(State, []Node[ast.Node]) ITypeMapper
 
@@ -84,12 +84,12 @@ func (compiler *Compiler) Init(
 	for key, value := range FunctionMap {
 		if current, ok := compiler.GlobalFunctions[key]; !ok {
 			fn := func(vk ValueKey, node Node[*ast.FuncDecl]) functionInformation {
-				fn := func(state State) ExecuteStatement {
-					return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+				fn := func(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+					return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 						funcLit := &ast.FuncLit{node.Node.Type, node.Node.Body}
 						param := ChangeParamNode[*ast.FuncDecl, *ast.FuncLit](node, funcLit)
 						onCreateExecuteStatement := compiler.onFuncLitExecutionStatement(param)
-						executeStatement := onCreateExecuteStatement(state)
+						executeStatement := onCreateExecuteStatement(state, funcTypeNode)
 						return executeStatement(state, typeParams, unprocessedArgs)
 					}
 				}
@@ -256,7 +256,7 @@ func (compiler *Compiler) valueToNode(value reflect.Value) Node[ast.Node] {
 	}
 }
 
-func (compiler *Compiler) executeAndExpandStatement(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node], executeStatement ExecuteStatement) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) executeAndExpandStatement(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node], executeStatement ExecuteStatement) ([]Node[ast.Node], CallArrayResultType) {
 	var result []Node[ast.Node]
 	arr, v := executeStatement(state, typeParams, unprocessedArgs)
 	for _, instance := range arr {
@@ -294,6 +294,11 @@ func (compiler *Compiler) expandNodeWithSelector(node Node[ast.Node], sel *ast.I
 	return node, false
 }
 
+type FieldInformation struct {
+	Name string
+	Type Node[ast.Node]
+}
+
 func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.StructType]) ITypeMapper {
 	type StructTypeToTypeUsage int
 	const (
@@ -301,16 +306,16 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 		StructTypeWithTypeMapper
 		StructTypeWithActualTypes
 	)
-	structTypeToType := func(List []*ast.Field, useActual StructTypeToTypeUsage) reflect.Type {
-		fieldTypeFn := func(Type ast.Expr, useActual StructTypeToTypeUsage) reflect.Type {
+	structTypeToType := func(List []FieldInformation, useActual StructTypeToTypeUsage) reflect.Type {
+		fieldTypeFn := func(Type Node[ast.Node], useActual StructTypeToTypeUsage) reflect.Type {
 			switch useActual {
 			case StructTypeWithNodeType:
 				return reflect.TypeFor[Node[ast.Node]]()
 			case StructTypeWithTypeMapper:
 				return reflect.TypeFor[ITypeMapper]()
 			case StructTypeWithActualTypes:
-				param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, Type)
-				typeMapper := compiler.findType(state, param, Default)
+				//param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, Type)
+				typeMapper := compiler.findType(state, Type, Default)
 				return typeMapper.ActualType()
 			default:
 				panic("fsdfds")
@@ -319,46 +324,56 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 		var structFields []reflect.StructField
 		for _, field := range List {
 			fieldType := fieldTypeFn(field.Type, useActual)
-			for _, fieldName := range field.Names {
-				structField := reflect.StructField{
-					Name: fieldName.Name,
-					PkgPath: func() string {
-						switch token.IsExported(fieldName.Name) {
-						case true:
-							return ""
-						default:
-							return "PkgPath" // required for unexported items
-						}
-					}(),
-					Type:      fieldType,
-					Tag:       reflect.StructTag(""),
-					Offset:    0,
-					Index:     nil,
-					Anonymous: false,
-				}
-				structFields = append(structFields, structField)
+
+			structField := reflect.StructField{
+				Name: field.Name,
+				PkgPath: func() string {
+					switch token.IsExported(field.Name) {
+					case true:
+						return ""
+					default:
+						return "PkgPath" // required for unexported items
+					}
+				}(),
+				Type:      fieldType,
+				Tag:       reflect.StructTag(""),
+				Offset:    0,
+				Index:     nil,
+				Anonymous: false,
 			}
+			structFields = append(structFields, structField)
+
 		}
 		return reflect.StructOf(structFields)
 	}
 
-	nodeRt := structTypeToType(node.Node.Fields.List, StructTypeWithNodeType)
-	rtWithITypeMapper := structTypeToType(node.Node.Fields.List, StructTypeWithTypeMapper)
-	actualTypeRt := structTypeToType(node.Node.Fields.List, StructTypeWithActualTypes)
-	typeMapperInstance := reflect.New(rtWithITypeMapper).Elem()
-	for _, field := range node.Node.Fields.List {
-		param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, field.Type)
-		fieldType := compiler.findType(state, param, Default)
-		for _, fieldName := range field.Names {
-			typeMapperInstance.FieldByName(fieldName.Name).Set(reflect.ValueOf(fieldType))
+	fn := func(node Node[*ast.StructType], arr []struct {
+		name string
+		node ast.Expr
+	}) []FieldInformation {
+		var result []FieldInformation
+		for _, ss := range arr {
+			field := FieldInformation{ss.name, ChangeParamNode[*ast.StructType, ast.Node](node, ss.node)}
+			result = append(result, field)
 		}
+		return result
+	}
+	fieldList := fn(node, findAllParamNameAndTypes(node.Node.Fields))
+	nodeRt := structTypeToType(fieldList, StructTypeWithNodeType)
+	rtWithITypeMapper := structTypeToType(fieldList, StructTypeWithTypeMapper)
+	actualTypeRt := structTypeToType(fieldList, StructTypeWithActualTypes)
+	typeMapperInstance := reflect.New(rtWithITypeMapper).Elem()
+	for _, field := range fieldList {
+		param := field.Type
+		fieldType := compiler.findType(state, param, Default)
+		typeMapperInstance.FieldByName(field.Name).Set(reflect.ValueOf(fieldType))
 	}
 	return &TypeMapperForStruct{nodeRt, actualTypeRt, typeMapperInstance}
 }
 
 func (compiler *Compiler) builtInStructMethods(rv reflect.Value) OnCreateExecuteStatement {
-	return func(state State) ExecuteStatement {
-		return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+		return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 			if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 				return outputNodes, art
 			}

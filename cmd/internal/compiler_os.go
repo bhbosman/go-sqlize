@@ -16,26 +16,26 @@ func (compiler *Compiler) addOsFunctions() {
 }
 
 func (compiler *Compiler) genericValue(rv reflect.Value) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rvNode := &ReflectValueExpression{rv}
 		vv := ChangeParamNode[ast.Node, ast.Node](state.currentNode, rvNode)
 		return []Node[ast.Node]{vv}, artValue
 	}
 }
 
-func (compiler *Compiler) osModePermImplementation(state State) ExecuteStatement {
+func (compiler *Compiler) osModePermImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	rv := reflect.ValueOf(os.ModePerm)
 	return compiler.genericValue(rv)
 }
 
-func (compiler *Compiler) osStdout(state State) ExecuteStatement {
+func (compiler *Compiler) osStdout(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	rv := reflect.ValueOf(os.Stdout)
 	return compiler.genericValue(rv)
 }
 
-func (compiler *Compiler) osGetWdImplementation(state State) ExecuteStatement {
+func (compiler *Compiler) osGetWdImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rv := reflect.ValueOf(os.Getwd)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art
@@ -44,8 +44,8 @@ func (compiler *Compiler) osGetWdImplementation(state State) ExecuteStatement {
 	}
 }
 
-func (compiler *Compiler) osMkdirAllImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) osMkdirAllImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rv := reflect.ValueOf(os.MkdirAll)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art
@@ -54,8 +54,8 @@ func (compiler *Compiler) osMkdirAllImplementation(state State) ExecuteStatement
 	}
 }
 
-func (compiler *Compiler) osCreateImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) osCreateImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rv := reflect.ValueOf(os.Create)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art

@@ -81,7 +81,7 @@ func (compiler *Compiler) initExecutionStatement(state State, stackIndex int, un
 	}
 	switch value := unk.(type) {
 	case OnCreateExecuteStatement:
-		return value(state), unk02
+		return value(state, unk02), unk02
 	case Node[ast.Node]:
 		switch value02 := value.Node.(type) {
 		case ast.Expr:
@@ -93,7 +93,7 @@ func (compiler *Compiler) initExecutionStatement(state State, stackIndex int, un
 		}
 	case functionInformation:
 		panic("gfdgf")
-		return value.fn(state), value.funcType
+		return value.fn(state, value.funcType), value.funcType
 	default:
 		panic(unk)
 	}

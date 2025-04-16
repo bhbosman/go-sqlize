@@ -6,7 +6,7 @@ import (
 )
 
 func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.CompositeLit]) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		typeMapperFn := func(state State, parent Node[*ast.CompositeLit], Type ast.Expr) ITypeMapper {
 			if Type != nil {
 				param := ChangeParamNode[*ast.CompositeLit, ast.Node](parent, Type)

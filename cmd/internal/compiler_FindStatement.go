@@ -26,7 +26,7 @@ func createError(methodName, message string) error {
 func (compiler *Compiler) findStatement(state State, node Node[ast.Stmt]) (ExecuteStatement, Node[ast.Node]) {
 	switch item := node.Node.(type) {
 	case *ast.FolderContextInformation:
-		return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+		return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 			value := ChangeParamNode[ast.Stmt, ast.Node](node, item)
 			return []Node[ast.Node]{value}, artFCI
 		}, ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
@@ -75,7 +75,7 @@ func (compiler *Compiler) handleSpec(state State, node Node[ast.Spec]) {
 }
 
 func (compiler *Compiler) createDeclStmtExecution(node Node[*ast.DeclStmt]) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		switch nodeItem := node.Node.Decl.(type) {
 		case *ast.GenDecl:
 			for _, spec := range nodeItem.Specs {
@@ -88,7 +88,7 @@ func (compiler *Compiler) createDeclStmtExecution(node Node[*ast.DeclStmt]) Exec
 }
 
 func (compiler *Compiler) createBlockStmtExecution(node Node[*ast.BlockStmt]) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		return compiler.executeBlockStmt(state, node, typeParams, unprocessedArgs)
 	}
 }
@@ -150,7 +150,7 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 }
 
 func (compiler *Compiler) createReturnStmtExecution(node Node[*ast.ReturnStmt]) ExecuteStatement {
-	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		var result []Node[ast.Node]
 		for _, expr := range node.Node.Results {
 			param := ChangeParamNode[*ast.ReturnStmt, ast.Node](node, expr)
@@ -169,7 +169,7 @@ func (compiler *Compiler) createReturnStmtExecution(node Node[*ast.ReturnStmt]) 
 func (compiler *Compiler) createAssignStatementExecution(node Node[*ast.AssignStmt]) ExecuteStatement {
 	switch node.Node.Tok {
 	case token.DEFINE, token.ASSIGN:
-		return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+		return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 			var rhsArray []Node[ast.Node]
 
 			for _, rhsExpression := range node.Node.Rhs {

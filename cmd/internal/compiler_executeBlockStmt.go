@@ -4,7 +4,7 @@ import (
 	"go/ast"
 )
 
-func (compiler *Compiler) executeBlockStmt(state State, node Node[*ast.BlockStmt], typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) executeBlockStmt(state State, node Node[*ast.BlockStmt], typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 	var values []Node[ast.Node]
 	var vv CallArrayResultType = 0
 	newContext := &CurrentContext{ValueInformationMap{}, map[string]ITypeMapper{}, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}

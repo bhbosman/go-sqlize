@@ -96,7 +96,7 @@ func (compiler *Compiler) internalProjectRv(w io.Writer, tabCount int, last bool
 			case SomeDataWithRv:
 				_, _ = io.WriteString(w, fmt.Sprintf(" /*SomeDataWithRv(assigned:%v)*/ ", expr.assigned))
 				if expr.assigned {
-					compiler.internalProjectRv(w, tabCount, last, stackCount+1, name, expr.rv)
+					compiler.internalProjectRv(w, tabCount, last, stackCount+1, name, reflect.ValueOf(expr.rv))
 				} else {
 					_, _ = io.WriteString(w, fmt.Sprintf("nil"))
 				}

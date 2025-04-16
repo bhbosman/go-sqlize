@@ -31,7 +31,7 @@ func (compiler *Compiler) runBasicLitNode(state State, node Node[*ast.BasicLit])
 }
 
 func (compiler *Compiler) createRhsBasicLitExecution(node Node[*ast.BasicLit]) ExecuteStatement {
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		return compiler.runBasicLitNode(state, node)
 	}
 }

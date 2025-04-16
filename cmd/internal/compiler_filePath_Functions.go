@@ -7,8 +7,7 @@ import (
 )
 
 func (compiler *Compiler) pathFilepathJoinImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rv := reflect.ValueOf(filepath.Join)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art
@@ -18,9 +17,7 @@ func (compiler *Compiler) pathFilepathJoinImplementation(state State) ExecuteSta
 }
 
 func (compiler *Compiler) pathFilepathDirImplementation(state State) ExecuteStatement {
-
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rv := reflect.ValueOf(filepath.Dir)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art

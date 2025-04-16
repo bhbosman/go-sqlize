@@ -9,7 +9,7 @@ import (
 type (
 	IFindTypeMapper interface {
 		ast.Node
-		GetTypeMapper() ([]ITypeMapper, bool)
+		GetTypeMapper() (ITypeMapperArray, bool)
 	}
 
 	EntitySource struct {
@@ -94,13 +94,13 @@ type (
 	}
 )
 
-func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() ([]ITypeMapper, bool) {
+func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() (ITypeMapperArray, bool) {
 	switch v := iteSingleCondition.conditionalStatement[0].value.Node.(type) {
 	case *IfThenElseSingleValueCondition:
 		return v.GetTypeMapper()
 	case *ReflectValueExpression:
 		dd := &WrapReflectTypeInMapper{v.Rv.Type()}
-		return []ITypeMapper{dd}, true
+		return ITypeMapperArray{dd}, true
 	case IFindTypeMapper:
 		panic("ffff")
 	default:
@@ -111,30 +111,30 @@ func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() ([]ITy
 	//typeMapper := iteSingleCondition.conditionalStatement[0].value.Node(*IfThenElseSingleValueCondition).()
 	//panic(typeMapper)
 	//
-	//return []ITypeMapper{typeMapper}, true
+	//return ITypeMapperArray{typeMapper}, true
 }
 
-func (de *DictionaryExpression) GetTypeMapper() ([]ITypeMapper, bool) {
-	return []ITypeMapper{de.keyTypeMapper, de.valueTypeMapper}, true
+func (de *DictionaryExpression) GetTypeMapper() (ITypeMapperArray, bool) {
+	return ITypeMapperArray{de.keyTypeMapper, de.valueTypeMapper}, true
 }
 
-func (entityField *EntityField) GetTypeMapper() ([]ITypeMapper, bool) {
+func (entityField *EntityField) GetTypeMapper() (ITypeMapperArray, bool) {
 	typemapper := entityField.aliasTypeMapper
 	switch typemapper.Kind() {
 	case reflect.Struct:
 		typeMapperForStruct := typemapper.(*TypeMapperForStruct)
-		return []ITypeMapper{typeMapperForStruct.typeMapperInstance.FieldByName(entityField.field).Interface().(ITypeMapper)}, true
+		return ITypeMapperArray{typeMapperForStruct.typeMapperInstance.FieldByName(entityField.field).Interface().(ITypeMapper)}, true
 	default:
 		panic("dfgdfgfd")
 	}
 }
 
-func (value *TrailRecord) GetTypeMapper() ([]ITypeMapper, bool) {
-	return []ITypeMapper{value.typeMapper}, true
+func (value *TrailRecord) GetTypeMapper() (ITypeMapperArray, bool) {
+	return ITypeMapperArray{value.typeMapper}, true
 }
 
-func (value *TrailSource) GetTypeMapper() ([]ITypeMapper, bool) {
-	return []ITypeMapper{value.typeMapper}, true
+func (value *TrailSource) GetTypeMapper() (ITypeMapperArray, bool) {
+	return ITypeMapperArray{value.typeMapper}, true
 }
 
 func (c *CheckForNotNullExpression) Pos() token.Pos {

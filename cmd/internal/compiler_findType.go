@@ -47,11 +47,11 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 	case *ast.MapType:
 		paramKey := ChangeParamNode[ast.Node, ast.Node](node, item.Key)
 		rtKeyTypeMapper := compiler.findType(state, paramKey, flags)
-		rtKey := rtKeyTypeMapper.MapperKeyType(state)
+		rtKey := rtKeyTypeMapper.MapperKeyType()
 
 		paramValue := ChangeParamNode[ast.Node, ast.Node](node, item.Value)
 		rtValueTypeMapper := compiler.findType(state, paramValue, flags)
-		rtValue := rtValueTypeMapper.MapperValueType(state)
+		rtValue := rtValueTypeMapper.MapperValueType()
 
 		rt := reflect.MapOf(rtKey, rtValue)
 		return initOnCreateType(0, &TypeMapperForMap{rtKeyTypeMapper, rtValueTypeMapper, rt}, nil)

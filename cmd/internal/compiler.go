@@ -25,7 +25,7 @@ const (
 	CompilerState_InitCalled CompilerState = 1 << iota
 )
 
-type ExecuteStatement func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType)
+type ExecuteStatement func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType)
 
 type AssignStatement func(state State, value Node[ast.Node])
 
@@ -64,6 +64,7 @@ func (compiler *Compiler) Init(
 		ValueKey{"", "int"}:               compiler.registerInt(),
 		ValueKey{"", "string"}:            compiler.registerString(),
 		ValueKey{"", "float64"}:           compiler.registerFloat64(),
+		ValueKey{"reflect", "Type"}:       compiler.registerReflectType(),
 		ValueKey{libFolder, "Some"}:       compiler.registerSomeType(),
 		ValueKey{libFolder, "Dictionary"}: compiler.registerLibType(),
 	}
@@ -78,12 +79,13 @@ func (compiler *Compiler) Init(
 	compiler.addOsFunctions()
 	compiler.addIoFunctions()
 	compiler.addMathFunctions()
+	compiler.addReflectFunctions()
 
 	for key, value := range FunctionMap {
 		if current, ok := compiler.GlobalFunctions[key]; !ok {
 			fn := func(vk ValueKey, node Node[*ast.FuncDecl]) functionInformation {
 				fn := func(state State) ExecuteStatement {
-					return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+					return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 						funcLit := &ast.FuncLit{node.Node.Type, node.Node.Body}
 						param := ChangeParamNode[*ast.FuncDecl, *ast.FuncLit](node, funcLit)
 						onCreateExecuteStatement := compiler.onFuncLitExecutionStatement(param)
@@ -142,7 +144,7 @@ func (compiler *Compiler) readTypeSpec(node Node[*ast.TypeSpec]) OnCreateType {
 }
 
 func (compiler *Compiler) genericCall(state State, rv reflect.Value, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType, bool) {
-	input, allLiterals := compiler.nodesToValues(state, rv, arguments)
+	input, allLiterals := compiler.nodesToValues(rv, arguments)
 	if allLiterals {
 		output := rv.Call(input)
 		return compiler.valuesToNodes(state, output), artValue, true
@@ -199,7 +201,7 @@ func (compiler *Compiler) projectSources(w io.Writer, tabCount int, sources []st
 		query, _ := compiler.Sources[source]
 		switch item := query.(type) {
 		case *EntitySource:
-			rt := item.rt.NodeType(State{})
+			rt := item.rt.NodeType()
 			_, _ = io.WriteString(w, fmt.Sprintf("%v [%v]", rt.String(), source))
 		default:
 			panic("unhandled default case")
@@ -207,11 +209,11 @@ func (compiler *Compiler) projectSources(w io.Writer, tabCount int, sources []st
 	}
 }
 
-func (compiler *Compiler) nodesToValues(state State, rvFunc reflect.Value, nodes []Node[ast.Node]) ([]reflect.Value, bool) {
+func (compiler *Compiler) nodesToValues(rvFunc reflect.Value, nodes []Node[ast.Node]) ([]reflect.Value, bool) {
 	funcRt := rvFunc.Type()
 	var arr []reflect.Value
 	for idx, node := range nodes {
-		rv, b := compiler.nodeToValue(state, node)
+		rv, b := compiler.nodeToValue(node)
 		if !b {
 			return nil, false
 		}
@@ -227,7 +229,7 @@ func (compiler *Compiler) nodesToValues(state State, rvFunc reflect.Value, nodes
 	return arr, true
 }
 
-func (compiler *Compiler) nodeToValue(_ State, node Node[ast.Node]) (reflect.Value, bool) {
+func (compiler *Compiler) nodeToValue(node Node[ast.Node]) (reflect.Value, bool) {
 	if value, isLiterateValue := isLiterateValue(node); isLiterateValue {
 		return value, true
 	}
@@ -237,24 +239,24 @@ func (compiler *Compiler) nodeToValue(_ State, node Node[ast.Node]) (reflect.Val
 func (compiler *Compiler) valuesToNodes(state State, values []reflect.Value) []Node[ast.Node] {
 	var arr []Node[ast.Node]
 	for _, node := range values {
-		arr = append(arr, compiler.valueToNode(state, node))
+		arr = append(arr, compiler.valueToNode(node))
 	}
 	return arr
 }
 
-func (compiler *Compiler) valueToNode(state State, value reflect.Value) Node[ast.Node] {
+func (compiler *Compiler) valueToNode(value reflect.Value) Node[ast.Node] {
 	kind := value.Kind()
 	switch kind {
-	case reflect.Interface:
-		return ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{value.Elem()})
-	case reflect.String, reflect.Pointer, reflect.Int, reflect.Float32, reflect.Float64:
-		return ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{value})
+	//case reflect.Interface:
+	//	return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value.Elem()}}
+	case reflect.String /*reflect.Pointer,*/, reflect.Int, reflect.Float32, reflect.Float64:
+		return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value}}
 	default:
 		panic("unhandled default case")
 	}
 }
 
-func (compiler *Compiler) executeAndExpandStatement(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr], executeStatement ExecuteStatement) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) executeAndExpandStatement(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node], executeStatement ExecuteStatement) ([]Node[ast.Node], CallArrayResultType) {
 	var result []Node[ast.Node]
 	arr, v := executeStatement(state, typeParams, unprocessedArgs)
 	for _, instance := range arr {
@@ -309,7 +311,7 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 			case StructTypeWithActualTypes:
 				param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, Type)
 				typeMapper := compiler.findType(state, param, Default)
-				return typeMapper.ActualType(state)
+				return typeMapper.ActualType()
 			default:
 				panic("fsdfds")
 			}
@@ -356,9 +358,7 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 
 func (compiler *Compiler) builtInStructMethods(rv reflect.Value) OnCreateExecuteStatement {
 	return func(state State) ExecuteStatement {
-
-		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+		return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 			if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 				return outputNodes, art
 			}

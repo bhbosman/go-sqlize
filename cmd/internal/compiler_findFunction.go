@@ -19,14 +19,14 @@ func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node
 		return compiler.initExecutionStatement(state, stackIndex, es, paramFuncType, nil)
 	case *ast.IndexExpr:
 		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
-		indexParam := ChangeParamNode(node, item.Index)
+		indexParam := ChangeParamNode[ast.Expr, ast.Node](node, item.Index)
 		unk, unk2 := compiler.internalFindFunction(stackIndex+1, state, param)
-		return compiler.initExecutionStatement(state, stackIndex, unk, unk2, []Node[ast.Expr]{indexParam})
+		return compiler.initExecutionStatement(state, stackIndex, unk, unk2, []Node[ast.Node]{indexParam})
 	case *ast.IndexListExpr:
 		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
-		var arrIndices []Node[ast.Expr]
+		var arrIndices []Node[ast.Node]
 		for _, index := range item.Indices {
-			indexParam := ChangeParamNode(node, index)
+			indexParam := ChangeParamNode[ast.Expr, ast.Node](node, index)
 			arrIndices = append(arrIndices, indexParam)
 		}
 		unk, unk2 := compiler.internalFindFunction(stackIndex+1, state, param)
@@ -75,7 +75,7 @@ func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node
 	}
 }
 
-func (compiler *Compiler) initExecutionStatement(state State, stackIndex int, unk interface{}, unk02 Node[*ast.FuncType], typeParams []Node[ast.Expr]) (interface{}, Node[*ast.FuncType]) {
+func (compiler *Compiler) initExecutionStatement(state State, stackIndex int, unk interface{}, unk02 Node[*ast.FuncType], typeParams []Node[ast.Node]) (interface{}, Node[*ast.FuncType]) {
 	if stackIndex != 0 {
 		return unk, unk02
 	}

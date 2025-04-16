@@ -16,8 +16,7 @@ func (impl libDictionaryLookupImplementation) ExecuteStatement() ExecuteStatemen
 	return impl.Run
 }
 
-func (impl libDictionaryLookupImplementation) Run(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-	arguments := impl.compiler.compileArguments(state, unprocessedArgs, typeParams)
+func (impl libDictionaryLookupImplementation) Run(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 	var conditionalStatement []SingleValueCondition
 	dictionaryExpression := arguments[0].Node.(*DictionaryExpression)
 	{

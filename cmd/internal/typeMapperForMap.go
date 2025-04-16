@@ -19,27 +19,27 @@ func (tyfm *TypeMapperForMap) End() token.Pos {
 	return token.NoPos
 }
 
-func (tyfm *TypeMapperForMap) ActualType(state State) reflect.Type {
+func (tyfm *TypeMapperForMap) ActualType() reflect.Type {
 	return tyfm.mapRt
 }
 
-func (tyfm *TypeMapperForMap) MapperValueType(state State) reflect.Type {
-	return tyfm.valueTypeMapper.MapperValueType(state)
+func (tyfm *TypeMapperForMap) MapperValueType() reflect.Type {
+	return tyfm.valueTypeMapper.MapperValueType()
 }
 
-func (tyfm *TypeMapperForMap) MapperKeyType(state State) reflect.Type {
-	return tyfm.keyTypeMapper.MapperKeyType(state)
+func (tyfm *TypeMapperForMap) MapperKeyType() reflect.Type {
+	return tyfm.keyTypeMapper.MapperKeyType()
 }
 
 func (tyfm *TypeMapperForMap) Kind() reflect.Kind {
 	return tyfm.mapRt.Kind()
 }
 
-func (tyfm *TypeMapperForMap) Create(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
+func (tyfm *TypeMapperForMap) Create(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (tyfm *TypeMapperForMap) NodeType(state State) reflect.Type {
+func (tyfm *TypeMapperForMap) NodeType() reflect.Type {
 	return tyfm.mapRt
 }

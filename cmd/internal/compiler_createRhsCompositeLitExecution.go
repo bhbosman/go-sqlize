@@ -6,7 +6,7 @@ import (
 )
 
 func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.CompositeLit]) ExecuteStatement {
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		typeMapperFn := func(state State, parent Node[*ast.CompositeLit], Type ast.Expr) ITypeMapper {
 			if Type != nil {
 				param := ChangeParamNode[*ast.CompositeLit, ast.Node](parent, Type)
@@ -23,7 +23,7 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 			if len(node.Node.Elts) == 0 {
 				typeMapperForStruct := typeMapper.(*TypeMapperForStruct)
 				param := ChangeParamNode[*ast.CompositeLit, ast.Node](node, node.Node.Type)
-				rv := typeMapperForStruct.createDefaultType(state, param)
+				rv := typeMapperForStruct.createDefaultType(param)
 				nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](
 					node,
 					&TrailRecord{
@@ -34,12 +34,12 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 				)
 				return []Node[ast.Node]{nodeValue}, artValue
 			}
-			rt := typeMapper.NodeType(state)
+			rt := typeMapper.NodeType()
 			rv := reflect.New(rt).Elem()
 			for idx, elt := range node.Node.Elts {
 				switch expr := elt.(type) {
 				case *ast.KeyValueExpr:
-					param := ChangeParamNode(node, expr.Value)
+					param := ChangeParamNode[*ast.CompositeLit, ast.Node](node, expr.Value)
 					tempState := state.setCurrentNode(ChangeParamNode[*ast.CompositeLit, ast.Node](node, expr.Value))
 					es := compiler.findRhsExpression(tempState, param)
 					vv, _ := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
@@ -51,7 +51,7 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 						panic("unhandled key")
 					}
 				default:
-					param := ChangeParamNode(node, elt)
+					param := ChangeParamNode[*ast.CompositeLit, ast.Node](node, elt)
 					tempState := state.setCurrentNode(ChangeParamNode[*ast.CompositeLit, ast.Node](node, elt))
 					es := compiler.findRhsExpression(tempState, param)
 					vv, _ := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
@@ -69,18 +69,18 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 				case *ast.KeyValueExpr:
 					fn := func(state State, expression ast.Expr, typeMapper ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
 						state = SetCompilerState[*CurrentCompositeCreateType](&CurrentCompositeCreateType{typeMapper}, state)
-						param := ChangeParamNode(node, expression)
+						param := ChangeParamNode[*ast.CompositeLit, ast.Node](node, expression)
 						tempState := state.setCurrentNode(ChangeParamNode[*ast.CompositeLit, ast.Node](node, expression))
 						es := compiler.findRhsExpression(tempState, param)
 						return compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
 					}
-					rt := typeMapper.NodeType(state)
+					rt := typeMapper.NodeType()
 					nodeKey, _ := fn(state, expr.Key, typeMapperForMap.keyTypeMapper)
 					if rvKey, okKey := isLiterateValue(nodeKey[0]); okKey {
-						rvKey = typeMapperForMap.keyTypeMapper.Create(state, tmcoMapKey, rvKey)
+						rvKey = typeMapperForMap.keyTypeMapper.Create(tmcoMapKey, rvKey)
 						nodeValue, _ := fn(state, expr.Value, typeMapperForMap.valueTypeMapper)
 						if rvValue, okValue := isLiterateValue(nodeValue[0]); okValue {
-							rvValue = typeMapperForMap.valueTypeMapper.Create(state, tmcoMapValue, rvValue)
+							rvValue = typeMapperForMap.valueTypeMapper.Create(tmcoMapValue, rvValue)
 							rv.SetMapIndex(rvKey.Convert(rt.Key()), rvValue.Convert(rt.Elem()))
 							continue
 						}

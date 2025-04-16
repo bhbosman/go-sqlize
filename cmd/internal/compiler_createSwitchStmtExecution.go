@@ -8,10 +8,10 @@ import (
 )
 
 func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) ExecuteStatement {
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		var nodes []Node[ast.Node]
 		for _, expr := range node.Node.List {
-			param := ChangeParamNode[*ast.CaseClause, ast.Expr](node, expr)
+			param := ChangeParamNode[*ast.CaseClause, ast.Node](node, expr)
 			tempState := state.setCurrentNode(ChangeParamNode[*ast.CaseClause, ast.Node](node, expr))
 			es := compiler.findRhsExpression(tempState, param)
 			nn, _ := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
@@ -33,10 +33,10 @@ func (compiler *Compiler) createCaseClauseExecution(node Node[*ast.CaseClause]) 
 }
 
 func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) ExecuteStatement {
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		expression := func(state State, parent Node[*ast.SwitchStmt], Tag ast.Expr) Node[ast.Node] {
 			if Tag != nil {
-				param := ChangeParamNode(node, Tag)
+				param := ChangeParamNode[*ast.SwitchStmt, ast.Node](node, Tag)
 				tempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](parent, Tag))
 				result, _ := compiler.findRhsExpression(tempState, param)(state, typeParams, unprocessedArgs)
 				return result[0]

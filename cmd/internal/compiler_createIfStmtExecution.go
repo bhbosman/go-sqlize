@@ -6,7 +6,7 @@ import (
 )
 
 func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteStatement {
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+	return func(state State, typeParams ITypeMapperArray, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		var conditionalStatement []MultiValueCondition
 		var whatIsReturned CallArrayResultType = 0
 
@@ -21,7 +21,7 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 		}
 
 		fnBoolExpression := func(state State, Cond ast.Expr) ([]Node[ast.Node], CallArrayResultType) {
-			param := ChangeParamNode(node, Cond)
+			param := ChangeParamNode[*ast.IfStmt, ast.Node](node, Cond)
 			es := compiler.findRhsExpression(state, param)
 			return compiler.executeAndExpandStatement(state, typeParams, unprocessedArgs, es)
 		}

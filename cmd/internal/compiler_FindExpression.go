@@ -5,11 +5,11 @@ import (
 	"go/ast"
 )
 
-func (compiler *Compiler) findRhsExpression(state State, node Node[ast.Expr]) ExecuteStatement {
+func (compiler *Compiler) findRhsExpression(state State, node Node[ast.Node]) ExecuteStatement {
 	return compiler.internalFindRhsExpression(0, state, node).(ExecuteStatement)
 }
 
-func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State, node Node[ast.Expr]) interface{} {
+func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State, node Node[ast.Node]) interface{} {
 	switch item := node.Node.(type) {
 	case *ast.UnaryExpr:
 		param := ChangeParamNode(node, item)
@@ -21,7 +21,7 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 		param := ChangeParamNode(node, item)
 		return compiler.createRhsBasicLitExecution(param)
 	case *ast.SelectorExpr:
-		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
 		unk := compiler.internalFindRhsExpression(stackIndex+1, state, param)
 		switch vv := unk.(type) {
 		case ast.ImportMapEntry:
@@ -34,13 +34,13 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 			switch vvv := vv.Node.(type) {
 			case *TrailRecord:
 				return func(trailRecord *TrailRecord, sel *ast.Ident) ExecuteStatement {
-					return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+					return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 						return []Node[ast.Node]{trailRecord.Value.FieldByName(sel.Name).Interface().(Node[ast.Node])}, artValue
 					}
 				}(vvv, item.Sel)
 			case *IfThenElseSingleValueCondition:
 				return func(node Node[ast.Node], sel *ast.Ident) ExecuteStatement {
-					return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+					return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 
 						if selector, ok := compiler.expandNodeWithSelector(node, sel); ok {
 							return []Node[ast.Node]{selector}, artValue
@@ -49,8 +49,8 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 					}
 				}(vv, item.Sel)
 			case *TrailSource:
-				var es ExecuteStatement = func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-					result := ChangeParamNode[ast.Expr, ast.Node](node, &EntityField{node.Node.Pos(), vvv.Alias, vvv.typeMapper, item.Sel.Name})
+				var es ExecuteStatement = func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+					result := ChangeParamNode[ast.Node, ast.Node](node, &EntityField{node.Node.Pos(), vvv.Alias, vvv.typeMapper, item.Sel.Name})
 					return []Node[ast.Node]{result}, artValue
 				}
 				return es
@@ -59,8 +59,8 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 			}
 		case ExecuteStatement:
 			return func(es ExecuteStatement, sel *ast.Ident) ExecuteStatement {
-				return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-					arr, art := compiler.executeAndExpandStatement(state, typeParams, unprocessedArgs, es)
+				return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+					arr, art := compiler.executeAndExpandStatement(state, typeParams, arguments, es)
 					if selector, ok := compiler.expandNodeWithSelector(arr[0], sel); ok {
 						return []Node[ast.Node]{selector}, art
 					}
@@ -81,13 +81,13 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 		param := ChangeParamNode(node, item)
 		return compiler.createRhsFuncLitExprExecution(param)
 	case *ast.ParenExpr:
-		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
 		return compiler.findRhsExpression(state, param)
 	case *ast.Ident:
 		currentContext := GetCompilerState[*CurrentContext](state)
 		if value, b := currentContext.FindValueByString(item.Name); b {
 			if stackIndex == 0 {
-				var es ExecuteStatement = func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+				var es ExecuteStatement = func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 					return []Node[ast.Node]{value}, artValue
 				}
 				return es
@@ -112,8 +112,7 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 
 func (compiler *Compiler) onFuncLitExecutionStatement(node Node[*ast.FuncLit]) OnCreateExecuteStatement {
 	return func(state State) ExecuteStatement {
-		return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-			arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+		return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 			var names []*ast.Ident
 			if node.Node.Type.Params != nil {
 				for _, field := range node.Node.Type.Params.List {
@@ -128,7 +127,7 @@ func (compiler *Compiler) onFuncLitExecutionStatement(node Node[*ast.FuncLit]) O
 			newContext := &CurrentContext{m, map[string]ITypeMapper{}, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
 			state = SetCompilerState(newContext, state)
 			param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, node.Node.Body)
-			values, art := compiler.executeBlockStmt(state, param, typeParams, unprocessedArgs)
+			values, art := compiler.executeBlockStmt(state, param, typeParams, arguments)
 			state = SetCompilerState(newContext.Parent, state)
 			return values, art
 		}

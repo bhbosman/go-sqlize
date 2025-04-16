@@ -12,24 +12,29 @@ func (compiler *Compiler) addStrconvFunctions() {
 }
 
 func (compiler *Compiler) strconvItoaImplementation(state State) ExecuteStatement {
-
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
-		rv := reflect.ValueOf(strconv.Itoa)
-		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
-			return outputNodes, art
-		}
-		return compiler.coercionString(state)(state, typeParams, unprocessedArgs)
+	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+		return compiler.strconvItoaCompiled(state, arguments)
 	}
 }
 
-func (compiler *Compiler) strconvAtoiImplementation(state State) ExecuteStatement {
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
-		rv := reflect.ValueOf(strconv.Atoi)
-		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
-			return outputNodes, art
-		}
-		return compiler.coercionInt(state)(state, typeParams, unprocessedArgs)
+func (compiler *Compiler) strconvItoaCompiled(state State, compiledArguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	rv := reflect.ValueOf(strconv.Itoa)
+	if outputNodes, art, b := compiler.genericCall(state, rv, compiledArguments); b {
+		return outputNodes, art
 	}
+	return compiler.coercionStringCompiled(state, compiledArguments)
+}
+
+func (compiler *Compiler) strconvAtoiImplementation(state State) ExecuteStatement {
+	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+		return compiler.strconvAtoiCompiled(state, arguments)
+	}
+}
+
+func (compiler *Compiler) strconvAtoiCompiled(state State, compiledArguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	rv := reflect.ValueOf(strconv.Atoi)
+	if outputNodes, art, b := compiler.genericCall(state, rv, compiledArguments); b {
+		return outputNodes, art
+	}
+	return compiler.coercionIntCompiled(state, compiledArguments)
 }

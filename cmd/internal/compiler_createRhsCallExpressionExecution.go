@@ -4,20 +4,6 @@ import (
 	"go/ast"
 )
 
-func (compiler *Compiler) compileArguments(state State, argss []Node[ast.Expr], typeParams []ITypeMapper) []Node[ast.Node] {
-	var result []Node[ast.Node]
-	for _, arg := range argss {
-
-		tempState := state.setCurrentNode(ChangeParamNode[ast.Expr, ast.Node](arg, arg.Node))
-
-		param := ChangeParamNode[ast.Node, ast.Expr](state.currentNode, arg.Node)
-		fn := compiler.findRhsExpression(tempState, param)
-		nodeArg, _ := compiler.executeAndExpandStatement(state, typeParams, argss, fn)
-		result = append(result, nodeArg...)
-	}
-	return result
-}
-
 func buildMap(ss []struct {
 	name string
 	node ast.Expr
@@ -30,87 +16,101 @@ func buildMap(ss []struct {
 }
 
 func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallExpr]) ExecuteStatement {
-	return func(state State, _ []ITypeMapper, _ []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+	compileArguments := func(state State, argss []Node[ast.Node], typeParams ITypeMapperArray) []Node[ast.Node] {
+		var result []Node[ast.Node]
+		for _, arg := range argss {
+			tempState := state.setCurrentNode(ChangeParamNode[ast.Node, ast.Node](arg, arg.Node))
+			param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, arg.Node)
+			fn := compiler.findRhsExpression(tempState, param)
+			nodeArg, _ := compiler.executeAndExpandStatement(state, typeParams, argss, fn)
+			result = append(result, nodeArg...)
+		}
+		return result
+	}
+
+	createTypeMapperFn := func(
+		state State,
+		node Node[*ast.CallExpr],
+		nameAndTypeParams []struct {
+			name string
+			node ast.Expr
+		},
+		funcTypeNode Node[*ast.FuncType]) (map[string]ITypeMapper, bool) {
+		if len(nameAndTypeParams) == 0 {
+			return map[string]ITypeMapper{}, true
+		}
+
+		if !funcTypeNode.Valid {
+			return nil, false
+		}
+		switch nodeItem := node.Node.Fun.(type) {
+		case *ast.IndexExpr:
+			paramType := ChangeParamNode[*ast.CallExpr, ast.Node](node, nodeItem.Index)
+			typeMapper := compiler.findType(state, paramType, TypeParamType|Default)
+			return map[string]ITypeMapper{
+				nameAndTypeParams[0].name: typeMapper,
+			}, true
+		case *ast.IndexListExpr:
+			results := map[string]ITypeMapper{}
+			for idx, index := range nodeItem.Indices {
+				paramType := ChangeParamNode[*ast.CallExpr, ast.Node](node, index)
+				typeMapper := compiler.findType(state, paramType, TypeParamType|Default)
+				results[nameAndTypeParams[idx].name] = typeMapper
+			}
+			return results, true
+		default:
+			nameAndParams := findAllParamNameAndTypes(funcTypeNode.Node.Params)
+			if len(nameAndParams) > 0 && len(nameAndParams) == len(node.Node.Args) {
+				sss := map[string]ITypeMapper{}
+				for idx, andParam := range nameAndParams {
+					param := ChangeParamNode[*ast.CallExpr, ast.Node](node, node.Node.Args[idx])
+					sss = compiler.calculateTypeParams(state, andParam.node, sss, param)
+				}
+				return sss, true
+			}
+		}
+		return nil, false
+	}
+
+	return func(state State, _ ITypeMapperArray, _ []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		println(compiler.Fileset.Position(node.Node.Pos()).String())
 		newContext := &CurrentContext{ValueInformationMap{}, map[string]ITypeMapper{}, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
-
 		state = SetCompilerState(newContext, state)
-
 		param := ChangeParamNode(node, node.Node.Fun)
 		tempState02 := state.setCurrentNode(ChangeParamNode[ast.Node, ast.Node](state.currentNode, node.Node.Fun))
-
 		execFn, funcTypeNode := compiler.findFunction(tempState02, param)
 		if !funcTypeNode.Valid {
-			var args []Node[ast.Expr]
+			var args []Node[ast.Node]
 			for _, arg := range node.Node.Args {
-				param := ChangeParamNode(node, arg)
+				param := ChangeParamNode[*ast.CallExpr, ast.Node](node, arg)
 				args = append(args, param)
 			}
+			args = compileArguments(state, args, nil)
 			return execFn(tempState02, nil, args)
 		}
 		nameAndTypeParams := findAllParamNameAndTypes(funcTypeNode.Node.TypeParams)
-		//if len(nameAndTypeParams) > 0 {
-		{
-			createTypeMapperFn := func(node Node[*ast.CallExpr]) (map[string]ITypeMapper, bool) {
-				if len(nameAndTypeParams) == 0 {
-					return map[string]ITypeMapper{}, true
+
+		if mappers, b := createTypeMapperFn(state, node, nameAndTypeParams, funcTypeNode); b {
+			if len(mappers) >= len(nameAndTypeParams) {
+				var calculatedTypeMappers ITypeMapperArray
+				for _, typeParam := range nameAndTypeParams {
+					calculatedTypeMappers = append(calculatedTypeMappers, mappers[typeParam.name])
 				}
 
-				if !funcTypeNode.Valid {
-					return nil, false
+				var args []Node[ast.Node]
+				for _, arg := range node.Node.Args {
+					param := ChangeParamNode[*ast.CallExpr, ast.Node](node, arg)
+					args = append(args, param)
 				}
-				switch nodeItem := node.Node.Fun.(type) {
-				case *ast.IndexExpr:
-					paramType := ChangeParamNode[*ast.CallExpr, ast.Node](node, nodeItem.Index)
-					typeMapper := compiler.findType(state, paramType, TypeParamType|Default)
-					return map[string]ITypeMapper{
-						nameAndTypeParams[0].name: typeMapper,
-					}, true
-				case *ast.IndexListExpr:
-					results := map[string]ITypeMapper{}
-					for idx, index := range nodeItem.Indices {
-						paramType := ChangeParamNode[*ast.CallExpr, ast.Node](node, index)
-						typeMapper := compiler.findType(state, paramType, TypeParamType|Default)
-						results[nameAndTypeParams[idx].name] = typeMapper
-					}
-					return results, true
-				default:
-					nameAndParams := findAllParamNameAndTypes(funcTypeNode.Node.Params)
-					if len(nameAndParams) > 0 && len(nameAndParams) == len(node.Node.Args) {
-						sss := map[string]ITypeMapper{}
-						for idx, andParam := range nameAndParams {
-							param := ChangeParamNode[*ast.CallExpr, ast.Node](node, node.Node.Args[idx])
-							sss = compiler.calculateTypeParams(state, andParam.node, sss, param)
-						}
-						return sss, true
-					}
-				}
-				return nil, false
-			}
-			if mappers, b := createTypeMapperFn(node); b {
-				if len(mappers) >= len(nameAndTypeParams) {
-					var calculatedTypeMappers []ITypeMapper
-					for _, typeParam := range nameAndTypeParams {
-						calculatedTypeMappers = append(calculatedTypeMappers, mappers[typeParam.name])
-					}
-
-					var args []Node[ast.Expr]
-					for _, arg := range node.Node.Args {
-						param := ChangeParamNode(node, arg)
-						args = append(args, param)
-					}
-					return execFn(tempState02, calculatedTypeMappers, args)
-				} else {
-					createTypeMapperFn(node)
-					panic("sdfds")
-				}
+				args = compileArguments(state, args, calculatedTypeMappers)
+				return execFn(tempState02, calculatedTypeMappers, args)
 			} else {
-				panic("unreachable")
+				//createTypeMapperFn(node)
+				panic("sdfds")
 			}
+		} else {
 			panic("unreachable")
 		}
-
-		panic("dfgdfgdfg")
 	}
 }
 
@@ -119,6 +119,9 @@ func (compiler *Compiler) calculateTypeParams(state State, funcDecl ast.Node, s 
 	switch funcDeclItem := funcDecl.(type) {
 	default:
 		panic("unreachable")
+	case *ast.SelectorExpr:
+		// do nothing ??
+		return s
 	case *ast.MapType:
 		switch itemArgument := argument.Node.(type) {
 		default:
@@ -161,9 +164,7 @@ func (compiler *Compiler) calculateTypeParams(state State, funcDecl ast.Node, s 
 
 			itemArgumentY := itemArgument.right
 			paramY := ChangeParamNode[ast.Node, ast.Node](argument, itemArgumentY.Node)
-			s = compiler.calculateTypeParams(state, funcDecl, s, paramY)
-
-			return s
+			return compiler.calculateTypeParams(state, funcDecl, s, paramY)
 		case *ast.Ident:
 			if _, ok := s[funcDeclItem.Name]; !ok {
 				currentContext := GetCompilerState[*CurrentContext](state)
@@ -277,14 +278,12 @@ func (compiler *Compiler) calculateTypeParams(state State, funcDecl ast.Node, s 
 			}
 			return s
 		}
-
 	case *ast.IndexExpr:
 		return compiler.calculateTypeParams(state, funcDeclItem.Index, s, argument)
 	case *ast.FuncType:
 		switch itemA := argument.Node.(type) {
 		case *ast.Ident:
 			currentContext := GetCompilerState[*CurrentContext](state)
-
 			if v, ok := currentContext.FindValueByString(itemA.Name); ok {
 				switch itemV := v.Node.(type) {
 				case *ast.FuncLit:

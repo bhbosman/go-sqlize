@@ -13,8 +13,7 @@ func (compiler *Compiler) addMathFunctions() {
 
 func (compiler *Compiler) mathSinImplementation(state State) ExecuteStatement {
 
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rv := reflect.ValueOf(math.Sin)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art
@@ -26,8 +25,7 @@ func (compiler *Compiler) mathSinImplementation(state State) ExecuteStatement {
 
 func (compiler *Compiler) mathCosImplementation(state State) ExecuteStatement {
 
-	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
+	return func(state State, typeParams ITypeMapperArray, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 		rv := reflect.ValueOf(math.Cos)
 		if outputNodes, art, b := compiler.genericCall(state, rv, arguments); b {
 			return outputNodes, art

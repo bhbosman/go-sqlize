@@ -33,14 +33,14 @@ func (self *CurrentContext) findLocalType(key string) (OnCreateType, bool) {
 	return self.Parent.findLocalType(key)
 }
 
-func (self *CurrentContext) FindTypeFromNode(node Node[ast.Node]) ([]ITypeMapper, bool) {
+func (self *CurrentContext) FindTypeFromNode(node Node[ast.Node]) (ITypeMapperArray, bool) {
 	if _, fromNode, b := self.internalFindTypeFromNode(node); b {
 		return fromNode, true
 	}
 	return nil, false
 }
 
-func (self *CurrentContext) internalFindTypeFromNode(node Node[ast.Node]) (Node[ast.Node], []ITypeMapper, bool) {
+func (self *CurrentContext) internalFindTypeFromNode(node Node[ast.Node]) (Node[ast.Node], ITypeMapperArray, bool) {
 	switch item := node.Node.(type) {
 	case *ast.Ident:
 		if value, b := self.FindValueByString(item.Name); b {
@@ -54,9 +54,9 @@ func (self *CurrentContext) internalFindTypeFromNode(node Node[ast.Node]) (Node[
 	case *ast.SelectorExpr:
 		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
 		if _, mapper, b := self.internalFindTypeFromNode(param); b {
-			var typeMapperArray []ITypeMapper
+			var typeMapperArray ITypeMapperArray
 			for _, typeMapper := range mapper {
-				rt := typeMapper.ActualType(State{})
+				rt := typeMapper.ActualType()
 				sf, _ := rt.FieldByName(item.Sel.Name)
 				typeMapperArray = append(typeMapperArray, &WrapReflectTypeInMapper{sf.Type})
 			}

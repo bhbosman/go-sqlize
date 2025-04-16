@@ -20,15 +20,15 @@ func (typeMapperForStruct *TypeMapperForStruct) End() token.Pos {
 	return token.NoPos
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) ActualType(state State) reflect.Type {
+func (typeMapperForStruct *TypeMapperForStruct) ActualType() reflect.Type {
 	return typeMapperForStruct.actualTypeRt
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) MapperValueType(state State) reflect.Type {
+func (typeMapperForStruct *TypeMapperForStruct) MapperValueType() reflect.Type {
 	return typeMapperForStruct.nodeRt
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) MapperKeyType(state State) reflect.Type {
+func (typeMapperForStruct *TypeMapperForStruct) MapperKeyType() reflect.Type {
 	return typeMapperForStruct.actualTypeRt
 }
 
@@ -55,7 +55,7 @@ func (typeMapperForStruct *TypeMapperForStruct) walk(newRt reflect.Type, newRv r
 	}
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) Create(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
+func (typeMapperForStruct *TypeMapperForStruct) Create(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
 	switch option {
 	case tmcoMapKey:
 		if rv.Type() == typeMapperForStruct.nodeRt {
@@ -75,15 +75,15 @@ func (typeMapperForStruct *TypeMapperForStruct) Create(state State, option TypeM
 	}
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) NodeType(state State) reflect.Type {
+func (typeMapperForStruct *TypeMapperForStruct) NodeType() reflect.Type {
 	return typeMapperForStruct.nodeRt
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) createDefaultType(state State, parentNode Node[ast.Node]) reflect.Value {
+func (typeMapperForStruct *TypeMapperForStruct) createDefaultType(parentNode Node[ast.Node]) reflect.Value {
 	rv := reflect.New(typeMapperForStruct.nodeRt).Elem()
 	for idx := range typeMapperForStruct.nodeRt.NumField() {
 		typeMapper := typeMapperForStruct.typeMapperInstance.Field(idx).Interface().(ITypeMapper)
-		rvZero := reflect.Zero(typeMapper.NodeType(state))
+		rvZero := reflect.Zero(typeMapper.NodeType())
 		node := ChangeParamNode[ast.Node, ast.Node](parentNode, &ReflectValueExpression{rvZero})
 		rv.Field(idx).Set(reflect.ValueOf(node))
 	}

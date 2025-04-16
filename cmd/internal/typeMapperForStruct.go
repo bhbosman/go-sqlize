@@ -2,6 +2,7 @@ package internal
 
 import (
 	"go/ast"
+	"go/token"
 	"reflect"
 )
 
@@ -9,6 +10,14 @@ type TypeMapperForStruct struct {
 	nodeRt             reflect.Type
 	actualTypeRt       reflect.Type
 	typeMapperInstance reflect.Value
+}
+
+func (typeMapperForStruct *TypeMapperForStruct) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (typeMapperForStruct *TypeMapperForStruct) End() token.Pos {
+	return token.NoPos
 }
 
 func (typeMapperForStruct *TypeMapperForStruct) ActualType(state State) reflect.Type {

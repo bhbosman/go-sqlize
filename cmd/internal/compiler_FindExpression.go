@@ -85,7 +85,7 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 		return compiler.findRhsExpression(state, param)
 	case *ast.Ident:
 		currentContext := GetCompilerState[*CurrentContext](state)
-		if value, b := currentContext.FindValue(item.Name); b {
+		if value, b := currentContext.FindValueByString(item.Name); b {
 			if stackIndex == 0 {
 				var es ExecuteStatement = func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 					return []Node[ast.Node]{value}, artValue
@@ -128,7 +128,7 @@ func (compiler *Compiler) onFuncLitExecutionStatement(node Node[*ast.FuncLit]) O
 			newContext := &CurrentContext{m, map[string]ITypeMapper{}, LocalTypesMap{}, GetCompilerState[*CurrentContext](state)}
 			state = SetCompilerState(newContext, state)
 			param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, node.Node.Body)
-			values, art := compiler.executeBlockStmt(state, param, typeParams)
+			values, art := compiler.executeBlockStmt(state, param, typeParams, unprocessedArgs)
 			state = SetCompilerState(newContext.Parent, state)
 			return values, art
 		}

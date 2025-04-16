@@ -87,10 +87,36 @@ type (
 		Rhs                []Node[ast.Node]
 	}
 	DictionaryExpression struct {
-		m            reflect.Value
-		defaultValue reflect.Value
+		m               reflect.Value
+		defaultValue    reflect.Value
+		keyTypeMapper   ITypeMapper
+		valueTypeMapper ITypeMapper
 	}
 )
+
+func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() ([]ITypeMapper, bool) {
+	switch v := iteSingleCondition.conditionalStatement[0].value.Node.(type) {
+	case *IfThenElseSingleValueCondition:
+		return v.GetTypeMapper()
+	case *ReflectValueExpression:
+		dd := &WrapReflectTypeInMapper{v.Rv.Type()}
+		return []ITypeMapper{dd}, true
+	case IFindTypeMapper:
+		panic("ffff")
+	default:
+		panic("dfdsfds")
+	}
+	panic("ddd")
+
+	//typeMapper := iteSingleCondition.conditionalStatement[0].value.Node(*IfThenElseSingleValueCondition).()
+	//panic(typeMapper)
+	//
+	//return []ITypeMapper{typeMapper}, true
+}
+
+func (de *DictionaryExpression) GetTypeMapper() ([]ITypeMapper, bool) {
+	return []ITypeMapper{de.keyTypeMapper, de.valueTypeMapper}, true
+}
 
 func (entityField *EntityField) GetTypeMapper() ([]ITypeMapper, bool) {
 	typemapper := entityField.aliasTypeMapper

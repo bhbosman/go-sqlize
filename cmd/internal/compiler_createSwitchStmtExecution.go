@@ -46,7 +46,7 @@ func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) 
 
 		paramBody := ChangeParamNode(node, node.Node.Body)
 		tempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](node, node.Node.Body))
-		stmt, resultType := compiler.executeBlockStmt(tempState, paramBody, typeParams)
+		stmt, resultType := compiler.executeBlockStmt(tempState, paramBody, typeParams, unprocessedArgs)
 		if resultType != artReturnAndContinue {
 			panic("need a return statement")
 		}

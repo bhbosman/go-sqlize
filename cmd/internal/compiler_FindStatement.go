@@ -89,7 +89,7 @@ func (compiler *Compiler) createDeclStmtExecution(node Node[*ast.DeclStmt]) Exec
 
 func (compiler *Compiler) createBlockStmtExecution(node Node[*ast.BlockStmt]) ExecuteStatement {
 	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
-		return compiler.executeBlockStmt(state, node, typeParams)
+		return compiler.executeBlockStmt(state, node, typeParams, unprocessedArgs)
 	}
 }
 

@@ -33,7 +33,7 @@ func (compiler *Compiler) internalFindLhsExpression(state State, node Node[ast.E
 			//err := syntaxErrorf(state.currentNode, "No assignements allowed")
 			//panic(err)
 			currentContext := GetCompilerState[*CurrentContext](state)
-			currentContext.FindValue(item.Name)
+			currentContext.FindValueByString(item.Name)
 			for currentContext != nil {
 				if _, ok := currentContext.Mm[item.Name]; ok {
 					break

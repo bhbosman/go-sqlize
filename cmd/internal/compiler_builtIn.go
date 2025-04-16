@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 	"reflect"
 )
 
@@ -141,6 +142,7 @@ const (
 )
 
 type ITypeMapper interface {
+	ast.Node
 	Create(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value
 	NodeType(state State) reflect.Type
 	ActualType(state State) reflect.Type
@@ -151,6 +153,14 @@ type ITypeMapper interface {
 
 type WrapReflectTypeInMapper struct {
 	rt reflect.Type
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) End() token.Pos {
+	return token.NoPos
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) Create(state State, option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
@@ -186,6 +196,14 @@ type ReflectTypeHolder struct {
 	fnKind            func() reflect.Kind
 	fnMapperKeyType   func(state State) reflect.Type
 	fnMapperValueType func(state State) reflect.Type
+}
+
+func (rth *ReflectTypeHolder) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (rth *ReflectTypeHolder) End() token.Pos {
+	return token.NoPos
 }
 
 func (rth *ReflectTypeHolder) ActualType(state State) reflect.Type {
@@ -302,10 +320,7 @@ func (compiler *Compiler) genericCoercion(rt reflect.Type) ExecuteStatement {
 
 		rv, isLiterate := isLiterateValue(arguments[0])
 		if isLiterate {
-			returnValue := ChangeParamNode[ast.Node, ast.Node](
-				state.currentNode,
-				&ReflectValueExpression{rv.Convert(rt)},
-			)
+			returnValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rv.Convert(rt)})
 			return []Node[ast.Node]{returnValue}, artValue
 		}
 		returnValue := ChangeParamNode[ast.Node, ast.Node](

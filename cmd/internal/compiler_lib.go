@@ -50,7 +50,7 @@ func (compiler *Compiler) libQueryImplementation(state State) ExecuteStatement {
 	}
 }
 
-func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, arguments []Node[ast.Node], typeParams []ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
+func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, arguments []Node[ast.Node], typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
 	nameAndParams := findAllParamNameAndTypes(funcLit.Type.Params)
 	mm := ValueInformationMap{}
 	for i, param := range nameAndParams {
@@ -65,7 +65,7 @@ func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, argu
 	}
 	state = SetCompilerState(newContext, state)
 	param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, funcLit.Body)
-	values, _ := compiler.executeBlockStmt(state, param, typeParams)
+	values, _ := compiler.executeBlockStmt(state, param, typeParams, unprocessedArgs)
 	state = SetCompilerState(newContext.Parent, state)
 	return values, artValue
 }
@@ -81,7 +81,7 @@ func (compiler *Compiler) libMapImplementation(state State) ExecuteStatement {
 				panic("map implementation requires function literal")
 			}
 			if funcLit, ok := arguments[1].Node.(*ast.FuncLit); ok {
-				return compiler.executeFuncLit(state, funcLit, arguments, typeParams)
+				return compiler.executeFuncLit(state, funcLit, arguments, typeParams, unprocessedArgs)
 			}
 			panic("map implementation argument 1 is not a function literal")
 
@@ -127,7 +127,7 @@ func (compiler *Compiler) libGenerateSqlTestImplementation(state State) ExecuteS
 			ans, _ := compiler.libGenerateSql(state, args)
 			if rv, isLiterate := isLiterateValue(ans[0]); isLiterate && rv.Kind() == reflect.String {
 				currentContext := GetCompilerState[*CurrentContext](state)
-				if value, b := currentContext.FindValue("__stdOut__"); b {
+				if value, b := currentContext.FindValueByString("__stdOut__"); b {
 					switch nodeValue := value.Node.(type) {
 					case *ReflectValueExpression:
 						if wr, ok := nodeValue.Rv.Interface().(io.Writer); ok {
@@ -304,10 +304,21 @@ func (compiler *Compiler) libGetSomeData05Implementation(state State) ExecuteSta
 
 func (compiler *Compiler) libCreateDictionaryImplementation(state State) ExecuteStatement {
 	return func(state State, typeParams []ITypeMapper, unprocessedArgs []Node[ast.Expr]) ([]Node[ast.Node], CallArrayResultType) {
+		if len(typeParams) != 2 {
+			panic(fmt.Errorf("CreateDictionary implementation requires 2 type arguments, got %d", len(typeParams)))
+		}
+		if len(unprocessedArgs) != 2 {
+			panic(fmt.Errorf("CreateDictionary implementation requires 2 arguments, got %d", len(unprocessedArgs)))
+		}
 		arguments := compiler.compileArguments(state, unprocessedArgs, typeParams)
 		if rv00, ok00 := isLiterateValue(arguments[0]); ok00 {
 			if rv01, ok01 := isLiterateValue(arguments[1]); ok01 {
-				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{rv00, rv01})}, artValue
+				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{
+					rv00,
+					rv01,
+					typeParams[0],
+					typeParams[1],
+				})}, artValue
 			}
 		}
 		panic(fmt.Errorf("createDictionary implementation requires literal values"))

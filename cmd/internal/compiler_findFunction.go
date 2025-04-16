@@ -59,7 +59,7 @@ func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node
 		}
 
 		currentContext := GetCompilerState[*CurrentContext](state)
-		if v, ok := currentContext.FindValue(item.Name); ok {
+		if v, ok := currentContext.FindValueByString(item.Name); ok {
 			return compiler.initExecutionStatement(state, stackIndex, v, Node[*ast.FuncType]{}, nil)
 		}
 

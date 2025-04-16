@@ -1,11 +1,22 @@
 package internal
 
-import "reflect"
+import (
+	"go/token"
+	"reflect"
+)
 
 type TypeMapperForMap struct {
 	keyTypeMapper   ITypeMapper
 	valueTypeMapper ITypeMapper
 	mapRt           reflect.Type
+}
+
+func (tyfm *TypeMapperForMap) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (tyfm *TypeMapperForMap) End() token.Pos {
+	return token.NoPos
 }
 
 func (tyfm *TypeMapperForMap) ActualType(state State) reflect.Type {

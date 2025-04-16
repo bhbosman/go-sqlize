@@ -179,7 +179,7 @@ const (
 
 func (compiler *Compiler) CompileFunc(state State, fn Node[*ast.FuncDecl]) ([]Node[ast.Node], CallArrayResultType) {
 	param := ChangeParamNode(fn, fn.Node.Body)
-	return compiler.executeBlockStmt(state, param, nil)
+	return compiler.executeBlockStmt(state, param, nil, nil)
 }
 
 func (compiler *Compiler) AddEntitySource(rt ITypeMapper) string {

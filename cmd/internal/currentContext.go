@@ -43,7 +43,7 @@ func (self *CurrentContext) FindTypeFromNode(node Node[ast.Node]) ([]ITypeMapper
 func (self *CurrentContext) internalFindTypeFromNode(node Node[ast.Node]) (Node[ast.Node], []ITypeMapper, bool) {
 	switch item := node.Node.(type) {
 	case *ast.Ident:
-		if value, b := self.FindValue(item.Name); b {
+		if value, b := self.FindValueByString(item.Name); b {
 			if findTypeMapper, ok := value.Node.(IFindTypeMapper); ok {
 				if mapper, ok := findTypeMapper.GetTypeMapper(); ok {
 					return value, mapper, true
@@ -66,14 +66,46 @@ func (self *CurrentContext) internalFindTypeFromNode(node Node[ast.Node]) (Node[
 	panic("implement me")
 }
 
-func (self *CurrentContext) FindValue(value string) (Node[ast.Node], bool) {
+func (self *CurrentContext) FindValueByString(value string) (Node[ast.Node], bool) {
 	if v, ok := self.Mm[value]; ok {
 		return v.Node, true
 	}
 	if self.Parent == nil {
 		return Node[ast.Node]{}, false
 	}
-	return self.Parent.FindValue(value)
+	return self.Parent.FindValueByString(value)
+}
+
+func (self *CurrentContext) FindValueByNode(node Node[ast.Node]) (Node[ast.Node], bool) {
+	if byNode, b := self.Parent.internalFindValueByNode(node); b {
+		return byNode.(Node[ast.Node]), true
+	}
+	return Node[ast.Node]{}, false
+}
+
+func (self *CurrentContext) internalFindValueByNode(node Node[ast.Node]) (interface{}, bool) {
+	switch item := node.Node.(type) {
+	default:
+		return nil, false
+	case *ast.Ident:
+		return self.FindValueByString(item.Name)
+	case *ast.SelectorExpr:
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
+		if unk, ok := self.internalFindValueByNode(param); ok {
+			switch unkItem := unk.(type) {
+			default:
+				panic("implement me")
+			case Node[ast.Node]:
+				switch nodeItem := unkItem.Node.(type) {
+				default:
+					panic("implement me")
+				case *TrailRecord:
+					return nodeItem.Value.FieldByName(item.Sel.Name).Interface().(Node[ast.Node]), true
+				}
+			}
+		}
+		return nil, false
+	}
 }
 
 func (self *CurrentContext) FindTypeParam(value string) (ITypeMapper, bool) {

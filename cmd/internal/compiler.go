@@ -349,7 +349,7 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 
 	fn := func(node Node[*ast.StructType], arr []struct {
 		name string
-		node ast.Expr
+		node ast.Node
 	}) []FieldInformation {
 		var result []FieldInformation
 		for _, ss := range arr {

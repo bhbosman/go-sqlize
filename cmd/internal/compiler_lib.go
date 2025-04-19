@@ -352,11 +352,11 @@ func (compiler *Compiler) libDictionaryDefaultImplementation(state State, funcTy
 
 func findAllParamNameAndTypes(Params *ast.FieldList) []struct {
 	name string
-	node ast.Expr
+	node ast.Node
 } {
 	result := make([]struct {
 		name string
-		node ast.Expr
+		node ast.Node
 	}, 0, Params.NumFields())
 
 	if Params != nil {
@@ -364,14 +364,14 @@ func findAllParamNameAndTypes(Params *ast.FieldList) []struct {
 			if len(g.Names) == 0 {
 				result = append(result, struct {
 					name string
-					node ast.Expr
+					node ast.Node
 				}{name: "_", node: g.Type})
 
 			} else {
 				for _, n := range g.Names {
 					result = append(result, struct {
 						name string
-						node ast.Expr
+						node ast.Node
 					}{name: n.Name, node: g.Type})
 				}
 			}

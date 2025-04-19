@@ -36,7 +36,7 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 		node Node[*ast.CallExpr],
 		nameAndTypeParams []struct {
 			name string
-			node ast.Expr
+			node ast.Node
 		},
 		funcTypeNode Node[*ast.FuncType],
 		args []CalculateTypeArgumentType,

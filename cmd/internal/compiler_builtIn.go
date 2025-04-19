@@ -187,7 +187,7 @@ func (typeWrapper *WrapReflectTypeInMapper) Keys() []Node[ast.Node] {
 	return nil
 }
 
-func (typeWrapper *WrapReflectTypeInMapper) GetTypeMapper(int) (ITypeMapperArray, bool) {
+func (typeWrapper *WrapReflectTypeInMapper) GetTypeMapper() (ITypeMapperArray, bool) {
 	return ITypeMapperArray{TypeMapperInformation{
 		"",
 		typeWrapper,

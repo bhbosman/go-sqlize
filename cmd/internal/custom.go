@@ -12,7 +12,7 @@ type (
 	}
 	IFindTypeMapper interface {
 		ast.Node
-		GetTypeMapper(int) (ITypeMapperArray, bool)
+		GetTypeMapper() (ITypeMapperArray, bool)
 	}
 
 	EntitySource struct {
@@ -104,15 +104,15 @@ func (de *DictionaryExpression) GetTypeParamIdentifiers() ([]string, bool) {
 	return []string{de.key, de.value}, true
 }
 
-func (rv *ReflectValueExpression) GetTypeMapper(int) (ITypeMapperArray, bool) {
+func (rv *ReflectValueExpression) GetTypeMapper() (ITypeMapperArray, bool) {
 	return ITypeMapperArray{TypeMapperInformation{"", &WrapReflectTypeInMapper{rv.Rv.Type()}}}, true
 }
 
-func (coercion coercion) GetTypeMapper(int) (ITypeMapperArray, bool) {
+func (coercion coercion) GetTypeMapper() (ITypeMapperArray, bool) {
 	return ITypeMapperArray{TypeMapperInformation{"", &WrapReflectTypeInMapper{coercion.rt}}}, true
 }
 
-func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper(int) (ITypeMapperArray, bool) {
+func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() (ITypeMapperArray, bool) {
 	switch v := iteSingleCondition.conditionalStatement[0].value.Node.(type) {
 	case *IfThenElseSingleValueCondition:
 		return v.GetTypeMapper(0)
@@ -132,7 +132,7 @@ func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper(int) (IT
 	//return ITypeMapperArray{typeMapper}, true
 }
 
-func (de *DictionaryExpression) GetTypeMapper(i int) (ITypeMapperArray, bool) {
+func (de *DictionaryExpression) GetTypeMapper() (ITypeMapperArray, bool) {
 	switch i {
 	case 0:
 		return ITypeMapperArray{TypeMapperInformation{de.key, de.keyTypeMapper}}, true
@@ -145,7 +145,7 @@ func (de *DictionaryExpression) GetTypeMapper(i int) (ITypeMapperArray, bool) {
 
 }
 
-func (entityField *EntityField) GetTypeMapper(int) (ITypeMapperArray, bool) {
+func (entityField *EntityField) GetTypeMapper() (ITypeMapperArray, bool) {
 	typemapper := entityField.aliasTypeMapper
 	switch typemapper.Kind() {
 	case reflect.Struct:
@@ -159,14 +159,14 @@ func (entityField *EntityField) GetTypeMapper(int) (ITypeMapperArray, bool) {
 	}
 }
 
-func (value *TrailRecord) GetTypeMapper(int) (ITypeMapperArray, bool) {
+func (value *TrailRecord) GetTypeMapper() (ITypeMapperArray, bool) {
 	return ITypeMapperArray{TypeMapperInformation{
 		"",
 		value.typeMapper,
 	}}, true
 }
 
-func (value *TrailSource) GetTypeMapper(int) (ITypeMapperArray, bool) {
+func (value *TrailSource) GetTypeMapper() (ITypeMapperArray, bool) {
 	return ITypeMapperArray{TypeMapperInformation{
 		"",
 		value.typeMapper,

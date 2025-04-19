@@ -285,19 +285,21 @@ func (compiler *Compiler) libCreateDictionaryImplementation(state State, funcTyp
 		}
 
 		nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.TypeParams))
-		key := nameAndParams[0].name
-		value := nameAndParams[1].name
+		key := nameAndParams[0]
+		value := nameAndParams[1]
 		if rv00, ok00 := isLiterateValue(arguments[0]); ok00 {
 			if rv01, ok01 := isLiterateValue(arguments[1]); ok01 {
-				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{
-					rv00,
-					rv01,
-					key,
-					value,
-					&WrapReflectTypeInMapper{rv00.Type()},
-					typeParams[key],
-					typeParams[value],
-				})}, artValue
+				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](
+					state.currentNode,
+					&DictionaryExpression{
+						rv00,
+						rv01,
+						key.name,
+						value.name,
+						&WrapReflectTypeInMapper{rv00.Type()},
+						typeParams[key.name],
+						typeParams[value.name],
+					})}, artValue
 			}
 		}
 		panic(fmt.Errorf("createDictionary implementation requires literal values"))

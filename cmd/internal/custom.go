@@ -7,9 +7,12 @@ import (
 )
 
 type (
+	IFindTypeParamIdentifiers interface {
+		GetTypeParamIdentifiers() ([]string, bool)
+	}
 	IFindTypeMapper interface {
 		ast.Node
-		GetTypeMapper(int) (ITypeMapperArray, bool) // 8 impl
+		GetTypeMapper(int) (ITypeMapperArray, bool)
 	}
 
 	EntitySource struct {
@@ -97,6 +100,10 @@ type (
 	}
 )
 
+func (de *DictionaryExpression) GetTypeParamIdentifiers() ([]string, bool) {
+	return []string{de.key, de.value}, true
+}
+
 func (rv *ReflectValueExpression) GetTypeMapper(int) (ITypeMapperArray, bool) {
 	return ITypeMapperArray{TypeMapperInformation{"", &WrapReflectTypeInMapper{rv.Rv.Type()}}}, true
 }
@@ -143,18 +150,27 @@ func (entityField *EntityField) GetTypeMapper(int) (ITypeMapperArray, bool) {
 	switch typemapper.Kind() {
 	case reflect.Struct:
 		typeMapperForStruct := typemapper.(*TypeMapperForStruct)
-		return ITypeMapperArray{TypeMapperInformation{"", typeMapperForStruct.typeMapperInstance.FieldByName(entityField.field).Interface().(ITypeMapper)}}, true
+		return ITypeMapperArray{TypeMapperInformation{
+			"",
+			typeMapperForStruct.typeMapperInstance.FieldByName(entityField.field).Interface().(ITypeMapper),
+		}}, true
 	default:
 		panic("dfgdfgfd")
 	}
 }
 
 func (value *TrailRecord) GetTypeMapper(int) (ITypeMapperArray, bool) {
-	return ITypeMapperArray{TypeMapperInformation{"", value.typeMapper}}, true
+	return ITypeMapperArray{TypeMapperInformation{
+		"",
+		value.typeMapper,
+	}}, true
 }
 
 func (value *TrailSource) GetTypeMapper(int) (ITypeMapperArray, bool) {
-	return ITypeMapperArray{TypeMapperInformation{"", value.typeMapper}}, true
+	return ITypeMapperArray{TypeMapperInformation{
+		"",
+		value.typeMapper,
+	}}, true
 }
 
 func (c *CheckForNotNullExpression) Pos() token.Pos {

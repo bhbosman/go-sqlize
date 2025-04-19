@@ -188,7 +188,10 @@ func (typeWrapper *WrapReflectTypeInMapper) Keys() []Node[ast.Node] {
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) GetTypeMapper(int) (ITypeMapperArray, bool) {
-	return ITypeMapperArray{TypeMapperInformation{"", typeWrapper}}, true
+	return ITypeMapperArray{TypeMapperInformation{
+		"",
+		typeWrapper,
+	}}, true
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) Pos() token.Pos {

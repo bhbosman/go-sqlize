@@ -18,9 +18,18 @@ func buildMap(ss []struct {
 }
 
 func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallExpr]) ExecuteStatement {
-	compileArguments := func(state State, argss []Node[ast.Node], typeParams map[string]ITypeMapper) []Node[ast.Node] {
+	compileArguments := func(
+		state State,
+		argss []Node[ast.Node],
+		typeParams map[string]ITypeMapper,
+		paramDefinitions []struct {
+			name string
+			node Node[ast.Node]
+		},
+	) []Node[ast.Node] {
 		var result []Node[ast.Node]
-		for _, arg := range argss {
+		for idx, arg := range argss {
+			_ = paramDefinitions[idx]
 			tempState := state.setCurrentNode(ChangeParamNode[ast.Node, ast.Node](arg, arg.Node))
 			param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, arg.Node)
 			fn := compiler.findRhsExpression(tempState, param)
@@ -100,20 +109,22 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 			paramArg := ChangeParamNode[*ast.CallExpr, ast.Node](node, arg)
 			args = append(args, paramArg)
 		}
-		args = compileArguments(state, args, knownTypeParams)
+		nameAndTypeParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.TypeParams))
+		nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.Params))
+		args = compileArguments(state, args, knownTypeParams, nameAndParams)
 		if !funcTypeNode.Valid {
 			fn, resultType := execFn(tempState02, knownTypeParams, args)
 			fmt.Printf("end %v\n", compiler.Fileset.Position(node.Node.Rparen).String())
 			return fn, resultType
 		} else {
-			nameAndTypeParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.TypeParams))
+
 			requiredTypeParams := map[string]bool{}
 			for _, ss := range nameAndTypeParams {
 				if _, ok := knownTypeParams[ss.name]; !ok {
 					requiredTypeParams[ss.name] = true
 				}
 			}
-			nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.Params))
+
 			var argumentArr []CalculateTypeArgumentType
 			for idx, arg := range args {
 				argumentArr = append(argumentArr, CalculateTypeArgumentType{idx, ChangeParamNode[*ast.CallExpr, ast.Node](node, node.Node.Args[idx]), nameAndParams[idx].node, arg})

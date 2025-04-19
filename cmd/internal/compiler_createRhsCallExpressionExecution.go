@@ -119,12 +119,15 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 					requiredTypeParams[ss.name] = true
 				}
 			}
-
+			nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.Params))
 			var argumentArr []CalculateTypeArgumentType
 			for idx, arg := range args {
-				inputArgument := node.Node.Args[idx]
-				inputArgumentNode := ChangeParamNode[*ast.CallExpr, ast.Node](node, inputArgument)
-				argumentArr = append(argumentArr, CalculateTypeArgumentType{idx, inputArgumentNode, arg})
+				argumentArr = append(argumentArr, CalculateTypeArgumentType{
+					idx,
+					ChangeParamNode[*ast.CallExpr, ast.Node](node, node.Node.Args[idx]),
+					nameAndParams[idx].node,
+					arg,
+				})
 			}
 
 			if mappers, b := createTypeMapperFn(state, requiredTypeParams, node, nameAndTypeParams, funcTypeNode, argumentArr); b {
@@ -160,6 +163,7 @@ type CalculateTypeParamType struct {
 type CalculateTypeArgumentType struct {
 	index             int
 	inputArgumentNode Node[ast.Node]
+	paramStruct       Node[ast.Node]
 	compiledArgument  Node[ast.Node]
 }
 
@@ -225,6 +229,7 @@ func (compiler *Compiler) calculateTypeParams(
 									{
 										args[idx].index,
 										args[idx].inputArgumentNode,
+										args[idx].paramStruct,
 										mapperKeyNode,
 									},
 								})
@@ -246,6 +251,7 @@ func (compiler *Compiler) calculateTypeParams(
 									{
 										args[idx].index,
 										args[idx].inputArgumentNode,
+										args[idx].paramStruct,
 										mapperValueNode,
 									},
 								})

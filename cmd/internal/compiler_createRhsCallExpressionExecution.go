@@ -387,7 +387,6 @@ func (compiler *Compiler) calculateTypeParams(
 					CalculateTypeParamType{ChangeParamNode[ast.Node, ast.Node](Params.node, paramItem.Value)},
 					args,
 				)
-
 			case *ast.IndexListExpr:
 				for _, index := range paramItem.Indices {
 					var b bool
@@ -404,7 +403,6 @@ func (compiler *Compiler) calculateTypeParams(
 					}
 				}
 				return s, len(requiredTypeParams) > 0
-
 			case *ast.IndexExpr:
 				param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
 				return compiler.calculateTypeParams(

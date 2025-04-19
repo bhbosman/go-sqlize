@@ -319,6 +319,9 @@ func (compiler *Compiler) calculateTypeParams(
 		case *ast.IndexListExpr:
 			typeParamValues, _ := args[0].compiledArgument.Node.(IFindTypeParamIdentifiers).GetTypeParamIdentifiers()
 			if len(typeParamValues) == len(funcDeclItem.Indices) {
+				if findTypeMapper, ok := args[0].compiledArgument.Node.(IFindTypeMapper); ok {
+					panic(findTypeMapper)
+				}
 
 			}
 			panic(paramItem)

@@ -13,6 +13,7 @@ type libDictionaryLookupImplementation struct {
 }
 
 func (impl libDictionaryLookupImplementation) ExecuteStatement() ExecuteStatement {
+
 	return impl.Run
 }
 

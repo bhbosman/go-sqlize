@@ -246,7 +246,7 @@ func (compiler *Compiler) calculateTypeParams(
 			for idx, field := range paramItem.List {
 				if findTypeMapperForMap, ok := args[idx].compiledArgument.Node.(IFindTypeMapper); ok {
 					if mapper, b := findTypeMapperForMap.GetTypeMapper(); b {
-						defaultMapper := mapper[""]
+						defaultMapper := mapper[0]
 						switch defaultMapper.typeMapper.Kind() {
 						default:
 							panic(mapper)
@@ -319,15 +319,24 @@ func (compiler *Compiler) calculateTypeParams(
 			panic(paramItem)
 		case *ast.IndexListExpr:
 			typeParamValues, _ := args[0].compiledArgument.Node.(IFindTypeParamIdentifiers).GetTypeParamIdentifiers()
-			if len(typeParamValues) == len(funcDeclItem.Indices) {
-				if findTypeMapper, ok := args[0].compiledArgument.Node.(IFindTypeMapper); ok {
-					_, _ = findTypeMapper.GetTypeMapper()
-
-					panic(findTypeMapper)
+			mappers, _ := args[0].compiledArgument.Node.(IFindTypeMapper).GetTypeMapper()
+			if len(typeParamValues) == len(funcDeclItem.Indices) && len(funcDeclItem.Indices) == len(mappers) {
+				for idx := 0; idx < len(mappers); idx++ {
+					var b bool
+					if s, b = compiler.calculateTypeParams(
+						state,
+						requiredTypeParams,
+						CalculateTypeFuncDeclType{idx, ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Indices[idx])},
+						s,
+						CalculateTypeParamType{idx, Node[ast.Node]{Node: mappers[idx].typeMapper, Valid: true}},
+						nil,
+					); !b {
+						return s, len(requiredTypeParams) > 0
+					}
 				}
-
+				return s, len(requiredTypeParams) > 0
 			}
-			panic(paramItem)
+			panic("counts mismatch")
 		case *ast.FieldList:
 			for idx, field := range paramItem.List {
 				var b bool
@@ -510,7 +519,7 @@ func (compiler *Compiler) calculateTypeParams(
 								requiredTypeParams,
 								funcDecl,
 								s,
-								CalculateTypeParamType{Params.index, Node[ast.Node]{Node: arr[""].typeMapper, Valid: true}},
+								CalculateTypeParamType{Params.index, Node[ast.Node]{Node: arr[0].typeMapper, Valid: true}},
 								nil,
 							)
 						}

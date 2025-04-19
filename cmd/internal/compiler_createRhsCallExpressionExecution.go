@@ -165,21 +165,20 @@ func (compiler *Compiler) calculateTypeParams(
 			for idx, field := range paramItem.List {
 				if findTypeMapperForMap, ok := args[idx].Node.(IFindTypeMapper); ok {
 					if mapper, b := findTypeMapperForMap.GetTypeMapper(""); b {
-						switch mapper[0].Kind() {
+						switch mapper[0].typeMapper.Kind() {
 						default:
 							panic(mapper)
 						case reflect.Map:
-							keyRt := mapper[0].ActualType().Key()
+							keyRt := mapper[0].typeMapper.ActualType().Key()
 							mapperKey := &WrapReflectTypeInMapper{keyRt}
 							mapperKeyNode := ChangeParamNode[ast.Node, ast.Node](args[idx], mapperKey)
-
 							funcDeclParam := ChangeParamNode[ast.Node, ast.Node](funcDecl, funcDeclItem.Key)
 							s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDeclParam, s, field.Type, []Node[ast.Node]{mapperKeyNode})
 							if !b {
 								return s, len(requiredTypeParams) > 0
 							}
 
-							valueRt := mapper[0].ActualType().Elem()
+							valueRt := mapper[0].typeMapper.ActualType().Elem()
 							mapperValue := &WrapReflectTypeInMapper{valueRt}
 							mapperValueNode := ChangeParamNode[ast.Node, ast.Node](args[idx], mapperValue)
 							funcDeclParam = ChangeParamNode[ast.Node, ast.Node](funcDecl, funcDeclItem.Value)
@@ -282,7 +281,7 @@ func (compiler *Compiler) calculateTypeParams(
 					if findTypeMapper, ok := args[0].Node.(IFindTypeMapper); ok {
 						if arr, ok := findTypeMapper.GetTypeMapper(funcDeclItem.Name); ok {
 							param := ChangeParamNode[ast.Node, ast.Node](funcDecl, funcDeclItem)
-							return compiler.calculateTypeParams(state, requiredTypeParams, param, s, arr[0], nil)
+							return compiler.calculateTypeParams(state, requiredTypeParams, param, s, arr[0].typeMapper, nil)
 						}
 					} else {
 						panic("implement me")
@@ -292,6 +291,33 @@ func (compiler *Compiler) calculateTypeParams(
 			case *ast.FieldList:
 				nameAndParams := findAllParamNameAndTypes(paramItem)
 				for idx, arg := range args {
+					//if typeMapper, ok := args[idx].Node.(IFindTypeMapper); ok {
+					//	if mapper, ok := typeMapper.GetTypeMapper(""); ok && mapper[0].Kind() == reflect.Map {
+					//
+					//		//keyRt := mapper[0].ActualType().Key()
+					//		//mapperKey := &WrapReflectTypeInMapper{keyRt}
+					//		//mapperKeyNode := ChangeParamNode[ast.Node, ast.Node](args[idx], mapperKey)
+					//		//funcDeclParam := ChangeParamNode[ast.Node, ast.Node](funcDecl, funcDeclItem.Key)
+					//		//s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDeclParam, s, field.Type, []Node[ast.Node]{mapperKeyNode})
+					//		//if !b {
+					//		//	return s, len(requiredTypeParams) > 0
+					//		//}
+					//		//
+					//		//valueRt := mapper[0].ActualType().Elem()
+					//		//mapperValue := &WrapReflectTypeInMapper{valueRt}
+					//		//mapperValueNode := ChangeParamNode[ast.Node, ast.Node](args[idx], mapperValue)
+					//		//funcDeclParam = ChangeParamNode[ast.Node, ast.Node](funcDecl, funcDeclItem.Value)
+					//		//s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDeclParam, s, field.Type, []Node[ast.Node]{mapperValueNode})
+					//		//if !b {
+					//		//	return s, len(requiredTypeParams) > 0
+					//		//}
+					//
+					//		panic("sfsdf")
+					//
+					//	}
+					//
+					//}
+
 					nameAndParam := nameAndParams[idx]
 					var b bool
 					s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDecl, s, nameAndParam.node, []Node[ast.Node]{arg})

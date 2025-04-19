@@ -172,22 +172,15 @@ type ITypeMapper interface {
 	Kind() reflect.Kind
 }
 
-type ITypeMapperArray []ITypeMapper
-
-func (receiver ITypeMapperArray) toNodeArray() []Node[ast.Node] {
-	var result []Node[ast.Node]
-	for _, element := range receiver {
-		result = append(result, Node[ast.Node]{Node: &ReflectValueExpression{reflect.ValueOf(element.ActualType())}, Valid: true})
-	}
-	return result
-}
+type TypeMapperInformation struct{ typeMapper ITypeMapper }
+type ITypeMapperArray []TypeMapperInformation
 
 type WrapReflectTypeInMapper struct {
 	rt reflect.Type
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) GetTypeMapper(string) (ITypeMapperArray, bool) {
-	return ITypeMapperArray{typeWrapper}, true
+	return ITypeMapperArray{TypeMapperInformation{typeWrapper}}, true
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) Pos() token.Pos {

@@ -284,13 +284,19 @@ func (compiler *Compiler) libCreateDictionaryImplementation(state State, funcTyp
 			panic(fmt.Errorf("CreateDictionary implementation requires 2 arguments, got %d", len(arguments)))
 		}
 
+		nameAndParams := findAllParamNameAndTypes(funcTypeNode.Node.TypeParams)
+		key := nameAndParams[0].name
+		value := nameAndParams[1].name
 		if rv00, ok00 := isLiterateValue(arguments[0]); ok00 {
 			if rv01, ok01 := isLiterateValue(arguments[1]); ok01 {
 				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{
 					rv00,
 					rv01,
-					typeParams["TKey"],
-					typeParams["TValue"],
+					key,
+					value,
+					&WrapReflectTypeInMapper{rv00.Type()},
+					typeParams[key],
+					typeParams[value],
 				})}, artValue
 			}
 		}

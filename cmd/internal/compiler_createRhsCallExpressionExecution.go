@@ -121,8 +121,10 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 			}
 
 			var argumentArr []CalculateTypeArgumentType
-			for _, arg := range args {
-				argumentArr = append(argumentArr, CalculateTypeArgumentType{arg})
+			for idx, arg := range args {
+				inputArgument := node.Node.Args[idx]
+				inputArgumentNode := ChangeParamNode[*ast.CallExpr, ast.Node](node, inputArgument)
+				argumentArr = append(argumentArr, CalculateTypeArgumentType{inputArgumentNode, arg})
 			}
 
 			if mappers, b := createTypeMapperFn(state, requiredTypeParams, node, nameAndTypeParams, funcTypeNode, argumentArr); b {
@@ -156,7 +158,8 @@ type CalculateTypeParamType struct {
 }
 
 type CalculateTypeArgumentType struct {
-	compiledArgument Node[ast.Node]
+	inputArgumentNode Node[ast.Node]
+	compiledArgument  Node[ast.Node]
 }
 
 // Todo: remove the return value
@@ -197,7 +200,13 @@ func (compiler *Compiler) calculateTypeParams(
 							mapperKey := &WrapReflectTypeInMapper{keyRt}
 							mapperKeyNode := ChangeParamNode[ast.Node, ast.Node](args[idx].compiledArgument, mapperKey)
 							funcDeclParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Key)
-							s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam}, s, CalculateTypeParamType{field.Type}, []CalculateTypeArgumentType{{mapperKeyNode}})
+							s, b = compiler.calculateTypeParams(
+								state,
+								requiredTypeParams,
+								CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam},
+								s,
+								CalculateTypeParamType{field.Type},
+								[]CalculateTypeArgumentType{{args[idx].inputArgumentNode, mapperKeyNode}})
 							if !b {
 								return s, len(requiredTypeParams) > 0
 							}
@@ -206,7 +215,13 @@ func (compiler *Compiler) calculateTypeParams(
 							mapperValue := &WrapReflectTypeInMapper{valueRt}
 							mapperValueNode := ChangeParamNode[ast.Node, ast.Node](args[idx].compiledArgument, mapperValue)
 							funcDeclParam = ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Value)
-							s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam}, s, CalculateTypeParamType{field.Type}, []CalculateTypeArgumentType{{mapperValueNode}})
+							s, b = compiler.calculateTypeParams(
+								state,
+								requiredTypeParams,
+								CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam},
+								s,
+								CalculateTypeParamType{field.Type},
+								[]CalculateTypeArgumentType{{args[idx].inputArgumentNode, mapperValueNode}})
 							if !b {
 								return s, len(requiredTypeParams) > 0
 							}

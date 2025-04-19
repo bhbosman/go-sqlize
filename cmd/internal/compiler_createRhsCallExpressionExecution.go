@@ -70,7 +70,7 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 				sss := map[string]ITypeMapper{}
 				for _, andParam := range nameAndParams {
 					param := ChangeParamNode[*ast.FuncType, ast.Node](funcTypeNode, andParam.node)
-					sss, _ = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{0, param}, sss, funcTypeNode.Node.Params, args)
+					sss, _ = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{0, param}, sss, CalculateTypeParamType{funcTypeNode.Node.Params}, args)
 					if len(requiredTypeParams) == 0 {
 						return sss, true
 					}
@@ -141,8 +141,7 @@ type CalculateTypeFuncDeclType struct {
 }
 
 type CalculateTypeParamType struct {
-	index int
-	node  Node[ast.Node]
+	node ast.Node
 }
 
 // Todo: remove the return value
@@ -151,7 +150,7 @@ func (compiler *Compiler) calculateTypeParams(
 	requiredTypeParams map[string]bool,
 	funcDecl CalculateTypeFuncDeclType,
 	s map[string]ITypeMapper,
-	Params ast.Node,
+	Params CalculateTypeParamType,
 	args []Node[ast.Node],
 ) (map[string]ITypeMapper, bool) {
 
@@ -160,17 +159,17 @@ func (compiler *Compiler) calculateTypeParams(
 		panic(funcDeclItem)
 		panic("unreachable")
 	case *ast.MapType:
-		switch paramItem := Params.(type) {
+		switch paramItem := Params.node.(type) {
 		default:
 			panic("fff")
 		case *ast.Ident:
 			var b bool
 			param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Key)
-			if s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem, args); !b {
+			if s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{paramItem}, args); !b {
 				return s, len(requiredTypeParams) > 0
 			}
 			param = ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Value)
-			return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem, args)
+			return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{paramItem}, args)
 		case *ast.FieldList:
 			for idx, field := range paramItem.List {
 				if findTypeMapperForMap, ok := args[idx].Node.(IFindTypeMapper); ok {
@@ -183,7 +182,7 @@ func (compiler *Compiler) calculateTypeParams(
 							mapperKey := &WrapReflectTypeInMapper{keyRt}
 							mapperKeyNode := ChangeParamNode[ast.Node, ast.Node](args[idx], mapperKey)
 							funcDeclParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Key)
-							s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam}, s, field.Type, []Node[ast.Node]{mapperKeyNode})
+							s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam}, s, CalculateTypeParamType{field.Type}, []Node[ast.Node]{mapperKeyNode})
 							if !b {
 								return s, len(requiredTypeParams) > 0
 							}
@@ -192,7 +191,7 @@ func (compiler *Compiler) calculateTypeParams(
 							mapperValue := &WrapReflectTypeInMapper{valueRt}
 							mapperValueNode := ChangeParamNode[ast.Node, ast.Node](args[idx], mapperValue)
 							funcDeclParam = ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Value)
-							s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam}, s, field.Type, []Node[ast.Node]{mapperValueNode})
+							s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam}, s, CalculateTypeParamType{field.Type}, []Node[ast.Node]{mapperValueNode})
 							if !b {
 								return s, len(requiredTypeParams) > 0
 							}
@@ -200,7 +199,7 @@ func (compiler *Compiler) calculateTypeParams(
 					}
 				} else {
 					var b bool
-					s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDecl, s, field.Type, []Node[ast.Node]{args[idx]})
+					s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDecl, s, CalculateTypeParamType{field.Type}, []Node[ast.Node]{args[idx]})
 					if !b {
 						return s, len(requiredTypeParams) > 0
 					}
@@ -222,7 +221,7 @@ func (compiler *Compiler) calculateTypeParams(
 		indexParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Index)
 		return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, indexParam}, s, Params, args)
 	case *ast.FuncType:
-		switch paramItem := Params.(type) {
+		switch paramItem := Params.node.(type) {
 		default:
 			panic(paramItem)
 		case *ast.Ident:
@@ -232,14 +231,14 @@ func (compiler *Compiler) calculateTypeParams(
 			if _, ok := requiredTypeParams[a.Name]; ok && a.Name == b.Name {
 				typeMapper := compiler.findType(state, args[0], Default|TypeParamType)
 				param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Results.List[0].Type)
-				return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, typeMapper, nil)
+				return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{typeMapper}, nil)
 			}
 			return s, len(requiredTypeParams) > 0
 		case *ast.FieldList:
 			for idx, field := range paramItem.List {
 				var b bool
 				param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-				s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, field.Type, []Node[ast.Node]{args[idx]})
+				s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{field.Type}, []Node[ast.Node]{args[idx]})
 				if !b {
 					return s, len(requiredTypeParams) > 0
 				}
@@ -247,28 +246,28 @@ func (compiler *Compiler) calculateTypeParams(
 			return s, len(requiredTypeParams) > 0
 		case *ast.ArrayType:
 			param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-			return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem.Elt, args)
+			return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{paramItem.Elt}, args)
 		}
 	case *ast.ArrayType:
 		param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Elt)
 		return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, Params, args)
 	case *ast.Ident:
 		if _, ok := requiredTypeParams[funcDeclItem.Name]; ok {
-			switch paramItem := Params.(type) {
+			switch paramItem := Params.node.(type) {
 			default:
 				panic(paramItem)
 			case *ast.MapType:
 				var b bool
-				if s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDecl, s, paramItem.Key, args); !b {
+				if s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDecl, s, CalculateTypeParamType{paramItem.Key}, args); !b {
 					return s, len(requiredTypeParams) > 0
 				}
-				return compiler.calculateTypeParams(state, requiredTypeParams, funcDecl, s, paramItem.Value, args)
+				return compiler.calculateTypeParams(state, requiredTypeParams, funcDecl, s, CalculateTypeParamType{paramItem.Value}, args)
 
 			case *ast.IndexListExpr:
 				for _, index := range paramItem.Indices {
 					var b bool
 					param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-					if s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, index, args); !b {
+					if s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{index}, args); !b {
 						return s, len(requiredTypeParams) > 0
 					}
 				}
@@ -276,10 +275,10 @@ func (compiler *Compiler) calculateTypeParams(
 
 			case *ast.IndexExpr:
 				param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-				return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem.Index, args)
+				return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{paramItem.Index}, args)
 			case *ast.ArrayType:
 				param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-				return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem.Elt, args)
+				return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{paramItem.Elt}, args)
 			case ITypeMapper:
 				if _, ok := requiredTypeParams[funcDeclItem.Name]; ok {
 					delete(requiredTypeParams, funcDeclItem.Name)
@@ -291,7 +290,7 @@ func (compiler *Compiler) calculateTypeParams(
 					if findTypeMapper, ok := args[0].Node.(IFindTypeMapper); ok {
 						if arr, ok := findTypeMapper.GetTypeMapper(funcDeclItem.Name); ok {
 							param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-							return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, arr[0].typeMapper, nil)
+							return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{arr[0].typeMapper}, nil)
 						}
 					} else {
 						panic("implement me")
@@ -330,7 +329,7 @@ func (compiler *Compiler) calculateTypeParams(
 
 					nameAndParam := nameAndParams[idx]
 					var b bool
-					s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDecl, s, nameAndParam.node, []Node[ast.Node]{arg})
+					s, b = compiler.calculateTypeParams(state, requiredTypeParams, funcDecl, s, CalculateTypeParamType{nameAndParam.node}, []Node[ast.Node]{arg})
 					if !b {
 						return s, false
 					}

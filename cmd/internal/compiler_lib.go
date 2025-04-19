@@ -350,17 +350,17 @@ func (compiler *Compiler) libDictionaryDefaultImplementation(state State, funcTy
 	}
 }
 
-func findAllParamNameAndTypes(Params *ast.FieldList) []struct {
+func findAllParamNameAndTypes(node *ast.FieldList) []struct {
 	name string
 	node ast.Node
 } {
 	result := make([]struct {
 		name string
 		node ast.Node
-	}, 0, Params.NumFields())
+	}, 0, node.NumFields())
 
-	if Params != nil {
-		for _, g := range Params.List {
+	if node != nil {
+		for _, g := range node.List {
 			if len(g.Names) == 0 {
 				result = append(result, struct {
 					name string

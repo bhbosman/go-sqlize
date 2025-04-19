@@ -70,7 +70,7 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 				sss := map[string]ITypeMapper{}
 				for _, andParam := range nameAndParams {
 					param := ChangeParamNode[*ast.FuncType, ast.Node](funcTypeNode, andParam.node)
-					sss, _ = compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{0, param}, sss, funcTypeNode.Node.Params, args)
+					sss, _ = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{0, param}, sss, funcTypeNode.Node.Params, args)
 					if len(requiredTypeParams) == 0 {
 						return sss, true
 					}
@@ -135,7 +135,12 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 	}
 }
 
-type FuncDeclParam struct {
+type CalculateTypeFuncDeclType struct {
+	index int
+	node  Node[ast.Node]
+}
+
+type CalculateTypeParamType struct {
 	index int
 	node  Node[ast.Node]
 }
@@ -144,7 +149,7 @@ type FuncDeclParam struct {
 func (compiler *Compiler) calculateTypeParams(
 	state State,
 	requiredTypeParams map[string]bool,
-	funcDecl FuncDeclParam,
+	funcDecl CalculateTypeFuncDeclType,
 	s map[string]ITypeMapper,
 	Params ast.Node,
 	args []Node[ast.Node],
@@ -161,11 +166,11 @@ func (compiler *Compiler) calculateTypeParams(
 		case *ast.Ident:
 			var b bool
 			param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Key)
-			if s, b = compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, paramItem, args); !b {
+			if s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem, args); !b {
 				return s, len(requiredTypeParams) > 0
 			}
 			param = ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Value)
-			return compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, paramItem, args)
+			return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem, args)
 		case *ast.FieldList:
 			for idx, field := range paramItem.List {
 				if findTypeMapperForMap, ok := args[idx].Node.(IFindTypeMapper); ok {
@@ -178,7 +183,7 @@ func (compiler *Compiler) calculateTypeParams(
 							mapperKey := &WrapReflectTypeInMapper{keyRt}
 							mapperKeyNode := ChangeParamNode[ast.Node, ast.Node](args[idx], mapperKey)
 							funcDeclParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Key)
-							s, b = compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, funcDeclParam}, s, field.Type, []Node[ast.Node]{mapperKeyNode})
+							s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam}, s, field.Type, []Node[ast.Node]{mapperKeyNode})
 							if !b {
 								return s, len(requiredTypeParams) > 0
 							}
@@ -187,7 +192,7 @@ func (compiler *Compiler) calculateTypeParams(
 							mapperValue := &WrapReflectTypeInMapper{valueRt}
 							mapperValueNode := ChangeParamNode[ast.Node, ast.Node](args[idx], mapperValue)
 							funcDeclParam = ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Value)
-							s, b = compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, funcDeclParam}, s, field.Type, []Node[ast.Node]{mapperValueNode})
+							s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, funcDeclParam}, s, field.Type, []Node[ast.Node]{mapperValueNode})
 							if !b {
 								return s, len(requiredTypeParams) > 0
 							}
@@ -208,14 +213,14 @@ func (compiler *Compiler) calculateTypeParams(
 		for _, index := range funcDeclItem.Indices {
 			var b bool
 			indexParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, index)
-			if s, b = compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, indexParam}, s, Params, args); !b {
+			if s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, indexParam}, s, Params, args); !b {
 				return s, len(requiredTypeParams) > 0
 			}
 		}
 		return s, len(requiredTypeParams) > 0
 	case *ast.IndexExpr:
 		indexParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Index)
-		return compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, indexParam}, s, Params, args)
+		return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, indexParam}, s, Params, args)
 	case *ast.FuncType:
 		switch paramItem := Params.(type) {
 		default:
@@ -227,14 +232,14 @@ func (compiler *Compiler) calculateTypeParams(
 			if _, ok := requiredTypeParams[a.Name]; ok && a.Name == b.Name {
 				typeMapper := compiler.findType(state, args[0], Default|TypeParamType)
 				param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Results.List[0].Type)
-				return compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, typeMapper, nil)
+				return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, typeMapper, nil)
 			}
 			return s, len(requiredTypeParams) > 0
 		case *ast.FieldList:
 			for idx, field := range paramItem.List {
 				var b bool
 				param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-				s, b = compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, field.Type, []Node[ast.Node]{args[idx]})
+				s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, field.Type, []Node[ast.Node]{args[idx]})
 				if !b {
 					return s, len(requiredTypeParams) > 0
 				}
@@ -242,11 +247,11 @@ func (compiler *Compiler) calculateTypeParams(
 			return s, len(requiredTypeParams) > 0
 		case *ast.ArrayType:
 			param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-			return compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, paramItem.Elt, args)
+			return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem.Elt, args)
 		}
 	case *ast.ArrayType:
 		param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Elt)
-		return compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, Params, args)
+		return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, Params, args)
 	case *ast.Ident:
 		if _, ok := requiredTypeParams[funcDeclItem.Name]; ok {
 			switch paramItem := Params.(type) {
@@ -263,7 +268,7 @@ func (compiler *Compiler) calculateTypeParams(
 				for _, index := range paramItem.Indices {
 					var b bool
 					param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-					if s, b = compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, index, args); !b {
+					if s, b = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, index, args); !b {
 						return s, len(requiredTypeParams) > 0
 					}
 				}
@@ -271,10 +276,10 @@ func (compiler *Compiler) calculateTypeParams(
 
 			case *ast.IndexExpr:
 				param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-				return compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, paramItem.Index, args)
+				return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem.Index, args)
 			case *ast.ArrayType:
 				param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-				return compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, paramItem.Elt, args)
+				return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, paramItem.Elt, args)
 			case ITypeMapper:
 				if _, ok := requiredTypeParams[funcDeclItem.Name]; ok {
 					delete(requiredTypeParams, funcDeclItem.Name)
@@ -286,7 +291,7 @@ func (compiler *Compiler) calculateTypeParams(
 					if findTypeMapper, ok := args[0].Node.(IFindTypeMapper); ok {
 						if arr, ok := findTypeMapper.GetTypeMapper(funcDeclItem.Name); ok {
 							param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
-							return compiler.calculateTypeParams(state, requiredTypeParams, FuncDeclParam{funcDecl.index, param}, s, arr[0].typeMapper, nil)
+							return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, arr[0].typeMapper, nil)
 						}
 					} else {
 						panic("implement me")

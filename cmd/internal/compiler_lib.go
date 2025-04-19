@@ -51,8 +51,8 @@ func (compiler *Compiler) libQueryImplementation(state State, funcTypeNode Node[
 	}
 }
 
-func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, arguments []Node[ast.Node], typeParams map[string]ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
-	nameAndParams := findAllParamNameAndTypes(funcLit.Type.Params)
+func (compiler *Compiler) executeFuncLit(state State, funcLit Node[*ast.FuncLit], arguments []Node[ast.Node], typeParams map[string]ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
+	nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcLit, funcLit.Node.Type.Params))
 	mm := ValueInformationMap{}
 	for i, param := range nameAndParams {
 		mm[param.name] = ValueInformation{arguments[i]}
@@ -65,7 +65,7 @@ func (compiler *Compiler) executeFuncLit(state State, funcLit *ast.FuncLit, argu
 		GetCompilerState[*CurrentContext](state),
 	}
 	state = SetCompilerState(newContext, state)
-	param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, funcLit.Body)
+	param := ChangeParamNode[*ast.FuncLit, *ast.BlockStmt](funcLit, funcLit.Node.Body)
 	values, _ := compiler.executeBlockStmt(state, param, typeParams, arguments)
 	state = SetCompilerState(newContext.Parent, state)
 	return values, artValue
@@ -80,7 +80,7 @@ func (compiler *Compiler) libMapImplementation(state State, funcTypeNode Node[*a
 			panic("map implementation requires function literal")
 		}
 		if funcLit, ok := arguments[1].Node.(*ast.FuncLit); ok {
-			return compiler.executeFuncLit(state, funcLit, arguments, typeParams)
+			return compiler.executeFuncLit(state, ChangeParamNode(arguments[1], funcLit), arguments, typeParams)
 		}
 		panic("map implementation argument 1 is not a function literal")
 
@@ -284,14 +284,22 @@ func (compiler *Compiler) libCreateDictionaryImplementation(state State, funcTyp
 			panic(fmt.Errorf("CreateDictionary implementation requires 2 arguments, got %d", len(arguments)))
 		}
 
+		nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.TypeParams))
+		key := nameAndParams[0]
+		value := nameAndParams[1]
 		if rv00, ok00 := isLiterateValue(arguments[0]); ok00 {
 			if rv01, ok01 := isLiterateValue(arguments[1]); ok01 {
-				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &DictionaryExpression{
-					rv00,
-					rv01,
-					typeParams["TKey"],
-					typeParams["TValue"],
-				})}, artValue
+				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](
+					state.currentNode,
+					&DictionaryExpression{
+						rv00,
+						rv01,
+						key.name,
+						value.name,
+						&WrapReflectTypeInMapper{rv00.Type()},
+						typeParams[key.name],
+						typeParams[value.name],
+					})}, artValue
 			}
 		}
 		panic(fmt.Errorf("createDictionary implementation requires literal values"))
@@ -344,29 +352,29 @@ func (compiler *Compiler) libDictionaryDefaultImplementation(state State, funcTy
 	}
 }
 
-func findAllParamNameAndTypes(Params *ast.FieldList) []struct {
+func findAllParamNameAndTypes(node Node[*ast.FieldList]) []struct {
 	name string
-	node ast.Expr
+	node Node[ast.Node]
 } {
 	result := make([]struct {
 		name string
-		node ast.Expr
-	}, 0, Params.NumFields())
+		node Node[ast.Node]
+	}, 0, node.Node.NumFields())
 
-	if Params != nil {
-		for _, g := range Params.List {
+	if node.Node != nil {
+		for _, g := range node.Node.List {
 			if len(g.Names) == 0 {
 				result = append(result, struct {
 					name string
-					node ast.Expr
-				}{name: "_", node: g.Type})
+					node Node[ast.Node]
+				}{name: "_", node: ChangeParamNode[*ast.FieldList, ast.Node](node, g.Type)})
 
 			} else {
 				for _, n := range g.Names {
 					result = append(result, struct {
 						name string
-						node ast.Expr
-					}{name: n.Name, node: g.Type})
+						node Node[ast.Node]
+					}{name: n.Name, node: ChangeParamNode[*ast.FieldList, ast.Node](node, g.Type)})
 				}
 			}
 		}

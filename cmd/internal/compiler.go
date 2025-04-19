@@ -349,16 +349,16 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 
 	fn := func(node Node[*ast.StructType], arr []struct {
 		name string
-		node ast.Expr
+		node Node[ast.Node]
 	}) []FieldInformation {
 		var result []FieldInformation
 		for _, ss := range arr {
-			field := FieldInformation{ss.name, ChangeParamNode[*ast.StructType, ast.Node](node, ss.node)}
+			field := FieldInformation{ss.name, ss.node}
 			result = append(result, field)
 		}
 		return result
 	}
-	fieldList := fn(node, findAllParamNameAndTypes(node.Node.Fields))
+	fieldList := fn(node, findAllParamNameAndTypes(ChangeParamNode(node, node.Node.Fields)))
 	nodeRt := structTypeToType(fieldList, StructTypeWithNodeType)
 	rtWithITypeMapper := structTypeToType(fieldList, StructTypeWithTypeMapper)
 	actualTypeRt := structTypeToType(fieldList, StructTypeWithActualTypes)

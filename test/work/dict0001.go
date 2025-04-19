@@ -6,14 +6,15 @@ func init() {
 	query := lib.Query[Switch01InputValues]()
 	mapFn := func(inputData Switch01InputValues) Switch01InputValuesView {
 		l1 := func(Points lib.Some[int]) lib.Some[string] {
-			dict := lib.CreateDictionary[int, lib.Some[string]](
-				map[int]lib.Some[string]{
-					1: lib.SetSomeValue("1"),
-					2: lib.SetSomeNone[string](),
-					3: lib.SetSomeValue("3"),
-					4: lib.SetSomeValue("4"),
-					5: lib.SetSomeValue("5"),
-				},
+			m := map[int]lib.Some[string]{
+				1: lib.SetSomeValue("1"),
+				2: lib.SetSomeNone[string](),
+				3: lib.SetSomeValue("3"),
+				4: lib.SetSomeValue("4"),
+				5: lib.SetSomeValue("5"),
+			}
+			dict := lib.CreateDictionary(
+				m,
 				lib.SetSomeNone[string]())
 
 			if p, ok := lib.GetSomeData(Points); ok {
@@ -23,7 +24,7 @@ func init() {
 			}
 		}(inputData.Points01)
 		l2 := func(Points lib.Some[int]) string {
-			dict := lib.CreateDictionary[int, string](
+			dict := lib.CreateDictionary(
 				map[int]string{
 					1: "11",
 					2: "22",
@@ -39,7 +40,7 @@ func init() {
 			}
 		}(inputData.Points02)
 		l3 := func(Points lib.Some[int]) string {
-			dict := lib.CreateDictionary[int, string](
+			dict := lib.CreateDictionary(
 				map[int]string{
 					1: "111",
 					2: "222",

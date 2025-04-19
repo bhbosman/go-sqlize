@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"go/ast"
 	"go/token"
 	"reflect"
 )
@@ -9,6 +10,12 @@ type TypeMapperForMap struct {
 	keyTypeMapper   ITypeMapper
 	valueTypeMapper ITypeMapper
 	mapRt           reflect.Type
+	key             Node[ast.Node]
+	value           Node[ast.Node]
+}
+
+func (tyfm *TypeMapperForMap) Keys() []Node[ast.Node] {
+	return []Node[ast.Node]{tyfm.key, tyfm.value}
 }
 
 func (tyfm *TypeMapperForMap) Pos() token.Pos {

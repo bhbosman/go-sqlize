@@ -170,24 +170,30 @@ type ITypeMapper interface {
 	MapperKeyType() reflect.Type
 	MapperValueType() reflect.Type
 	Kind() reflect.Kind
+	Keys() []Node[ast.Node]
 }
 
-type ITypeMapperArray []ITypeMapper
-
-func (receiver ITypeMapperArray) toNodeArray() []Node[ast.Node] {
-	var result []Node[ast.Node]
-	for _, element := range receiver {
-		result = append(result, Node[ast.Node]{Node: &ReflectValueExpression{reflect.ValueOf(element.ActualType())}, Valid: true})
-	}
-	return result
+type TypeMapperInformation struct {
+	id         string
+	typeMapper ITypeMapper
 }
+type ITypeMapperArray []TypeMapperInformation
 
 type WrapReflectTypeInMapper struct {
 	rt reflect.Type
 }
 
-func (typeWrapper *WrapReflectTypeInMapper) GetTypeMapper(string) (ITypeMapperArray, bool) {
-	return ITypeMapperArray{typeWrapper}, true
+func (typeWrapper *WrapReflectTypeInMapper) Keys() []Node[ast.Node] {
+	return nil
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) GetTypeMapper() (ITypeMapperArray, bool) {
+	return ITypeMapperArray{
+		TypeMapperInformation{
+			"",
+			typeWrapper,
+		},
+	}, true
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) Pos() token.Pos {
@@ -229,6 +235,10 @@ type ReflectTypeHolder struct {
 	fnKind            func() reflect.Kind
 	fnMapperKeyType   func() reflect.Type
 	fnMapperValueType func() reflect.Type
+}
+
+func (rth *ReflectTypeHolder) Keys() []Node[ast.Node] {
+	return nil
 }
 
 func (rth *ReflectTypeHolder) Pos() token.Pos {

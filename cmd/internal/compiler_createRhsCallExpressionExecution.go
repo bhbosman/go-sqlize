@@ -173,7 +173,7 @@ func (compiler *Compiler) calculateTypeParams(
 		case *ast.FieldList:
 			for idx, field := range paramItem.List {
 				if findTypeMapperForMap, ok := args[idx].Node.(IFindTypeMapper); ok {
-					if mapper, b := findTypeMapperForMap.GetTypeMapper(""); b {
+					if mapper, b := findTypeMapperForMap.GetTypeMapper(0); b {
 						switch mapper[0].typeMapper.Kind() {
 						default:
 							panic(mapper)
@@ -288,7 +288,7 @@ func (compiler *Compiler) calculateTypeParams(
 			case *ast.Ident:
 				if len(args) == 1 && paramItem.Name == funcDeclItem.Name {
 					if findTypeMapper, ok := args[0].Node.(IFindTypeMapper); ok {
-						if arr, ok := findTypeMapper.GetTypeMapper(funcDeclItem.Name); ok {
+						if arr, ok := findTypeMapper.GetTypeMapper(funcDecl.index); ok {
 							param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
 							return compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{funcDecl.index, param}, s, CalculateTypeParamType{arr[0].typeMapper}, nil)
 						}

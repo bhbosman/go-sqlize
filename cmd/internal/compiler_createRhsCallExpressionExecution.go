@@ -23,14 +23,9 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 		state State,
 		argss []Node[ast.Node],
 		typeParams map[string]ITypeMapper,
-		paramDefinitions []struct {
-			name string
-			node Node[ast.Node]
-		},
 	) []Node[ast.Node] {
 		var result []Node[ast.Node]
-		for idx, arg := range argss {
-			_ = paramDefinitions[idx]
+		for _, arg := range argss {
 			tempState := state.setCurrentNode(ChangeParamNode[ast.Node, ast.Node](arg, arg.Node))
 			param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, arg.Node)
 			fn := compiler.findRhsExpression(tempState, param)
@@ -116,14 +111,14 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 			paramArg := ChangeParamNode[*ast.CallExpr, ast.Node](node, arg)
 			args = append(args, paramArg)
 		}
-		nameAndTypeParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.TypeParams))
-		nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.Params))
-		args = compileArguments(state, args, knownTypeParams, nameAndParams)
+		args = compileArguments(state, args, knownTypeParams)
 		if !funcTypeNode.Valid {
 			fn, resultType := execFn(tempState02, knownTypeParams, args)
 			fmt.Printf("end %v\n", compiler.Fileset.Position(node.Node.Rparen).String())
 			return fn, resultType
 		} else {
+			nameAndTypeParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.TypeParams))
+			nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.Params))
 
 			requiredTypeParams := map[string]bool{}
 			for _, ss := range nameAndTypeParams {

@@ -318,9 +318,9 @@ func (compiler *Compiler) calculateTypeParams(
 		default:
 			panic(paramItem)
 		case *ast.IndexListExpr:
-			typeParamValues, _ := args[0].compiledArgument.Node.(IFindTypeParamIdentifiers).GetTypeParamIdentifiers()
+			//typeParamValues, _ := args[0].compiledArgument.Node.(IFindTypeParamIdentifiers).GetTypeParamIdentifiers()
 			mappers, _ := args[0].compiledArgument.Node.(IFindTypeMapper).GetTypeMapper()
-			if len(typeParamValues) == len(funcDeclItem.Indices) && len(funcDeclItem.Indices) == len(mappers) {
+			if len(funcDeclItem.Indices) == len(mappers) {
 				for idx := 0; idx < len(mappers); idx++ {
 					var b bool
 					if s, b = compiler.calculateTypeParams(

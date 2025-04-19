@@ -7,9 +7,9 @@ import (
 )
 
 type (
-	IFindTypeParamIdentifiers interface {
-		GetTypeParamIdentifiers() ([]string, bool)
-	}
+	//IFindTypeParamIdentifiers interface {
+	//	GetTypeParamIdentifiers() ([]string, bool)
+	//}
 	IFindTypeMapper interface {
 		ast.Node
 		GetTypeMapper() (ITypeMapperArray, bool)

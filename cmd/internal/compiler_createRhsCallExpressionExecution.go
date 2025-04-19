@@ -70,13 +70,7 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 				sss := map[string]ITypeMapper{}
 				for _, andParam := range nameAndParams {
 					param := ChangeParamNode[*ast.FuncType, ast.Node](funcTypeNode, andParam.node.Node)
-					sss, _ = compiler.calculateTypeParams(
-						state,
-						requiredTypeParams,
-						CalculateTypeFuncDeclType{0, param},
-						sss,
-						CalculateTypeParamType{ChangeParamNode[*ast.FuncType, ast.Node](funcTypeNode, funcTypeNode.Node.Params)},
-						args)
+					sss, _ = compiler.calculateTypeParams(state, requiredTypeParams, CalculateTypeFuncDeclType{0, param}, sss, CalculateTypeParamType{ChangeParamNode[*ast.FuncType, ast.Node](funcTypeNode, funcTypeNode.Node.Params)}, args)
 					if len(requiredTypeParams) == 0 {
 						return sss, true
 					}
@@ -122,12 +116,7 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 			nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcTypeNode, funcTypeNode.Node.Params))
 			var argumentArr []CalculateTypeArgumentType
 			for idx, arg := range args {
-				argumentArr = append(argumentArr, CalculateTypeArgumentType{
-					idx,
-					ChangeParamNode[*ast.CallExpr, ast.Node](node, node.Node.Args[idx]),
-					nameAndParams[idx].node,
-					arg,
-				})
+				argumentArr = append(argumentArr, CalculateTypeArgumentType{idx, ChangeParamNode[*ast.CallExpr, ast.Node](node, node.Node.Args[idx]), nameAndParams[idx].node, arg})
 			}
 
 			if mappers, b := createTypeMapperFn(state, requiredTypeParams, node, nameAndTypeParams, funcTypeNode, argumentArr); b {
@@ -390,11 +379,11 @@ func (compiler *Compiler) calculateTypeParams(
 			case *ast.IndexListExpr:
 				for _, index := range paramItem.Indices {
 					var b bool
-					param := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem)
+
 					if s, b = compiler.calculateTypeParams(
 						state,
 						requiredTypeParams,
-						CalculateTypeFuncDeclType{funcDecl.index, param},
+						funcDecl,
 						s,
 						CalculateTypeParamType{ChangeParamNode[ast.Node, ast.Node](Params.node, index)},
 						args,

@@ -246,11 +246,12 @@ func (compiler *Compiler) calculateTypeParams(
 			for idx, field := range paramItem.List {
 				if findTypeMapperForMap, ok := args[idx].compiledArgument.Node.(IFindTypeMapper); ok {
 					if mapper, b := findTypeMapperForMap.GetTypeMapper(); b {
-						switch mapper[0].typeMapper.Kind() {
+						defaultMapper := mapper[""]
+						switch defaultMapper.typeMapper.Kind() {
 						default:
 							panic(mapper)
 						case reflect.Map:
-							keyRt := mapper[0].typeMapper.ActualType().Key()
+							keyRt := defaultMapper.typeMapper.ActualType().Key()
 							mapperKey := &WrapReflectTypeInMapper{keyRt}
 							mapperKeyNode := ChangeParamNode[ast.Node, ast.Node](args[idx].compiledArgument, mapperKey)
 							funcDeclParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Key)
@@ -272,7 +273,7 @@ func (compiler *Compiler) calculateTypeParams(
 								return s, len(requiredTypeParams) > 0
 							}
 
-							valueRt := mapper[0].typeMapper.ActualType().Elem()
+							valueRt := defaultMapper.typeMapper.ActualType().Elem()
 							mapperValue := &WrapReflectTypeInMapper{valueRt}
 							mapperValueNode := ChangeParamNode[ast.Node, ast.Node](args[idx].compiledArgument, mapperValue)
 							funcDeclParam = ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Value)
@@ -320,6 +321,8 @@ func (compiler *Compiler) calculateTypeParams(
 			typeParamValues, _ := args[0].compiledArgument.Node.(IFindTypeParamIdentifiers).GetTypeParamIdentifiers()
 			if len(typeParamValues) == len(funcDeclItem.Indices) {
 				if findTypeMapper, ok := args[0].compiledArgument.Node.(IFindTypeMapper); ok {
+					_, _ = findTypeMapper.GetTypeMapper()
+
 					panic(findTypeMapper)
 				}
 
@@ -507,7 +510,7 @@ func (compiler *Compiler) calculateTypeParams(
 								requiredTypeParams,
 								funcDecl,
 								s,
-								CalculateTypeParamType{Params.index, Node[ast.Node]{Node: arr[0].typeMapper, Valid: true}},
+								CalculateTypeParamType{Params.index, Node[ast.Node]{Node: arr[""].typeMapper, Valid: true}},
 								nil,
 							)
 						}

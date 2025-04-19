@@ -105,11 +105,14 @@ func (de *DictionaryExpression) GetTypeParamIdentifiers() ([]string, bool) {
 }
 
 func (rv *ReflectValueExpression) GetTypeMapper() (ITypeMapperArray, bool) {
-	return ITypeMapperArray{TypeMapperInformation{"", &WrapReflectTypeInMapper{rv.Rv.Type()}}}, true
+	return ITypeMapperArray{
+		"": {"", &WrapReflectTypeInMapper{rv.Rv.Type()}},
+	}, true
 }
 
 func (coercion coercion) GetTypeMapper() (ITypeMapperArray, bool) {
-	return ITypeMapperArray{TypeMapperInformation{"", &WrapReflectTypeInMapper{coercion.rt}}}, true
+	return ITypeMapperArray{
+		"": TypeMapperInformation{"", &WrapReflectTypeInMapper{coercion.rt}}}, true
 }
 
 func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() (ITypeMapperArray, bool) {
@@ -118,7 +121,7 @@ func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() (IType
 		return v.GetTypeMapper()
 	case *ReflectValueExpression:
 		dd := TypeMapperInformation{"", &WrapReflectTypeInMapper{v.Rv.Type()}}
-		return ITypeMapperArray{dd}, true
+		return ITypeMapperArray{"": dd}, true
 	case IFindTypeMapper:
 		panic("ffff")
 	default:
@@ -134,8 +137,8 @@ func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() (IType
 
 func (de *DictionaryExpression) GetTypeMapper() (ITypeMapperArray, bool) {
 	return ITypeMapperArray{
-		TypeMapperInformation{de.key, de.keyTypeMapper},
-		TypeMapperInformation{de.value, de.valueTypeMapper},
+		de.key:   TypeMapperInformation{de.key, de.keyTypeMapper},
+		de.value: TypeMapperInformation{de.value, de.valueTypeMapper},
 	}, true
 }
 
@@ -144,27 +147,30 @@ func (entityField *EntityField) GetTypeMapper() (ITypeMapperArray, bool) {
 	switch typemapper.Kind() {
 	case reflect.Struct:
 		typeMapperForStruct := typemapper.(*TypeMapperForStruct)
-		return ITypeMapperArray{TypeMapperInformation{
-			"",
-			typeMapperForStruct.typeMapperInstance.FieldByName(entityField.field).Interface().(ITypeMapper),
-		}}, true
+		return ITypeMapperArray{
+			"": TypeMapperInformation{
+				"",
+				typeMapperForStruct.typeMapperInstance.FieldByName(entityField.field).Interface().(ITypeMapper),
+			},
+		}, true
 	default:
 		panic("dfgdfgfd")
 	}
 }
 
 func (value *TrailRecord) GetTypeMapper() (ITypeMapperArray, bool) {
-	return ITypeMapperArray{TypeMapperInformation{
-		"",
-		value.typeMapper,
-	}}, true
+	return ITypeMapperArray{
+		"": TypeMapperInformation{"", value.typeMapper},
+	}, true
 }
 
 func (value *TrailSource) GetTypeMapper() (ITypeMapperArray, bool) {
-	return ITypeMapperArray{TypeMapperInformation{
-		"",
-		value.typeMapper,
-	}}, true
+	return ITypeMapperArray{
+		"": TypeMapperInformation{
+			"",
+			value.typeMapper,
+		},
+	}, true
 }
 
 func (c *CheckForNotNullExpression) Pos() token.Pos {

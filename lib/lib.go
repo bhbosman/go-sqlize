@@ -99,7 +99,7 @@ func CreateDictionary[TKey comparable, TValue interface{}](m map[TKey]TValue, de
 	panic("implement CreateDictionary")
 }
 
-func DictionaryLookup[TKey comparable, TValue interface{}](Dictionary[TKey, TValue], TKey) TValue {
+func DictionaryLookup[TValue interface{}, TKey comparable](Dictionary[TKey, TValue], TKey) TValue {
 	panic("implement DictionaryLookup")
 }
 func DictionaryDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TValue]) TValue {

@@ -100,10 +100,6 @@ type (
 	}
 )
 
-func (de *DictionaryExpression) GetTypeParamIdentifiers() ([]string, bool) {
-	return []string{de.key, de.value}, true
-}
-
 func (rv *ReflectValueExpression) GetTypeMapper() (ITypeMapperArray, bool) {
 	return ITypeMapperArray{
 		{"", &WrapReflectTypeInMapper{rv.Rv.Type()}},

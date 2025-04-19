@@ -104,7 +104,7 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 		state = SetCompilerState(newContext, state)
 
 		knownTypeParams := newContext.flattenTypeParams()
-		println("\t knownTypeParams:")
+		fmt.Printf("\t knownTypeParams:")
 		for key, value := range knownTypeParams {
 			fmt.Printf("\t\t %s -> %s\n", key, value.ActualType().String())
 		}
@@ -142,6 +142,11 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 					for key, value := range mappers {
 						newContext.TypeParams[key] = value
 						knownTypeParams[key] = value
+					}
+
+					fmt.Printf("\t knownTypeParams after calculation:\n")
+					for key, value := range knownTypeParams {
+						fmt.Printf("\t\t %s -> %s\n", key, value.ActualType().String())
 					}
 
 					fn, resultType := execFn(tempState02, knownTypeParams, args)
@@ -367,45 +372,6 @@ func (compiler *Compiler) calculateTypeParams(
 		}
 		return s, len(requiredTypeParams) > 0
 	case *ast.IndexExpr:
-		//switch paramItem := Params.node.Node.(type) {
-		//default:
-		//	panic(paramItem)
-		//case *ast.IndexExpr:
-		//	typeParamValues, _ := args[0].compiledArgument.Node.(IFindTypeParamIdentifiers).GetTypeParamIdentifiers()
-		//	mappers, _ := args[0].compiledArgument.Node.(IFindTypeMapper).GetTypeMapper()
-		//	if len(typeParamValues) == len(funcDeclItem.Indices) && len(funcDeclItem.Indices) == len(mappers) {
-		//		for idx := 0; idx < len(mappers); idx++ {
-		//			var b bool
-		//			if s, b = compiler.calculateTypeParams(
-		//				state,
-		//				requiredTypeParams,
-		//				CalculateTypeFuncDeclType{idx, ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Indices[idx])},
-		//				s,
-		//				CalculateTypeParamType{idx, Node[ast.Node]{Node: mappers[idx].typeMapper, Valid: true}},
-		//				nil,
-		//			); !b {
-		//				return s, len(requiredTypeParams) > 0
-		//			}
-		//		}
-		//		return s, len(requiredTypeParams) > 0
-		//	}
-		//	panic("counts mismatch")
-		//
-		//case *ast.FieldList:
-		//	for idx, field := range paramItem.List {
-		//		var b bool
-		//		if s, b = compiler.calculateTypeParams(
-		//			state,
-		//			requiredTypeParams,
-		//			funcDecl,
-		//			s,
-		//			CalculateTypeParamType{idx, ChangeParamNode[ast.Node, ast.Node](Params.node, field.Type)},
-		//			[]CalculateTypeArgumentType{args[idx]},
-		//		); !b {
-		//			return s, len(requiredTypeParams) > 0
-		//		}
-		//	}
-		//}
 		indexParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Index)
 		return compiler.calculateTypeParams(
 			state,

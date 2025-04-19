@@ -115,7 +115,7 @@ func (coercion coercion) GetTypeMapper() (ITypeMapperArray, bool) {
 func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() (ITypeMapperArray, bool) {
 	switch v := iteSingleCondition.conditionalStatement[0].value.Node.(type) {
 	case *IfThenElseSingleValueCondition:
-		return v.GetTypeMapper(0)
+		return v.GetTypeMapper()
 	case *ReflectValueExpression:
 		dd := TypeMapperInformation{"", &WrapReflectTypeInMapper{v.Rv.Type()}}
 		return ITypeMapperArray{dd}, true
@@ -133,16 +133,10 @@ func (iteSingleCondition *IfThenElseSingleValueCondition) GetTypeMapper() (IType
 }
 
 func (de *DictionaryExpression) GetTypeMapper() (ITypeMapperArray, bool) {
-	switch i {
-	case 0:
-		return ITypeMapperArray{TypeMapperInformation{de.key, de.keyTypeMapper}}, true
-	case 1:
-		return ITypeMapperArray{TypeMapperInformation{de.value, de.valueTypeMapper}}, true
-	default:
-		panic("ddd")
-		//return ITypeMapperArray{TypeMapperInformation{"", de.mapTypeMapper}}, true
-	}
-
+	return ITypeMapperArray{
+		TypeMapperInformation{de.key, de.keyTypeMapper},
+		TypeMapperInformation{de.value, de.valueTypeMapper},
+	}, true
 }
 
 func (entityField *EntityField) GetTypeMapper() (ITypeMapperArray, bool) {

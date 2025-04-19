@@ -60,7 +60,7 @@ func (self *CurrentContext) internalFindTypeFromNode(node Node[ast.Node]) (Node[
 	case *ast.Ident:
 		if value, b := self.FindValueByString(item.Name); b {
 			if findTypeMapper, ok := value.Node.(IFindTypeMapper); ok {
-				if mapper, ok := findTypeMapper.GetTypeMapper(0); ok {
+				if mapper, ok := findTypeMapper.GetTypeMapper(); ok {
 					return value, mapper, true
 				}
 			}

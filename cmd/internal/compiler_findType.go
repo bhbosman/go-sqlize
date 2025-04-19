@@ -58,8 +58,8 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 		rtValue := rtValueTypeMapper.MapperValueType()
 
 		rt := reflect.MapOf(rtKey, rtValue)
-		keyParam := ChangeParamNode(node, item.Key)
-		valueParam := ChangeParamNode(node, item.Value)
+		keyParam := ChangeParamNode[ast.Node, ast.Node](node, item.Key)
+		valueParam := ChangeParamNode[ast.Node, ast.Node](node, item.Value)
 
 		return initOnCreateType(0, &TypeMapperForMap{rtKeyTypeMapper, rtValueTypeMapper, rt, keyParam, valueParam}, nil)
 	case *ast.IndexExpr:

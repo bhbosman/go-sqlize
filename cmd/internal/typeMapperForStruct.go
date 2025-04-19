@@ -12,6 +12,10 @@ type TypeMapperForStruct struct {
 	typeMapperInstance reflect.Value
 }
 
+func (typeMapperForStruct *TypeMapperForStruct) Keys() []Node[ast.Node] {
+	return nil
+}
+
 func (typeMapperForStruct *TypeMapperForStruct) Pos() token.Pos {
 	return token.NoPos
 }

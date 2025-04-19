@@ -170,6 +170,7 @@ type ITypeMapper interface {
 	MapperKeyType() reflect.Type
 	MapperValueType() reflect.Type
 	Kind() reflect.Kind
+	Keys() []Node[ast.Node]
 }
 
 type TypeMapperInformation struct {
@@ -180,6 +181,10 @@ type ITypeMapperArray []TypeMapperInformation
 
 type WrapReflectTypeInMapper struct {
 	rt reflect.Type
+}
+
+func (typeWrapper *WrapReflectTypeInMapper) Keys() []Node[ast.Node] {
+	return nil
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) GetTypeMapper(string) (ITypeMapperArray, bool) {
@@ -225,6 +230,10 @@ type ReflectTypeHolder struct {
 	fnKind            func() reflect.Kind
 	fnMapperKeyType   func() reflect.Type
 	fnMapperValueType func() reflect.Type
+}
+
+func (rth *ReflectTypeHolder) Keys() []Node[ast.Node] {
+	return nil
 }
 
 func (rth *ReflectTypeHolder) Pos() token.Pos {

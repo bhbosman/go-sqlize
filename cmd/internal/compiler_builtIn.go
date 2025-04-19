@@ -172,7 +172,10 @@ type ITypeMapper interface {
 	Kind() reflect.Kind
 }
 
-type TypeMapperInformation struct{ typeMapper ITypeMapper }
+type TypeMapperInformation struct {
+	id         string
+	typeMapper ITypeMapper
+}
 type ITypeMapperArray []TypeMapperInformation
 
 type WrapReflectTypeInMapper struct {
@@ -180,7 +183,7 @@ type WrapReflectTypeInMapper struct {
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) GetTypeMapper(string) (ITypeMapperArray, bool) {
-	return ITypeMapperArray{TypeMapperInformation{typeWrapper}}, true
+	return ITypeMapperArray{TypeMapperInformation{"", typeWrapper}}, true
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) Pos() token.Pos {

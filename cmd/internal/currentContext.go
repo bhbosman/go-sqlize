@@ -73,7 +73,7 @@ func (self *CurrentContext) internalFindTypeFromNode(node Node[ast.Node]) (Node[
 			for _, typeMapperInformation := range mapper {
 				rt := typeMapperInformation.typeMapper.ActualType()
 				sf, _ := rt.FieldByName(item.Sel.Name)
-				typeMapperArray = append(typeMapperArray, TypeMapperInformation{&WrapReflectTypeInMapper{sf.Type}})
+				typeMapperArray = append(typeMapperArray, TypeMapperInformation{"", &WrapReflectTypeInMapper{sf.Type}})
 			}
 			return Node[ast.Node]{}, typeMapperArray, true
 		}

@@ -55,9 +55,9 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 
 		paramValue := ChangeParamNode[ast.Node, ast.Node](node, item.Value)
 		rtValueTypeMapper := compiler.findType(state, paramValue, flags)
-		rtValue := rtValueTypeMapper.MapperValueType()
+		//rtValue := rtValueTypeMapper.MapperValueType()
 
-		rt := reflect.MapOf(rtKey, rtValue)
+		rt := reflect.MapOf(rtKey, reflect.TypeFor[Node[ast.Node]]())
 		keyParam := ChangeParamNode[ast.Node, ast.Node](node, item.Key)
 		valueParam := ChangeParamNode[ast.Node, ast.Node](node, item.Value)
 

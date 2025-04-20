@@ -53,9 +53,6 @@ func (compiler *Compiler) registerLibType() OnCreateType {
 			func() reflect.Type {
 				panic("dfgdfgf")
 			},
-			func() reflect.Type {
-				panic("dfgdfgf")
-			},
 		}
 	}
 }
@@ -89,7 +86,6 @@ func (compiler *Compiler) registerSomeType() OnCreateType {
 				return reflect.Struct
 			},
 			fn,
-			fn,
 		}
 	}
 }
@@ -108,7 +104,6 @@ func (compiler *Compiler) registerFloat64() OnCreateType {
 			func() reflect.Kind {
 				return reflect.Float64
 			},
-			fn,
 			fn,
 		}
 	}
@@ -129,7 +124,6 @@ func (compiler *Compiler) registerReflectType() OnCreateType {
 				return reflect.TypeFor[reflect.Type]().Kind()
 			},
 			fn,
-			fn,
 		}
 	}
 }
@@ -149,7 +143,6 @@ func (compiler *Compiler) registerString() OnCreateType {
 				return reflect.String
 			},
 			fn,
-			fn,
 		}
 	}
 }
@@ -168,7 +161,6 @@ type ITypeMapper interface {
 	NodeType() reflect.Type
 	ActualType() reflect.Type
 	MapperKeyType() reflect.Type
-	MapperValueType() reflect.Type
 	Kind() reflect.Kind
 	Keys() []Node[ast.Node]
 }
@@ -211,21 +203,16 @@ func (typeWrapper *WrapReflectTypeInMapper) MapperKeyType() reflect.Type {
 	return typeWrapper.rt
 }
 
-func (typeWrapper *WrapReflectTypeInMapper) MapperValueType() reflect.Type {
-	return typeWrapper.rt
-}
-
 func (typeWrapper *WrapReflectTypeInMapper) Kind() reflect.Kind {
 	return typeWrapper.rt.Kind()
 }
 
 type ReflectTypeHolder struct {
-	fnCreate          func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value
-	fnNodeType        func() reflect.Type
-	fnActualType      func() reflect.Type
-	fnKind            func() reflect.Kind
-	fnMapperKeyType   func() reflect.Type
-	fnMapperValueType func() reflect.Type
+	fnCreate        func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value
+	fnNodeType      func() reflect.Type
+	fnActualType    func() reflect.Type
+	fnKind          func() reflect.Kind
+	fnMapperKeyType func() reflect.Type
 }
 
 func (rth *ReflectTypeHolder) Keys() []Node[ast.Node] {
@@ -242,10 +229,6 @@ func (rth *ReflectTypeHolder) End() token.Pos {
 
 func (rth *ReflectTypeHolder) ActualType() reflect.Type {
 	return rth.fnActualType()
-}
-
-func (rth *ReflectTypeHolder) MapperValueType() reflect.Type {
-	return rth.fnMapperValueType()
 }
 
 func (rth *ReflectTypeHolder) MapperKeyType() reflect.Type {
@@ -286,7 +269,6 @@ func (compiler *Compiler) registerBool() OnCreateType {
 			func() reflect.Kind {
 				return reflect.Bool
 			},
-			fn,
 			fn,
 		}
 	}

@@ -272,6 +272,8 @@ func (compiler *Compiler) executeAndExpandStatement(state State, typeParams map[
 
 func (compiler *Compiler) expandNodeWithSelector(node Node[ast.Node], sel *ast.Ident) (Node[ast.Node], bool) {
 	switch nodeItem := node.Node.(type) {
+	case *TrailRecord:
+		return nodeItem.Value.FieldByName(sel.Name).Interface().(Node[ast.Node]), true
 	case *ReflectValueExpression:
 		if nodeItem.Rv.Kind() == reflect.Struct {
 			return nodeItem.Rv.FieldByName(sel.Name).Interface().(Node[ast.Node]), true
@@ -280,11 +282,12 @@ func (compiler *Compiler) expandNodeWithSelector(node Node[ast.Node], sel *ast.I
 	case *IfThenElseSingleValueCondition:
 		var singleValueConditions []SingleValueCondition
 		for _, conditionalStatement := range nodeItem.conditionalStatement {
-			if rve, ok00 := conditionalStatement.value.Node.(*ReflectValueExpression); ok00 && rve.Rv.Kind() == reflect.Struct {
-				value := rve.Rv.FieldByName(sel.Name).Interface().(Node[ast.Node])
+
+			if rve, ok00 := conditionalStatement.value.Node.(*TrailRecord); ok00 && rve.Value.Kind() == reflect.Struct {
+				value := rve.Value.FieldByName(sel.Name).Interface().(Node[ast.Node])
 				singleValueCondition := SingleValueCondition{conditionalStatement.condition, value}
 				singleValueConditions = append(singleValueConditions, singleValueCondition)
-			} else {
+			} else if _, ok := conditionalStatement.value.Node.(*IfThenElseSingleValueCondition); ok {
 				return node, false
 			}
 		}

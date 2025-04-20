@@ -129,6 +129,10 @@ func (compiler *Compiler) internalProjectNode(w io.Writer, tabCount int, last bo
 		_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
 	}
 	switch nodeItem := node.Node.(type) {
+	default:
+		panic("implement me")
+	case *TrailRecord:
+		_, _ = io.WriteString(w, "*TrailRecord")
 	case *CheckForNotNullExpression:
 		_, _ = io.WriteString(w, "(")
 		compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, nodeItem.node)
@@ -228,8 +232,6 @@ func (compiler *Compiler) internalProjectNode(w io.Writer, tabCount int, last bo
 			}
 		}
 		_, _ = io.WriteString(w, ")")
-	default:
-		panic("implement me")
 	}
 	if stackCount == 0 {
 		_, _ = io.WriteString(w, fmt.Sprintf(" as %v", name))

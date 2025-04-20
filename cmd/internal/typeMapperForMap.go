@@ -30,10 +30,6 @@ func (tyfm *TypeMapperForMap) ActualType() reflect.Type {
 	return tyfm.mapRt
 }
 
-func (tyfm *TypeMapperForMap) MapperValueType() reflect.Type {
-	return tyfm.valueTypeMapper.MapperValueType()
-}
-
 func (tyfm *TypeMapperForMap) MapperKeyType() reflect.Type {
 	return tyfm.keyTypeMapper.MapperKeyType()
 }

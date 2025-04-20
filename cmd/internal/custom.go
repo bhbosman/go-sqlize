@@ -91,7 +91,7 @@ type (
 	}
 	DictionaryExpression struct {
 		m               reflect.Value
-		defaultValue    reflect.Value
+		defaultValue    Node[ast.Node]
 		keyTypeMapper   ITypeMapper
 		valueTypeMapper ITypeMapper
 	}

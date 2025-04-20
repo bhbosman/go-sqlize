@@ -34,14 +34,14 @@ func (impl libDictionaryLookupImplementation) Run(state State, typeParams map[st
 			mbe := &MultiBinaryExpr{token.LAND, expressions}
 			mbeNode := ChangeParamNode[ast.Node, ast.Node](impl.state.currentNode, mbe)
 
-			singleValueCondition := SingleValueCondition{mbeNode, ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvValue})}
+			singleValueCondition := SingleValueCondition{mbeNode, rvValue.Interface().(Node[ast.Node])}
 			conditionalStatement = append(conditionalStatement, singleValueCondition)
 		}
 	}
 	{
 		rvDefault := dictionaryExpression.defaultValue
 		condition := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(true)})
-		singleValueCondition := SingleValueCondition{condition: condition, value: ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rvDefault})}
+		singleValueCondition := SingleValueCondition{condition: condition, value: rvDefault}
 		conditionalStatement = append(conditionalStatement, singleValueCondition)
 	}
 	ite := &IfThenElseSingleValueCondition{conditionalStatement}

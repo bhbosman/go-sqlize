@@ -79,13 +79,8 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 					if rvKey, okKey := isLiterateValue(nodeKey[0]); okKey {
 						rvKey = typeMapperForMap.keyTypeMapper.Create(tmcoMapKey, rvKey)
 						nodeValue, _ := fn(state, expr.Value, typeMapperForMap.valueTypeMapper)
-						if rvValue, okValue := isLiterateValue(nodeValue[0]); okValue {
-							rvValue = typeMapperForMap.valueTypeMapper.Create(tmcoMapValue, rvValue)
-							rv.SetMapIndex(rvKey.Convert(rt.Key()), rvValue.Convert(rt.Elem()))
-							continue
-						}
+						rv.SetMapIndex(rvKey.Convert(rt.Key()), reflect.ValueOf(nodeValue[0]))
 					}
-					panic("must be literal values")
 				default:
 					panic("unhandled key")
 				}

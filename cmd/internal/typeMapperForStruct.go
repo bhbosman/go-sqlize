@@ -28,10 +28,6 @@ func (typeMapperForStruct *TypeMapperForStruct) ActualType() reflect.Type {
 	return typeMapperForStruct.actualTypeRt
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) MapperValueType() reflect.Type {
-	return typeMapperForStruct.nodeRt
-}
-
 func (typeMapperForStruct *TypeMapperForStruct) MapperKeyType() reflect.Type {
 	return typeMapperForStruct.actualTypeRt
 }

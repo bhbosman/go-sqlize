@@ -288,16 +288,14 @@ func (compiler *Compiler) libCreateDictionaryImplementation(state State, funcTyp
 		key := nameAndParams[0]
 		value := nameAndParams[1]
 		if rv00, ok00 := isLiterateValue(arguments[0]); ok00 {
-			if rv01, ok01 := isLiterateValue(arguments[1]); ok01 {
-				return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](
-					state.currentNode,
-					&DictionaryExpression{
-						rv00,
-						rv01,
-						typeParams[key.name],
-						typeParams[value.name],
-					})}, artValue
-			}
+			return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](
+				state.currentNode,
+				&DictionaryExpression{
+					rv00,
+					arguments[1],
+					typeParams[key.name],
+					typeParams[value.name],
+				})}, artValue
 		}
 		panic(fmt.Errorf("createDictionary implementation requires literal values"))
 	}
@@ -343,9 +341,7 @@ func (compiler *Compiler) libDictionaryDefaultImplementation(state State, funcTy
 			panic(fmt.Errorf("DictionaryLookup implementation requires 1 arguments, got %d", len(arguments)))
 		}
 		dictionaryExpression := arguments[0].Node.(*DictionaryExpression)
-		rve := &ReflectValueExpression{dictionaryExpression.defaultValue}
-		resultValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, rve)
-		return []Node[ast.Node]{resultValue}, artReturn
+		return []Node[ast.Node]{dictionaryExpression.defaultValue}, artReturn
 	}
 }
 

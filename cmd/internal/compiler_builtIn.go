@@ -59,9 +59,18 @@ func (compiler *Compiler) registerLibType() OnCreateType {
 
 func (compiler *Compiler) registerSomeType() OnCreateType {
 	return func(state State, typeParams []Node[ast.Node]) ITypeMapper {
+
+		fieldType := compiler.findType(state, typeParams[0], Default|TypeParamType)
+		sfValue := reflect.StructField{Name: "Value", Type: fieldType.ActualType()}
+		var sfArr []reflect.StructField
+		sfAssigned := reflect.StructField{Name: "Assigned", Type: reflect.TypeOf(true), Tag: reflect.StructTag(fmt.Sprintf(`Type:"Some", TData:"%v"`, NodeStringValue(typeParams[0])))}
+		sfArr = append(sfArr, sfAssigned, sfValue)
+		rt := reflect.StructOf(sfArr)
 		fn := func() reflect.Type {
-			return reflect.TypeFor[SomeDataWithRv]()
+			//return reflect.TypeFor[SomeDataWithRv]()
+			return rt
 		}
+
 		return &ReflectTypeHolder{
 			func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
 				switch unk := rv.Interface().(type) {

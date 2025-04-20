@@ -21,10 +21,10 @@ func ReadAstFile(incomingState *ReadAstFileState, rawAst *RawAstRead, astFile *a
 		"path/filepath":          true,
 	}
 
-	imports := ast.FileImports{}
+	imports := FileImports{}
 	for _, spec := range astFile.Imports {
 		pathValue, _ := strconv.Unquote(spec.Path.Value)
-		ime := ast.ImportMapEntry{
+		ime := ImportMapEntry{
 			func(spec *ast.ImportSpec) string {
 				if spec.Name == nil {
 					pathValue, _ := strconv.Unquote(spec.Path.Value)

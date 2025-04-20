@@ -35,7 +35,7 @@ func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node
 		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
 		unk, _ := compiler.internalFindFunction(stackIndex+1, state, param)
 		switch value := unk.(type) {
-		case ast.ImportMapEntry:
+		case ImportMapEntry:
 			vk := ValueKey{value.Path, item.Sel.Name}
 			returnValue, ok := compiler.GlobalFunctions[vk]
 			if ok {

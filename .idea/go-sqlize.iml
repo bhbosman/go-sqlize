@@ -3,7 +3,7 @@
   <component name="Go" enabled="true" />
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
-    <content url="file:///opt/homebrew/Cellar/go/1.24.1/libexec/src/go/ast" />
+    <content url="file:///opt/homebrew/Cellar/go/1.24.2/libexec/src/go/ast" />
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

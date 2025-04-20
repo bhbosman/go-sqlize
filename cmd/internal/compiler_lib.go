@@ -294,9 +294,6 @@ func (compiler *Compiler) libCreateDictionaryImplementation(state State, funcTyp
 					&DictionaryExpression{
 						rv00,
 						rv01,
-						key.name,
-						value.name,
-						&WrapReflectTypeInMapper{rv00.Type()},
 						typeParams[key.name],
 						typeParams[value.name],
 					})}, artValue

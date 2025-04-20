@@ -30,12 +30,12 @@ type ReadAstFileState struct {
 	InputFolder        string
 }
 
-func CreateFciStmtNode(importMap ast.FileImports,
+func CreateFciStmtNode(importMap FileImports,
 	nodePos token.Pos,
 	absPath string,
 	relPath string,
 	fileName string,
-) *ast.FolderContextInformation {
-	fci := &ast.FolderContextInformation{nodePos, fileName, absPath, relPath, importMap}
+) *FolderContextInformation {
+	fci := &FolderContextInformation{nodePos, fileName, absPath, relPath, importMap}
 	return fci
 }

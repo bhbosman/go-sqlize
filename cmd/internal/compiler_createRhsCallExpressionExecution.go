@@ -99,7 +99,7 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 		state = SetCompilerState(newContext, state)
 
 		knownTypeParams := newContext.flattenTypeParams()
-		fmt.Printf("\t knownTypeParams:")
+		fmt.Printf("\t knownTypeParams:\n")
 		for key, value := range knownTypeParams {
 			fmt.Printf("\t\t %s -> %s\n", key, value.ActualType().String())
 		}
@@ -247,11 +247,11 @@ func (compiler *Compiler) calculateTypeParams(
 				if findTypeMapperForMap, ok := args[idx].compiledArgument.Node.(IFindTypeMapper); ok {
 					if mapper, b := findTypeMapperForMap.GetTypeMapper(); b {
 						defaultMapper := mapper[0]
-						switch defaultMapper.typeMapper.Kind() {
+						switch defaultMapper.Kind() {
 						default:
 							panic(mapper)
 						case reflect.Map:
-							keyRt := defaultMapper.typeMapper.ActualType().Key()
+							keyRt := defaultMapper.ActualType().Key()
 							mapperKey := &WrapReflectTypeInMapper{keyRt}
 							mapperKeyNode := ChangeParamNode[ast.Node, ast.Node](args[idx].compiledArgument, mapperKey)
 							funcDeclParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Key)
@@ -273,7 +273,7 @@ func (compiler *Compiler) calculateTypeParams(
 								return s, len(requiredTypeParams) > 0
 							}
 
-							valueRt := defaultMapper.typeMapper.ActualType().Elem()
+							valueRt := defaultMapper.ActualType().Elem()
 							mapperValue := &WrapReflectTypeInMapper{valueRt}
 							mapperValueNode := ChangeParamNode[ast.Node, ast.Node](args[idx].compiledArgument, mapperValue)
 							funcDeclParam = ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Value)
@@ -327,7 +327,7 @@ func (compiler *Compiler) calculateTypeParams(
 						requiredTypeParams,
 						CalculateTypeFuncDeclType{idx, ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Indices[idx])},
 						s,
-						CalculateTypeParamType{idx, Node[ast.Node]{Node: mappers[idx].typeMapper, Valid: true}},
+						CalculateTypeParamType{idx, Node[ast.Node]{Node: mappers[idx], Valid: true}},
 						nil,
 					); !b {
 						return s, len(requiredTypeParams) > 0
@@ -376,7 +376,7 @@ func (compiler *Compiler) calculateTypeParams(
 				requiredTypeParams,
 				CalculateTypeFuncDeclType{0, ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Index)},
 				s,
-				CalculateTypeParamType{0, Node[ast.Node]{Node: mappers[0].typeMapper, Valid: true}},
+				CalculateTypeParamType{0, Node[ast.Node]{Node: mappers[0], Valid: true}},
 				nil,
 			)
 		case *ast.FieldList:
@@ -546,7 +546,7 @@ func (compiler *Compiler) calculateTypeParams(
 								requiredTypeParams,
 								funcDecl,
 								s,
-								CalculateTypeParamType{Params.index, Node[ast.Node]{Node: arr[0].typeMapper, Valid: true}},
+								CalculateTypeParamType{Params.index, Node[ast.Node]{Node: arr[0], Valid: true}},
 								nil,
 							)
 						}

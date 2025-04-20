@@ -19,7 +19,7 @@ func (compiler *Compiler) executeBlockStmt(state State, node Node[*ast.BlockStmt
 		switch rt {
 		case artFCI:
 			switch instance := arr[0].Node.(type) {
-			case *ast.FolderContextInformation:
+			case *FolderContextInformation:
 				node = Node[*ast.BlockStmt]{node.Key, node.Node, instance.Imports, instance.AbsPath, instance.RelPath, instance.FileName, node.Fs, node.Valid}
 			}
 		case artValue:

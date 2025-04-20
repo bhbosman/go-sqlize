@@ -11,7 +11,7 @@ import (
 type Node[TType ast.Node] struct {
 	Key       ValueKey
 	Node      TType
-	ImportMap ast.FileImports
+	ImportMap FileImports
 	AbsPath   string
 	RelPath   string
 	FileName  string

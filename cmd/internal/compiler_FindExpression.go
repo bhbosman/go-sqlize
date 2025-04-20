@@ -24,7 +24,7 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
 		unk := compiler.internalFindRhsExpression(stackIndex+1, state, param)
 		switch vv := unk.(type) {
-		case ast.ImportMapEntry:
+		case ImportMapEntry:
 			vk := ValueKey{vv.Path, item.Sel.Name}
 			if globalFunction, ok := compiler.GlobalFunctions[vk]; ok {
 				return globalFunction.fn(state, globalFunction.funcType)

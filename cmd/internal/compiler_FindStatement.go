@@ -25,7 +25,7 @@ func createError(methodName, message string) error {
 
 func (compiler *Compiler) findStatement(state State, node Node[ast.Stmt]) (ExecuteStatement, Node[ast.Node]) {
 	switch item := node.Node.(type) {
-	case *ast.FolderContextInformation:
+	case *FolderContextInformation:
 		return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 			value := ChangeParamNode[ast.Stmt, ast.Node](node, item)
 			return []Node[ast.Node]{value}, artFCI

@@ -79,7 +79,7 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
 		unk := compiler.internalFindType(stackIndex+1, state, param, flags)
 		switch value := unk.(type) {
-		case ast.ImportMapEntry:
+		case ImportMapEntry:
 			vk := ValueKey{value.Path, item.Sel.Name}
 			returnValue, ok := compiler.GlobalTypes[vk]
 			if ok {

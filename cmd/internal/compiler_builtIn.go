@@ -173,11 +173,7 @@ type ITypeMapper interface {
 	Keys() []Node[ast.Node]
 }
 
-type TypeMapperInformation struct {
-	id         string
-	typeMapper ITypeMapper
-}
-type ITypeMapperArray []TypeMapperInformation
+type ITypeMapperArray []ITypeMapper
 
 type WrapReflectTypeInMapper struct {
 	rt reflect.Type
@@ -188,12 +184,7 @@ func (typeWrapper *WrapReflectTypeInMapper) Keys() []Node[ast.Node] {
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) GetTypeMapper() (ITypeMapperArray, bool) {
-	return ITypeMapperArray{
-		TypeMapperInformation{
-			"",
-			typeWrapper,
-		},
-	}, true
+	return ITypeMapperArray{typeWrapper}, true
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) Pos() token.Pos {

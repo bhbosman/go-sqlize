@@ -15,9 +15,9 @@ func (compiler *Compiler) addOsFunctions() {
 	compiler.GlobalFunctions[ValueKey{"os", "Stdout"}] = functionInformation{compiler.osStdout, Node[*ast.FuncType]{}, false}
 }
 
-func (compiler *Compiler) genericValue(rv reflect.Value) ExecuteStatement {
+func (compiler *Compiler) genericValue(rv reflect.Value, vk ValueKey) ExecuteStatement {
 	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-		rvNode := &ReflectValueExpression{rv}
+		rvNode := &ReflectValueExpression{rv, vk}
 		vv := ChangeParamNode[ast.Node, ast.Node](state.currentNode, rvNode)
 		return []Node[ast.Node]{vv}, artValue
 	}
@@ -25,12 +25,12 @@ func (compiler *Compiler) genericValue(rv reflect.Value) ExecuteStatement {
 
 func (compiler *Compiler) osModePermImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	rv := reflect.ValueOf(os.ModePerm)
-	return compiler.genericValue(rv)
+	return compiler.genericValue(rv, ValueKey{})
 }
 
 func (compiler *Compiler) osStdout(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	rv := reflect.ValueOf(os.Stdout)
-	return compiler.genericValue(rv)
+	return compiler.genericValue(rv, ValueKey{})
 }
 
 func (compiler *Compiler) osGetWdImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {

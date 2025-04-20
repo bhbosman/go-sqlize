@@ -50,7 +50,7 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 				}(vv, item.Sel)
 			case *TrailSource:
 				var es ExecuteStatement = func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-					result := ChangeParamNode[ast.Node, ast.Node](node, &EntityField{node.Node.Pos(), vvv.Alias, vvv.typeMapper, item.Sel.Name})
+					result := ChangeParamNode[ast.Node, ast.Node](node, EntityField{node.Node.Pos(), vvv.Alias, vvv.typeMapper, item.Sel.Name})
 					return []Node[ast.Node]{result}, artValue
 				}
 				return es

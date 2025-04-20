@@ -11,11 +11,11 @@ func (compiler *Compiler) runBasicLitNode(state State, node Node[*ast.BasicLit])
 	switch node.Node.Kind {
 	case token.INT:
 		intValue, _ := strconv.ParseInt(node.Node.Value, 10, 64)
-		param := ChangeParamNode[*ast.BasicLit, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(intValue)})
+		param := ChangeParamNode[*ast.BasicLit, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(intValue), intValueKey})
 		return []Node[ast.Node]{param}, artValue
 	case token.FLOAT:
 		floatValue, _ := strconv.ParseFloat(node.Node.Value, 64)
-		param := ChangeParamNode[*ast.BasicLit, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(floatValue)})
+		param := ChangeParamNode[*ast.BasicLit, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(floatValue), float64ValueKey})
 		return []Node[ast.Node]{param}, artValue
 	case token.IMAG:
 		panic("ssfds")
@@ -23,7 +23,7 @@ func (compiler *Compiler) runBasicLitNode(state State, node Node[*ast.BasicLit])
 		panic("ssfds")
 	case token.STRING:
 		stringValue, _ := strconv.Unquote(node.Node.Value)
-		param := ChangeParamNode[*ast.BasicLit, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(stringValue)})
+		param := ChangeParamNode[*ast.BasicLit, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(stringValue), stringValueKey})
 		return []Node[ast.Node]{param}, artValue
 	default:
 		panic(notFound(node.Node.Kind.String(), "createRhsBasicLitExecution"))

@@ -23,7 +23,7 @@ func (compiler *Compiler) findType(state State, node Node[ast.Node], flags findT
 }
 
 func (compiler *Compiler) internalFindType(stackIndex int, state State, node Node[ast.Node], flags findTypeFlags) interface{} {
-	initOnCreateType := func(stackIndex int, unk interface{}, indexes []Node[ast.Node]) interface{} {
+	initOnCreateType := func(stackIndex int, unk interface{}, indexes []ITypeMapper) interface{} {
 		if stackIndex != 0 {
 			return unk
 		}
@@ -66,13 +66,14 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
 		indexParam := ChangeParamNode[ast.Node, ast.Node](node, item.Index)
 		unk := compiler.internalFindType(stackIndex+1, state, param, flags)
-		return initOnCreateType(0, unk, []Node[ast.Node]{indexParam})
+
+		return initOnCreateType(0, unk, []ITypeMapper{compiler.findType(state, indexParam, Default|TypeParamType)})
 	case *ast.IndexListExpr:
 		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
-		var arrIndices []Node[ast.Node]
+		var arrIndices []ITypeMapper
 		for _, index := range item.Indices {
 			indexParam := ChangeParamNode[ast.Node, ast.Node](node, index)
-			arrIndices = append(arrIndices, indexParam)
+			arrIndices = append(arrIndices, compiler.findType(state, indexParam, Default|TypeParamType))
 		}
 		return initOnCreateType(stackIndex, compiler.internalFindType(stackIndex+1, state, param, flags), arrIndices)
 	case *ast.SelectorExpr:
@@ -121,7 +122,7 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 		switch kind {
 		case reflect.Map:
 			rt := item.Rv.Type()
-			return &WrapReflectTypeInMapper{rt}
+			return &WrapReflectTypeInMapper{rt, item.Vk}
 
 		default:
 			panic(compiler.Fileset.Position(item.Pos()).String())

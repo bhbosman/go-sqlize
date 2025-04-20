@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"github.com/ugurcsen/gods-generic/queues"
 	"go/ast"
 	"go/token"
@@ -9,6 +10,13 @@ import (
 type ValueKey struct {
 	Folder string
 	Key    string
+}
+
+func (v *ValueKey) String() string {
+	if v.Folder == "" {
+		return fmt.Sprintf("%v", v.Key)
+	}
+	return fmt.Sprintf("%v.%v", v.Folder, v.Key)
 }
 
 type FunctionMap map[ValueKey]Node[*ast.FuncDecl]

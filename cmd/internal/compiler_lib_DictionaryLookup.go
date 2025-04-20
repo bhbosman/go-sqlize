@@ -31,7 +31,7 @@ func (impl libDictionaryLookupImplementation) Run(state State, typeParams map[st
 			inputData := arguments[1]
 			expressions := impl.walk(inputData, rvKey)
 
-			mbe := &MultiBinaryExpr{token.LAND, expressions}
+			mbe := MultiBinaryExpr{token.LAND, expressions}
 			mbeNode := ChangeParamNode[ast.Node, ast.Node](impl.state.currentNode, mbe)
 
 			singleValueCondition := SingleValueCondition{mbeNode, rvValue.Interface().(Node[ast.Node])}
@@ -40,7 +40,7 @@ func (impl libDictionaryLookupImplementation) Run(state State, typeParams map[st
 	}
 	{
 		rvDefault := dictionaryExpression.defaultValue
-		condition := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(true)})
+		condition := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(true), boolValueKey})
 		singleValueCondition := SingleValueCondition{condition: condition, value: rvDefault}
 		conditionalStatement = append(conditionalStatement, singleValueCondition)
 	}
@@ -53,7 +53,7 @@ func (impl libDictionaryLookupImplementation) walk(inputData Node[ast.Node], rvK
 	switch {
 	case rvKey.CanFloat() || rvKey.CanInt() || rvKey.Kind() == reflect.String:
 		left := inputData
-		right := ChangeParamNode[ast.Node, ast.Node](impl.state.currentNode, &ReflectValueExpression{rvKey})
+		right := ChangeParamNode[ast.Node, ast.Node](impl.state.currentNode, &ReflectValueExpression{rvKey, ValueKey{}})
 		be := &BinaryExpr{token.NoPos, token.EQL, left, right}
 		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](impl.state.currentNode, be)}
 	case rvKey.Kind() == reflect.Struct:

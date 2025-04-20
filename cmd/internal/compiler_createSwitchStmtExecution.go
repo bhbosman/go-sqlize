@@ -68,7 +68,7 @@ func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) 
 			case *CaseClauseNode:
 				condition := func(expression Node[ast.Node], parent Node[*ast.SwitchStmt], item *CaseClauseNode) Node[ast.Node] {
 					if len(item.nodes) == 0 {
-						return ChangeParamNode[*ast.SwitchStmt, ast.Node](parent, &ReflectValueExpression{reflect.ValueOf(true)})
+						return ChangeParamNode[*ast.SwitchStmt, ast.Node](parent, &ReflectValueExpression{reflect.ValueOf(true), boolValueKey})
 					}
 					if expression.Valid {
 						return ChangeParamNode[*ast.SwitchStmt, ast.Node](parent, &LhsToMultipleRhsOperator{token.EQL, token.LOR, expression, item.nodes})

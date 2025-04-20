@@ -25,11 +25,11 @@ func (compiler *Compiler) createRhsBinaryExprExecution(node Node[*ast.BinaryExpr
 			newOp := &BinaryExpr{node.Node.OpPos, node.Node.Op, x[0], y[0]}
 			return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 		case !isXLiteral && isYLiteral:
-			newNode := ChangeParamNode[*ast.BinaryExpr, ast.Node](node, &ReflectValueExpression{rvY})
+			newNode := ChangeParamNode[*ast.BinaryExpr, ast.Node](node, &ReflectValueExpression{rvY, ValueKey{}})
 			newOp := &BinaryExpr{node.Node.OpPos, node.Node.Op, x[0], newNode}
 			return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 		case isXLiteral && !isYLiteral:
-			newNode := ChangeParamNode[*ast.BinaryExpr, ast.Node](node, &ReflectValueExpression{rvX})
+			newNode := ChangeParamNode[*ast.BinaryExpr, ast.Node](node, &ReflectValueExpression{rvX, ValueKey{}})
 			newOp := &BinaryExpr{node.Node.OpPos, node.Node.Op, newNode, y[0]}
 			return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 		case isXLiteral && isYLiteral:
@@ -55,16 +55,16 @@ func (compiler *Compiler) createRhsBinaryExprExecution(node Node[*ast.BinaryExpr
 			case kindX == KindY && kindX == reflect.Int:
 				switch node.Node.Op {
 				case token.ADD:
-					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.Int() + rvY.Int())}
+					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.Int() + rvY.Int()), intValueKey}
 					return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 				case token.SUB:
-					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.Int() - rvY.Int())}
+					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.Int() - rvY.Int()), intValueKey}
 					return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 				case token.MUL:
-					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.Int() * rvY.Int())}
+					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.Int() * rvY.Int()), intValueKey}
 					return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 				case token.QUO:
-					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.Int() / rvY.Int())}
+					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.Int() / rvY.Int()), intValueKey}
 					return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 				default:
 					panic("unhandled default case")
@@ -76,7 +76,7 @@ func (compiler *Compiler) createRhsBinaryExprExecution(node Node[*ast.BinaryExpr
 			case kindX == KindY && kindX == reflect.String:
 				switch node.Node.Op {
 				case token.ADD:
-					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.String() + rvY.String())}
+					newOp := &ReflectValueExpression{reflect.ValueOf(rvX.String() + rvY.String()), stringValueKey}
 					return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 				default:
 					panic("unhandled default case")
@@ -89,10 +89,10 @@ func (compiler *Compiler) createRhsBinaryExprExecution(node Node[*ast.BinaryExpr
 			case kindX == reflect.Invalid && KindY == reflect.Invalid:
 				switch node.Node.Op {
 				case token.NEQ:
-					newOp := &ReflectValueExpression{reflect.ValueOf(false)}
+					newOp := &ReflectValueExpression{reflect.ValueOf(false), boolValueKey}
 					return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 				case token.EQL:
-					newOp := &ReflectValueExpression{reflect.ValueOf(true)}
+					newOp := &ReflectValueExpression{reflect.ValueOf(true), boolValueKey}
 					return []Node[ast.Node]{ChangeParamNode[*ast.BinaryExpr, ast.Node](node, newOp)}, artValue
 				default:
 					panic("unhandled default case")

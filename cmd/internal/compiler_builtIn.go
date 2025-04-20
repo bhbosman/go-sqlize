@@ -7,26 +7,19 @@ import (
 	"reflect"
 )
 
-type SomeDataWithRv struct {
-	rt       reflect.Type
-	rv       interface{}
-	assigned bool
-}
-
-type SomeDataWithNode struct {
-	node     Node[ast.Node]
-	assigned bool
-}
+var intValueKey = ValueKey{"", "int"}
+var float64ValueKey = ValueKey{"", "float64"}
+var stringValueKey = ValueKey{"", "string"}
+var boolValueKey = ValueKey{"", "bool"}
 
 func (compiler *Compiler) addBuiltInFunctions() {
-	compiler.GlobalTypes[ValueKey{"", "int"}] = compiler.registerInt()
-	compiler.GlobalTypes[ValueKey{"", "string"}] = compiler.registerString()
-	compiler.GlobalTypes[ValueKey{"", "float64"}] = compiler.registerFloat64()
-
-	compiler.GlobalFunctions[ValueKey{"", "float64"}] = functionInformation{compiler.coercionFloat64UnCompiled, Node[*ast.FuncType]{}, false}
+	compiler.GlobalTypes[intValueKey] = compiler.registerInt()
+	compiler.GlobalTypes[stringValueKey] = compiler.registerString()
+	compiler.GlobalTypes[float64ValueKey] = compiler.registerFloat64()
+	compiler.GlobalFunctions[float64ValueKey] = functionInformation{compiler.coercionFloat64UnCompiled, Node[*ast.FuncType]{}, false}
 	compiler.GlobalFunctions[ValueKey{"", "float32"}] = functionInformation{compiler.coercionFloat32UnCompiled, Node[*ast.FuncType]{}, false}
-	compiler.GlobalFunctions[ValueKey{"", "int"}] = functionInformation{compiler.coercionIntUnCompiled, Node[*ast.FuncType]{}, false}
-	compiler.GlobalFunctions[ValueKey{"", "string"}] = functionInformation{compiler.coercionStringUnCompiled, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[intValueKey] = functionInformation{compiler.coercionIntUnCompiled, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[stringValueKey] = functionInformation{compiler.coercionStringUnCompiled, Node[*ast.FuncType]{}, false}
 	compiler.GlobalFunctions[ValueKey{"", "panic"}] = functionInformation{compiler.builtInPanic, Node[*ast.FuncType]{}, false}
 	compiler.GlobalFunctions[ValueKey{"", "nil"}] = functionInformation{compiler.builtInNil, Node[*ast.FuncType]{}, false}
 	compiler.GlobalFunctions[ValueKey{"", "true"}] = functionInformation{compiler.builtInTrue, Node[*ast.FuncType]{}, false}
@@ -36,15 +29,13 @@ func (compiler *Compiler) addBuiltInFunctions() {
 }
 
 func (compiler *Compiler) registerLibType() OnCreateType {
-	return func(state State, i []Node[ast.Node]) ITypeMapper {
+	return func(state State, i []ITypeMapper) ITypeMapper {
 		return &ReflectTypeHolder{
-			func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-				panic("dfgdfgf")
-			},
+			nil,
 			func() reflect.Type {
 				panic("dfgdfgf")
 			},
-			func() reflect.Type {
+			func() (reflect.Type, ValueKey) {
 				panic("dfgdfgf")
 			},
 			func() reflect.Kind {
@@ -57,78 +48,23 @@ func (compiler *Compiler) registerLibType() OnCreateType {
 	}
 }
 
-func (compiler *Compiler) registerSomeType() OnCreateType {
-	return func(state State, typeParams []Node[ast.Node]) ITypeMapper {
-
-		fieldType := compiler.findType(state, typeParams[0], Default|TypeParamType)
-		sfValue := reflect.StructField{Name: "Value", Type: fieldType.ActualType()}
-		var sfArr []reflect.StructField
-		sfAssigned := reflect.StructField{Name: "Assigned", Type: reflect.TypeOf(true), Tag: reflect.StructTag(fmt.Sprintf(`Type:"Some", TData:"%v"`, NodeStringValue(typeParams[0])))}
-		sfArr = append(sfArr, sfAssigned, sfValue)
-		rt := reflect.StructOf(sfArr)
-		fn := func() reflect.Type {
-			//return reflect.TypeFor[SomeDataWithRv]()
-			return rt
-		}
-
-		return &ReflectTypeHolder{
-			func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-				switch unk := rv.Interface().(type) {
-				case SomeDataWithNode:
-					if !unk.assigned {
-						rt := reflect.TypeFor[SomeDataWithRv]()
-						return reflect.Zero(rt)
-					}
-					switch nodeItem := unk.node.Node.(type) {
-					case *ReflectValueExpression:
-						v := SomeDataWithRv{reflect.TypeOf(nodeItem.Rv), nodeItem.Rv.Interface(), true}
-						return reflect.ValueOf(v)
-					}
-				default:
-				}
-				v := SomeDataWithRv{reflect.TypeOf(rv), rv.Interface(), true}
-				return reflect.ValueOf(v)
-			},
-			fn,
-			fn,
-			func() reflect.Kind {
-				return reflect.Struct
-			},
-			fn,
-		}
-	}
-}
-
 func (compiler *Compiler) registerFloat64() OnCreateType {
-	return func(state State, i []Node[ast.Node]) ITypeMapper {
-		fn := func() reflect.Type {
-			return reflect.TypeFor[float64]()
-		}
-		return &ReflectTypeHolder{
-			func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-				return rv
-			},
-			fn,
-			fn,
-			func() reflect.Kind {
-				return reflect.Float64
-			},
-			fn,
-		}
+	return func(state State, i []ITypeMapper) ITypeMapper {
+		return &WrapReflectTypeInMapper{reflect.TypeFor[float64](), float64ValueKey}
 	}
 }
 
 func (compiler *Compiler) registerReflectType() OnCreateType {
-	return func(state State, i []Node[ast.Node]) ITypeMapper {
+	return func(state State, i []ITypeMapper) ITypeMapper {
 		fn := func() reflect.Type {
 			return reflect.TypeFor[reflect.Type]()
 		}
 		return &ReflectTypeHolder{
-			func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-				return rv
+			nil,
+			fn,
+			func() (reflect.Type, ValueKey) {
+				return fn(), ValueKey{"reflect", "Type"}
 			},
-			fn,
-			fn,
 			func() reflect.Kind {
 				return reflect.TypeFor[reflect.Type]().Kind()
 			},
@@ -138,37 +74,20 @@ func (compiler *Compiler) registerReflectType() OnCreateType {
 }
 
 func (compiler *Compiler) registerString() OnCreateType {
-	return func(state State, i []Node[ast.Node]) ITypeMapper {
-		fn := func() reflect.Type {
-			return reflect.TypeFor[string]()
-		}
-		return &ReflectTypeHolder{
-			func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-				return rv
-			},
-			fn,
-			fn,
-			func() reflect.Kind {
-				return reflect.String
-			},
-			fn,
-		}
+	return func(state State, i []ITypeMapper) ITypeMapper {
+		return &WrapReflectTypeInMapper{reflect.TypeFor[string](), stringValueKey}
+
 	}
 }
 
-type TypeMapperCreateOption int
-
-const (
-	tmcoDefault TypeMapperCreateOption = iota
-	tmcoMapKey
-	tmcoMapValue
-)
+type ITranslateNodeValueToReflectValue interface {
+	TranslateNodeValueToReflectValue(node Node[ast.Node]) reflect.Value
+}
 
 type ITypeMapper interface {
 	ast.Node
-	Create(option TypeMapperCreateOption, rv reflect.Value) reflect.Value
 	NodeType() reflect.Type
-	ActualType() reflect.Type
+	ActualType() (reflect.Type, ValueKey)
 	MapperKeyType() reflect.Type
 	Kind() reflect.Kind
 	Keys() []Node[ast.Node]
@@ -178,6 +97,7 @@ type ITypeMapperArray []ITypeMapper
 
 type WrapReflectTypeInMapper struct {
 	rt reflect.Type
+	vk ValueKey
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) Keys() []Node[ast.Node] {
@@ -196,16 +116,12 @@ func (typeWrapper *WrapReflectTypeInMapper) End() token.Pos {
 	return token.NoPos
 }
 
-func (typeWrapper *WrapReflectTypeInMapper) Create(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-	return rv
-}
-
 func (typeWrapper *WrapReflectTypeInMapper) NodeType() reflect.Type {
 	return typeWrapper.rt
 }
 
-func (typeWrapper *WrapReflectTypeInMapper) ActualType() reflect.Type {
-	return typeWrapper.rt
+func (typeWrapper *WrapReflectTypeInMapper) ActualType() (reflect.Type, ValueKey) {
+	return typeWrapper.rt, typeWrapper.vk
 }
 
 func (typeWrapper *WrapReflectTypeInMapper) MapperKeyType() reflect.Type {
@@ -217,11 +133,15 @@ func (typeWrapper *WrapReflectTypeInMapper) Kind() reflect.Kind {
 }
 
 type ReflectTypeHolder struct {
-	fnCreate        func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value
-	fnNodeType      func() reflect.Type
-	fnActualType    func() reflect.Type
-	fnKind          func() reflect.Kind
-	fnMapperKeyType func() reflect.Type
+	fnTranslateNodeValueToReflectValue func(node Node[ast.Node]) reflect.Value
+	fnNodeType                         func() reflect.Type
+	fnActualType                       func() (reflect.Type, ValueKey)
+	fnKind                             func() reflect.Kind
+	fnMapperKeyType                    func() reflect.Type
+}
+
+func (rth *ReflectTypeHolder) TranslateNodeValueToReflectValue(node Node[ast.Node]) reflect.Value {
+	return rth.fnTranslateNodeValueToReflectValue(node)
 }
 
 func (rth *ReflectTypeHolder) Keys() []Node[ast.Node] {
@@ -236,7 +156,7 @@ func (rth *ReflectTypeHolder) End() token.Pos {
 	return token.NoPos
 }
 
-func (rth *ReflectTypeHolder) ActualType() reflect.Type {
+func (rth *ReflectTypeHolder) ActualType() (reflect.Type, ValueKey) {
 	return rth.fnActualType()
 }
 
@@ -252,34 +172,15 @@ func (rth *ReflectTypeHolder) NodeType() reflect.Type {
 	return rth.fnNodeType()
 }
 
-func (rth *ReflectTypeHolder) Create(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-	return rth.fnCreate(option, rv)
-}
-
 func (compiler *Compiler) registerInt() OnCreateType {
-	return func(state State, i []Node[ast.Node]) ITypeMapper {
-
-		return &WrapReflectTypeInMapper{reflect.TypeFor[int]()}
-
+	return func(state State, i []ITypeMapper) ITypeMapper {
+		return &WrapReflectTypeInMapper{reflect.TypeFor[int](), intValueKey}
 	}
 }
 
 func (compiler *Compiler) registerBool() OnCreateType {
-	return func(state State, i []Node[ast.Node]) ITypeMapper {
-		fn := func() reflect.Type {
-			return reflect.TypeFor[bool]()
-		}
-		return &ReflectTypeHolder{
-			func(option TypeMapperCreateOption, rv reflect.Value) reflect.Value {
-				return rv
-			},
-			fn,
-			fn,
-			func() reflect.Kind {
-				return reflect.Bool
-			},
-			fn,
-		}
+	return func(state State, i []ITypeMapper) ITypeMapper {
+		return &WrapReflectTypeInMapper{reflect.TypeFor[bool](), boolValueKey}
 	}
 }
 
@@ -291,13 +192,13 @@ func (compiler *Compiler) builtInNil(state State, funcTypeNode Node[*ast.FuncTyp
 
 func (compiler *Compiler) builtInTrue(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(true)})}, artValue
+		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(true), boolValueKey})}, artValue
 	}
 }
 
 func (compiler *Compiler) builtInFalse(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(false)})}, artValue
+		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(false), boolValueKey})}, artValue
 	}
 }
 
@@ -344,12 +245,12 @@ func (compiler *Compiler) coercionStringCompiled(state State, compiledArguments 
 func (compiler *Compiler) genericCoercionCompiled(state State, rt reflect.Type, compiledArguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 	rv, isLiterate := isLiterateValue(compiledArguments[0])
 	if isLiterate {
-		returnValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rv.Convert(rt)})
+		returnValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{rv.Convert(rt), ValueKey{}})
 		return []Node[ast.Node]{returnValue}, artValue
 	}
 	returnValue := ChangeParamNode[ast.Node, ast.Node](
 		state.currentNode,
-		&coercion{state.currentNode.Node.Pos(), rt.String(), compiledArguments[0], rt},
+		coercion{state.currentNode.Node.Pos(), rt.String(), compiledArguments[0], rt},
 	)
 	return []Node[ast.Node]{returnValue}, artValue
 }

@@ -73,7 +73,7 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 								conditionalStatement = append(conditionalStatement, conditionalStatementInstance)
 							}
 						default:
-							condition := ChangeParamNode[ast.Node, ast.Node](bodyElseValues[0], &ReflectValueExpression{reflect.ValueOf(true)})
+							condition := ChangeParamNode[ast.Node, ast.Node](bodyElseValues[0], &ReflectValueExpression{reflect.ValueOf(true), boolValueKey})
 							conditionalStatementInstance := MultiValueCondition{condition, bodyElseValues}
 							conditionalStatement = append(conditionalStatement, conditionalStatementInstance)
 						}

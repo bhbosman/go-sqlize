@@ -76,16 +76,23 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 					}
 					rt := typeMapper.NodeType()
 					nodeKey, _ := fn(state, expr.Key, typeMapperForMap.keyTypeMapper)
-					if rvKey, okKey := isLiterateValue(nodeKey[0]); okKey {
-						rvKey = typeMapperForMap.keyTypeMapper.Create(tmcoMapKey, rvKey)
-						nodeValue, _ := fn(state, expr.Value, typeMapperForMap.valueTypeMapper)
-						rv.SetMapIndex(rvKey.Convert(rt.Key()), reflect.ValueOf(nodeValue[0]))
-					}
+					rvKey := func(node Node[ast.Node]) reflect.Value {
+						if translateNodeValueToReflectValue, ok := typeMapperForMap.keyTypeMapper.(ITranslateNodeValueToReflectValue); ok {
+							return translateNodeValueToReflectValue.TranslateNodeValueToReflectValue(node)
+						} else if rv, ok := isLiterateValue(node); ok {
+							return rv
+						}
+						// todo: not 100% sold about this,
+						panic("unhandled key")
+					}(nodeKey[0])
+					nodeValue, _ := fn(state, expr.Value, typeMapperForMap.valueTypeMapper)
+					rv.SetMapIndex(rvKey.Convert(rt.Key()), reflect.ValueOf(nodeValue[0]))
+
 				default:
 					panic("unhandled key")
 				}
 			}
-			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, &ReflectValueExpression{rv})
+			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, &ReflectValueExpression{rv, ValueKey{}})
 			return []Node[ast.Node]{nodeValue}, artValue
 		default:
 			panic("dsfsfds")

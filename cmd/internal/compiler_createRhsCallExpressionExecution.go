@@ -101,7 +101,8 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 		knownTypeParams := newContext.flattenTypeParams()
 		fmt.Printf("\t knownTypeParams:\n")
 		for key, value := range knownTypeParams {
-			fmt.Printf("\t\t %s -> %s\n", key, value.ActualType().String())
+			typ, _ := value.ActualType()
+			fmt.Printf("\t\t %s -> %s\n", key, typ.String())
 		}
 		param := ChangeParamNode(node, node.Node.Fun)
 		tempState02 := state.setCurrentNode(ChangeParamNode[ast.Node, ast.Node](state.currentNode, node.Node.Fun))
@@ -141,7 +142,8 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 
 					fmt.Printf("\t knownTypeParams after calculation:\n")
 					for key, value := range knownTypeParams {
-						fmt.Printf("\t\t %s -> %s\n", key, value.ActualType().String())
+						typ, _ := value.ActualType()
+						fmt.Printf("\t\t %s -> %s\n", key, typ.String())
 					}
 
 					fn, resultType := execFn(tempState02, knownTypeParams, args)
@@ -251,8 +253,9 @@ func (compiler *Compiler) calculateTypeParams(
 						default:
 							panic(mapper)
 						case reflect.Map:
-							keyRt := defaultMapper.ActualType().Key()
-							mapperKey := &WrapReflectTypeInMapper{keyRt}
+							typ, vk := defaultMapper.ActualType()
+							keyRt := typ.Key()
+							mapperKey := &WrapReflectTypeInMapper{keyRt, vk}
 							mapperKeyNode := ChangeParamNode[ast.Node, ast.Node](args[idx].compiledArgument, mapperKey)
 							funcDeclParam := ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Key)
 							s, b = compiler.calculateTypeParams(
@@ -273,8 +276,8 @@ func (compiler *Compiler) calculateTypeParams(
 								return s, len(requiredTypeParams) > 0
 							}
 
-							valueRt := defaultMapper.ActualType().Elem()
-							mapperValue := &WrapReflectTypeInMapper{valueRt}
+							valueRt := typ.Elem()
+							mapperValue := &WrapReflectTypeInMapper{valueRt, vk}
 							mapperValueNode := ChangeParamNode[ast.Node, ast.Node](args[idx].compiledArgument, mapperValue)
 							funcDeclParam = ChangeParamNode[ast.Node, ast.Node](funcDecl.node, funcDeclItem.Value)
 							s, b = compiler.calculateTypeParams(

@@ -110,10 +110,10 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		return reflect.Value{}, false
 	case *CheckForNotNullExpression:
 		return isLiterateValue(item.node)
-	case *coercion:
+	case coercion:
 		rv, isLiterate := isLiterateValue(item.Node)
 		return rv, isLiterate
-	case *EntityField:
+	case EntityField:
 		return reflect.Value{}, false
 	case *ReflectValueExpression:
 		return item.Rv, true
@@ -140,7 +140,7 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		// TODO: *BinaryExpr: should always be false, this needs to be fixed where *BinaryExpr: is created
 	case *BinaryExpr:
 		return reflect.Value{}, false
-	case *MultiBinaryExpr:
+	case MultiBinaryExpr:
 		return reflect.Value{}, false
 	case *LhsToMultipleRhsOperator:
 		return reflect.Value{}, false

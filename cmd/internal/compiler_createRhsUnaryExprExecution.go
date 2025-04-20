@@ -24,11 +24,11 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 				case rv.CanFloat():
 					rv = reflect.ValueOf(-1.0 * rv.Float())
 				}
-				rve := &ReflectValueExpression{rv}
+				rve := &ReflectValueExpression{rv, ValueKey{}}
 				rveNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, rve)
 				return []Node[ast.Node]{rveNode}, artValue
 			} else {
-				rve := &ReflectValueExpression{reflect.ValueOf(-1)}
+				rve := &ReflectValueExpression{reflect.ValueOf(-1), ValueKey{}}
 				rveNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, rve)
 
 				be := &BinaryExpr{arr[0].Node.Pos(), token.MUL, arr[0], rveNode}
@@ -51,8 +51,8 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 				default:
 					panic("implement me")
 				}
-			case *EntityField:
-				right := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(true)})
+			case EntityField:
+				right := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(true), boolValueKey})
 				be := &BinaryExpr{arr[0].Node.Pos(), token.NEQ, arr[0], right}
 				beNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)
 				return []Node[ast.Node]{beNode}, artValue

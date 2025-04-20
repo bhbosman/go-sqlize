@@ -31,7 +31,7 @@ type AssignStatement func(state State, value Node[ast.Node])
 
 type OnCreateExecuteStatement func(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement
 
-type OnCreateType func(State, []Node[ast.Node]) ITypeMapper
+type OnCreateType func(State, []ITypeMapper) ITypeMapper
 
 type functionInformation struct {
 	fn               OnCreateExecuteStatement
@@ -60,13 +60,11 @@ func (compiler *Compiler) Init(
 	compiler.Fileset = Fileset
 	compiler.Sources = map[string]interface{}{}
 	compiler.GlobalTypes = map[ValueKey]OnCreateType{
-		ValueKey{"", "bool"}:              compiler.registerBool(),
-		ValueKey{"", "int"}:               compiler.registerInt(),
-		ValueKey{"", "string"}:            compiler.registerString(),
-		ValueKey{"", "float64"}:           compiler.registerFloat64(),
-		ValueKey{"reflect", "Type"}:       compiler.registerReflectType(),
-		ValueKey{libFolder, "Some"}:       compiler.registerSomeType(),
-		ValueKey{libFolder, "Dictionary"}: compiler.registerLibType(),
+		ValueKey{"", "bool"}:        compiler.registerBool(),
+		ValueKey{"", "int"}:         compiler.registerInt(),
+		ValueKey{"", "string"}:      compiler.registerString(),
+		ValueKey{"", "float64"}:     compiler.registerFloat64(),
+		ValueKey{"reflect", "Type"}: compiler.registerReflectType(),
 	}
 
 	compiler.GlobalFunctions = map[ValueKey]functionInformation{
@@ -74,12 +72,12 @@ func (compiler *Compiler) Init(
 		ValueKey{"path/filepath", "Dir"}:  {compiler.pathFilepathDirImplementation, Node[*ast.FuncType]{}, false},
 	}
 	compiler.addBuiltInFunctions()
-	compiler.addStrconvFunctions()
-	compiler.addLibFunctions()
 	compiler.addOsFunctions()
 	compiler.addIoFunctions()
+	compiler.addStrconvFunctions()
 	compiler.addMathFunctions()
 	compiler.addReflectFunctions()
+	compiler.addLibFunctions()
 
 	for key, value := range FunctionMap {
 		if current, ok := compiler.GlobalFunctions[key]; !ok {
@@ -97,7 +95,7 @@ func (compiler *Compiler) Init(
 			}
 			compiler.GlobalFunctions[key] = fn(key, value)
 		} else {
-			compiler.GlobalFunctions[key] = functionInformation{current.fn, ChangeParamNode(value, value.Node.Type), true}
+			compiler.GlobalFunctions[key] = functionInformation{current.fn, ChangeParamNode(value, value.Node.Type), current.funcTypeRequired}
 		}
 	}
 	for key, information := range compiler.GlobalFunctions {
@@ -119,7 +117,7 @@ func (compiler *Compiler) Init(
 }
 
 func (compiler *Compiler) readTypeSpec(node Node[*ast.TypeSpec]) OnCreateType {
-	return func(state State, expressions []Node[ast.Node]) ITypeMapper {
+	return func(state State, expressions []ITypeMapper) ITypeMapper {
 		if node.Node.TypeParams == nil || node.Node.TypeParams.NumFields() == len(expressions) {
 			var dd []*ast.Ident
 			if node.Node.TypeParams != nil {
@@ -129,7 +127,7 @@ func (compiler *Compiler) readTypeSpec(node Node[*ast.TypeSpec]) OnCreateType {
 			}
 			typeMapper := TypeMapper{}
 			for i := 0; i < len(dd); i++ {
-				typeMapper[dd[i].Name] = compiler.findType(state, expressions[i], Default)
+				typeMapper[dd[i].Name] = expressions[i]
 			}
 			state = SetCompilerState[TypeMapper](typeMapper, state)
 
@@ -247,10 +245,12 @@ func (compiler *Compiler) valuesToNodes(state State, values []reflect.Value) []N
 func (compiler *Compiler) valueToNode(value reflect.Value) Node[ast.Node] {
 	kind := value.Kind()
 	switch kind {
-	//case reflect.Interface:
-	//	return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value.Elem()}}
-	case reflect.String /*reflect.Pointer,*/, reflect.Int, reflect.Float32, reflect.Float64:
-		return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value}}
+	case reflect.String:
+		return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value, stringValueKey}}
+	case reflect.Int:
+		return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value, intValueKey}}
+	case reflect.Float64:
+		return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value, float64ValueKey}}
 	default:
 		panic("unhandled default case")
 	}
@@ -319,7 +319,8 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 			case StructTypeWithActualTypes:
 				//param := ChangeParamNode[ast.Node, ast.Node](state.currentNode, Type)
 				typeMapper := compiler.findType(state, Type, Default)
-				return typeMapper.ActualType()
+				typ, _ := typeMapper.ActualType()
+				return typ
 			default:
 				panic("fsdfds")
 			}
@@ -371,7 +372,7 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 		fieldType := compiler.findType(state, param, Default)
 		typeMapperInstance.FieldByName(field.Name).Set(reflect.ValueOf(fieldType))
 	}
-	return &TypeMapperForStruct{nodeRt, actualTypeRt, typeMapperInstance}
+	return &TypeMapperForStruct{nodeRt, actualTypeRt, typeMapperInstance, node.Key}
 }
 
 func (compiler *Compiler) builtInStructMethods(rv reflect.Value) OnCreateExecuteStatement {
@@ -383,4 +384,34 @@ func (compiler *Compiler) builtInStructMethods(rv reflect.Value) OnCreateExecute
 			panic(fmt.Errorf("builtInStructMethods only accept literal values"))
 		}
 	}
+}
+
+func findAllParamNameAndTypes(node Node[*ast.FieldList]) []struct {
+	name string
+	node Node[ast.Node]
+} {
+	result := make([]struct {
+		name string
+		node Node[ast.Node]
+	}, 0, node.Node.NumFields())
+
+	if node.Node != nil {
+		for _, g := range node.Node.List {
+			if len(g.Names) == 0 {
+				result = append(result, struct {
+					name string
+					node Node[ast.Node]
+				}{name: "_", node: ChangeParamNode[*ast.FieldList, ast.Node](node, g.Type)})
+
+			} else {
+				for _, n := range g.Names {
+					result = append(result, struct {
+						name string
+						node Node[ast.Node]
+					}{name: n.Name, node: ChangeParamNode[*ast.FieldList, ast.Node](node, g.Type)})
+				}
+			}
+		}
+	}
+	return result
 }

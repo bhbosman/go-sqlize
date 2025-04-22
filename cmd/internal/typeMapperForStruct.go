@@ -13,7 +13,7 @@ type TypeMapperForStruct struct {
 	vk                 ValueKey
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) TranslateNodeValueToReflectValue(node Node[ast.Node]) reflect.Value {
+func (typeMapperForStruct TypeMapperForStruct) TranslateNodeValueToReflectValue(node Node[ast.Node]) reflect.Value {
 	rv, _ := isLiterateValue(node)
 	newRt := typeMapperForStruct.actualTypeRt
 	newRv := reflect.New(newRt).Elem()
@@ -21,31 +21,31 @@ func (typeMapperForStruct *TypeMapperForStruct) TranslateNodeValueToReflectValue
 	return newRv
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) Keys() []Node[ast.Node] {
+func (typeMapperForStruct TypeMapperForStruct) Keys() []Node[ast.Node] {
 	return nil
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) Pos() token.Pos {
+func (typeMapperForStruct TypeMapperForStruct) Pos() token.Pos {
 	return token.NoPos
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) End() token.Pos {
+func (typeMapperForStruct TypeMapperForStruct) End() token.Pos {
 	return token.NoPos
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) ActualType() (reflect.Type, ValueKey) {
+func (typeMapperForStruct TypeMapperForStruct) ActualType() (reflect.Type, ValueKey) {
 	return typeMapperForStruct.actualTypeRt, typeMapperForStruct.vk
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) MapperKeyType() reflect.Type {
+func (typeMapperForStruct TypeMapperForStruct) MapperKeyType() reflect.Type {
 	return typeMapperForStruct.actualTypeRt
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) Kind() reflect.Kind {
+func (typeMapperForStruct TypeMapperForStruct) Kind() reflect.Kind {
 	return reflect.Struct
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) walk(newRt reflect.Type, newRv reflect.Value, oldValue reflect.Value) {
+func (typeMapperForStruct TypeMapperForStruct) walk(newRt reflect.Type, newRv reflect.Value, oldValue reflect.Value) {
 	// TODO: remove this function
 	switch newRt.Kind() {
 	case reflect.Struct:
@@ -65,11 +65,11 @@ func (typeMapperForStruct *TypeMapperForStruct) walk(newRt reflect.Type, newRv r
 	}
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) NodeType() reflect.Type {
+func (typeMapperForStruct TypeMapperForStruct) NodeType() reflect.Type {
 	return typeMapperForStruct.nodeRt
 }
 
-func (typeMapperForStruct *TypeMapperForStruct) createDefaultType(parentNode Node[ast.Node]) reflect.Value {
+func (typeMapperForStruct TypeMapperForStruct) createDefaultType(parentNode Node[ast.Node]) reflect.Value {
 	rv := reflect.New(typeMapperForStruct.nodeRt).Elem()
 	for idx := range typeMapperForStruct.nodeRt.NumField() {
 		typeMapper := typeMapperForStruct.typeMapperInstance.Field(idx).Interface().(ITypeMapper)

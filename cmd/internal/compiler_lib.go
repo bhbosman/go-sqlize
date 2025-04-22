@@ -7,7 +7,6 @@ import (
 	"io"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 const libFolder = "github.com/bhbosman/go-sqlize/lib"
@@ -37,8 +36,8 @@ func (compiler *Compiler) addLibFunctions() {
 	compiler.GlobalFunctions[ValueKey{libFolder, "CreateDictionary"}] = functionInformation{compiler.libCreateDictionaryImplementation, Node[*ast.FuncType]{}, true}
 	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryLookup"}] = functionInformation{compiler.libDictionaryLookupImplementation, Node[*ast.FuncType]{}, true}
 	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryDefault"}] = functionInformation{compiler.libDictionaryDefaultImplementation, Node[*ast.FuncType]{}, true}
-	//compiler.GlobalFunctions[ValueKey{libFolder, "TypeFor"}] = functionInformation{compiler.libTypeForImplementation, Node[*ast.FuncType]{}, true}
-	//compiler.GlobalFunctions[ValueKey{libFolder, "TestType"}] = functionInformation{compiler.libTestTypeImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "TypeFor"}] = functionInformation{compiler.libTypeForImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "TestType"}] = functionInformation{compiler.libTestTypeImplementation, Node[*ast.FuncType]{}, true}
 	//compiler.GlobalFunctions[ValueKey{libFolder, "CoreRelationship"}] = compiler.libCoreRelationshipImplementation
 	//compiler.GlobalFunctions[ValueKey{libFolder, "Relationship"}] = compiler.libRelationshipImplementation
 }
@@ -55,26 +54,6 @@ func (compiler *Compiler) libQueryImplementation(state State, funcTypeNode Node[
 		returnValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, qt)
 		return []Node[ast.Node]{returnValue}, artValue
 	}
-}
-
-func (compiler *Compiler) executeFuncLit(state State, funcLit Node[*ast.FuncLit], arguments []Node[ast.Node], typeParams map[string]ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
-	nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcLit, funcLit.Node.Type.Params))
-	mm := ValueInformationMap{}
-	for i, param := range nameAndParams {
-		mm[param.name] = ValueInformation{arguments[i]}
-	}
-
-	newContext := &CurrentContext{
-		mm,
-		map[string]ITypeMapper{},
-		LocalTypesMap{},
-		GetCompilerState[*CurrentContext](state),
-	}
-	state = SetCompilerState(newContext, state)
-	param := ChangeParamNode[*ast.FuncLit, *ast.BlockStmt](funcLit, funcLit.Node.Body)
-	values, _ := compiler.executeBlockStmt(state, param, typeParams, arguments)
-	state = SetCompilerState(newContext.Parent, state)
-	return values, artValue
 }
 
 func (compiler *Compiler) libMapImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
@@ -169,7 +148,6 @@ func (compiler *Compiler) libSetSomeValueImplementation(state State, funcTypeNod
 			rt := reflect.ValueOf(arguments[0].Node).Type()
 			typeMapper := &WrapReflectTypeInMapper{rt, vk}
 			mapper := compiler.createSomeType(state, []ITypeMapper{typeMapper})
-			//mapper := compiler.createSomeType(state, []ITypeMapper{&WrapReflectTypeInMapper{reflect.TypeFor[Node[ast.Node]](), ValueKey{"internal", "Node"}}})
 			typ, vk := mapper.ActualType()
 			rv := reflect.New(typ).Elem()
 			rv.FieldByName("Assigned").SetBool(true)
@@ -179,7 +157,6 @@ func (compiler *Compiler) libSetSomeValueImplementation(state State, funcTypeNod
 		} else {
 			panic("implemt IFindValueKey ")
 		}
-
 	}
 }
 
@@ -278,36 +255,6 @@ func (compiler *Compiler) libCreateDictionaryImplementation(state State, funcTyp
 	}
 }
 
-type rvArraySorter struct {
-	rvArray []reflect.Value
-}
-
-func (rvArray *rvArraySorter) Len() int {
-	return len(rvArray.rvArray)
-}
-
-func (rvArray *rvArraySorter) Less(i, j int) bool {
-	if rvArray.rvArray[i].Kind() == rvArray.rvArray[j].Kind() {
-		ith := rvArray.rvArray[i]
-		jth := rvArray.rvArray[j]
-		switch {
-		case ith.CanInt():
-			return ith.Int() < jth.Int()
-		case ith.CanFloat():
-			return ith.Float() < jth.Float()
-		case ith.Kind() == reflect.String:
-			return strings.Compare(ith.String(), jth.String()) < 0
-		default:
-			return false
-		}
-	}
-	return false
-}
-
-func (rvArray *rvArraySorter) Swap(i, j int) {
-	rvArray.rvArray[i], rvArray.rvArray[j] = rvArray.rvArray[j], rvArray.rvArray[i]
-}
-
 func (compiler *Compiler) libDictionaryLookupImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	return libDictionaryLookupImplementation{compiler, state}.ExecuteStatement()
 }
@@ -393,19 +340,25 @@ func (compiler *Compiler) libDictionaryDefaultImplementation(state State, funcTy
 //	return compiler.libCoreRelationshipImplementation(state, typeParams, append(arr, arguments...))
 //}
 
-//func (compiler *Compiler) libTypeForImplementation(state State) ExecuteStatement {
-//	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-//		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(typeParams[0].ActualType())})}, artNone
-//	}
-//}
+func (compiler *Compiler) libTypeForImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+		typeMapper := typeParams[funcTypeNode.Node.TypeParams.List[0].Names[0].Name]
+		actualType, key := typeMapper.ActualType()
+		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, &ReflectValueExpression{reflect.ValueOf(actualType), key})}, artNone
+	}
+}
 
-//func (compiler *Compiler) libTestTypeImplementation(state State) ExecuteStatement {
-//	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-//		nodes := append(typeParams.toNodeArray(), arguments...)
-//		rv := reflect.ValueOf(TestType)
-//		if outputNodes, art, b := compiler.genericCall(state, rv, nodes); b {
-//			return outputNodes, art
-//		}
-//		panic("fsdds")
-//	}
-//}
+func (compiler *Compiler) libTestTypeImplementation(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+		typeMapper := typeParams[funcTypeNode.Node.TypeParams.List[0].Names[0].Name]
+		actualType, key := typeMapper.ActualType()
+
+		println(actualType.String(), key.Key)
+		rv := arguments[0].Node.(*ReflectValueExpression).Rv
+		if rv.Type() != actualType {
+			panic("fsdds")
+		}
+
+		return nil, artNone
+	}
+}

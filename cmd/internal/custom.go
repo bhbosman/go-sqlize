@@ -100,6 +100,27 @@ type (
 	}
 )
 
+func (binop BinaryExpr) GetValueKey() ValueKey {
+	return ValueKey{"builtin", "BinaryExpr"}
+}
+
+func (value *TrailRecord) GetValueKey() ValueKey {
+	return ValueKey{"builtin", "TrailRecord"}
+}
+
+func (e EntitySource) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (e EntitySource) End() token.Pos {
+	return token.NoPos
+}
+
+func (e EntitySource) GetTypeMapper() (ITypeMapperArray, bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (iteSingleCondition IfThenElseSingleValueCondition) GetValueKey() ValueKey {
 	return ValueKey{"builtin", "IfThenElseSingleValueCondition"}
 }

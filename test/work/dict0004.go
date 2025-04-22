@@ -26,9 +26,15 @@ func init() {
 		Lookup lib.Dictionary[TKey[int], TValue]
 	}{lib.CreateDictionary(
 		map[TKey[int]]TValue{
+			{struct{ C struct{ Z int } }{struct{ Z int }{1}}, 7}: {11},
+			{struct{ C struct{ Z int } }{struct{ Z int }{1}}, 8}: {12},
+			{struct{ C struct{ Z int } }{struct{ Z int }{1}}, 9}: {13},
 			{struct{ C struct{ Z int } }{struct{ Z int }{1}}, 1}: {11},
 			{struct{ C struct{ Z int } }{struct{ Z int }{1}}, 2}: {12},
 			{struct{ C struct{ Z int } }{struct{ Z int }{1}}, 3}: {13},
+			{struct{ C struct{ Z int } }{struct{ Z int }{1}}, 4}: {11},
+			{struct{ C struct{ Z int } }{struct{ Z int }{1}}, 5}: {12},
+			{struct{ C struct{ Z int } }{struct{ Z int }{1}}, 6}: {13},
 		},
 		TValue{0},
 	)}

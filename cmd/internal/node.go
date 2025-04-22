@@ -92,20 +92,3 @@ func ChangeParamNode[TExisting ast.Node, TTarget ast.Node](
 		old.Valid,
 	}
 }
-
-func ChangeParamNodeWithValueKey[TExisting ast.Node, TTarget ast.Node](
-	old Node[TExisting],
-	withNode TTarget,
-	vk ValueKey,
-) Node[TTarget] {
-	return Node[TTarget]{
-		vk,
-		withNode,
-		old.ImportMap,
-		old.AbsPath,
-		old.RelPath,
-		old.FileName,
-		old.Fs,
-		old.Valid,
-	}
-}

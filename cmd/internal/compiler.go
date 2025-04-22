@@ -415,3 +415,22 @@ func findAllParamNameAndTypes(node Node[*ast.FieldList]) []struct {
 	}
 	return result
 }
+
+func (compiler *Compiler) executeFuncLit(state State, funcLit Node[*ast.FuncLit], arguments []Node[ast.Node], typeParams map[string]ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
+	nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcLit, funcLit.Node.Type.Params))
+	mm := ValueInformationMap{}
+	for i, param := range nameAndParams {
+		mm[param.name] = ValueInformation{arguments[i]}
+	}
+	newContext := &CurrentContext{
+		mm,
+		map[string]ITypeMapper{},
+		LocalTypesMap{},
+		GetCompilerState[*CurrentContext](state),
+	}
+	state = SetCompilerState(newContext, state)
+	param := ChangeParamNode[*ast.FuncLit, *ast.BlockStmt](funcLit, funcLit.Node.Body)
+	values, _ := compiler.executeBlockStmt(state, param, typeParams, arguments)
+	state = SetCompilerState(newContext.Parent, state)
+	return values, artValue
+}

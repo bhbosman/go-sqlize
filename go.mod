@@ -3,10 +3,12 @@ module github.com/bhbosman/go-sqlize
 go 1.24
 
 require (
+	github.com/dominikbraun/graph v0.23.0
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/ugurcsen/gods-generic v0.10.4
-	golang.org/x/tools v0.31.0
+	golang.org/x/tools v0.32.0
+
 )
 
 require (

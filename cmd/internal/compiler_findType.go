@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"go/ast"
 	"reflect"
 )
@@ -40,8 +41,90 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 	}
 
 	switch item := node.Node.(type) {
-	case *ast.FuncLit:
-		param := ChangeParamNode[ast.Node, ast.Node](node, item.Type.Results.List[0].Type)
+	default:
+		panic(node.Node)
+	case *ast.FuncType:
+		//reflect.FuncOf(nil, nil, false)
+		newContext := &CurrentContext{
+			ValueInformationMap{},
+			map[string]ITypeMapper{},
+			LocalTypesMap{},
+			false,
+			GetCompilerState[*CurrentContext](state),
+		}
+		state = SetCompilerState(newContext, state)
+
+		knownTypeParams := newContext.flattenTypeParams()
+		fmt.Printf("\t knownTypeParams:\n")
+		for key, value := range knownTypeParams {
+			typ, _ := value.ActualType()
+			fmt.Printf("\t\t %s -> %s\n", key, typ.String())
+		}
+
+		nameAndTypeParams := findAllParamNameAndTypes(ChangeParamNode(node, item.TypeParams))
+		requiredTypeParams := map[string]bool{}
+		for _, ss := range nameAndTypeParams.arr {
+			if _, ok := knownTypeParams[ss.name]; !ok {
+				requiredTypeParams[ss.name] = true
+			}
+		}
+		if len(requiredTypeParams) > 0 {
+			panic("implement this")
+		}
+
+		itemParamsNamesAndTypeExpressions := findAllParamNameAndTypes(ChangeParamNode(node, item.Params))
+
+		var inData []struct {
+			rt reflect.Type
+			vk ValueKey
+		}
+		for _, arrItem := range itemParamsNamesAndTypeExpressions.arr {
+			typeMapper := compiler.findType(state, arrItem.node, Default|TypeParamType)
+			rt, vk := typeMapper.ActualType()
+			inData = append(
+				inData,
+				struct {
+					rt reflect.Type
+					vk ValueKey
+				}{rt, vk},
+			)
+		}
+
+		resultNamesAndTypeExpressions := findAllParamNameAndTypes(ChangeParamNode(node, item.Results))
+		var outData []struct {
+			rt reflect.Type
+			vk ValueKey
+		}
+		for _, arrItem := range resultNamesAndTypeExpressions.arr {
+			typeMapper := compiler.findType(state, arrItem.node, Default|TypeParamType)
+			rt, vk := typeMapper.ActualType()
+			outData = append(
+				outData,
+				struct {
+					rt reflect.Type
+					vk ValueKey
+				}{rt, vk},
+			)
+		}
+
+		var inArr []reflect.Type
+		for _, arrItem := range inData {
+			inArr = append(inArr, arrItem.rt)
+		}
+		var outArr []reflect.Type
+		for _, arrItem := range outArr {
+			outArr = append(outArr, arrItem)
+		}
+
+		funcTypeRt := reflect.FuncOf(inArr, outArr, itemParamsNamesAndTypeExpressions.isVariadic)
+		typeMapper := TypeMapperForFuncType{funcTypeRt, node.Key, inData, outData}
+		return initOnCreateType(0, typeMapper, nil)
+	case FuncLit:
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.Type)
+		typeMapper := compiler.findType(state, param, flags)
+		return initOnCreateType(0, typeMapper, nil)
+	case *ast.ArrayType:
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.Elt)
 		typeMapper := compiler.findType(state, param, flags)
 		return initOnCreateType(0, typeMapper, nil)
 	case *ast.StructType:
@@ -51,7 +134,8 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 	case *ast.MapType:
 		paramKey := ChangeParamNode[ast.Node, ast.Node](node, item.Key)
 		rtKeyTypeMapper := compiler.findType(state, paramKey, flags)
-		rtKey := rtKeyTypeMapper.MapperKeyType()
+		actualType, _ := rtKeyTypeMapper.ActualType()
+		rtKey := actualType
 
 		paramValue := ChangeParamNode[ast.Node, ast.Node](node, item.Value)
 		rtValueTypeMapper := compiler.findType(state, paramValue, flags)
@@ -128,7 +212,5 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 			panic(compiler.Fileset.Position(item.Pos()).String())
 		}
 
-	default:
-		panic(node.Node)
 	}
 }

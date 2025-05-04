@@ -7,7 +7,18 @@ import (
 	"strconv"
 )
 
-func Query[TInputData interface{}]() []TInputData { panic("implement Query") }
+type IQueryOpt interface {
+}
+
+func QueryTop(int) IQueryOpt {
+	panic("implement QueryTop")
+}
+
+func QueryDistinct() IQueryOpt {
+	panic("implement QueryDistinct")
+}
+
+func Query[TInputData interface{}](...IQueryOpt) []TInputData { panic("implement Query") }
 
 func Map[TInputData interface{}, TOutputData interface{}](inputData []TInputData, cb func(inputData TInputData) TOutputData) []TOutputData {
 	panic("implement Map")
@@ -51,7 +62,6 @@ type Some[TData interface{}] struct{}
 
 func SetSomeValue[TData interface{}](TData) Some[TData] {
 	panic("implement SetSomeValue")
-
 }
 
 func SetSomeNone[TData interface{}]() Some[TData] {
@@ -106,18 +116,16 @@ func DictionaryDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TVa
 	panic("implement DictionaryDefault")
 }
 
-func CoreRelationship[TTarget interface{}]([]TTarget, func(TTarget) bool) TTarget {
+type IRelationshipOpt interface{}
+
+func CombinePredFunctionsWithAnd[TTarget interface{}]([]func(TTarget) bool) func(TTarget) bool {
+	panic("implement CombinePredFunctionsWithAnd")
+}
+
+func CoreRelationship[TTarget interface{}]([]TTarget, func(TTarget) bool, ...IRelationshipOpt) TTarget {
 	panic("implement CoreRelationship")
 }
 
-func OptionalCoreRelationship[TTarget interface{}]([]TTarget, func(TTarget) bool) Some[TTarget] {
-	panic("implement OptionalCoreRelationship")
-}
-
-func Relationship[TTarget interface{}](pred func(TTarget) bool) TTarget {
-	return CoreRelationship[TTarget](Query[TTarget](), pred)
-}
-
-func OptionalRelationship[TTarget interface{}](pred func(TTarget) bool) Some[TTarget] {
-	panic("implement OptionalRelationship")
+func Relationship[TTarget interface{}](pred func(TTarget) bool, opts ...IRelationshipOpt) TTarget {
+	return CoreRelationship[TTarget](Query[TTarget](), pred, opts...)
 }

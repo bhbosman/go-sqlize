@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -25,11 +26,6 @@ func createError(methodName, message string) error {
 
 func (compiler *Compiler) findStatement(state State, node Node[ast.Stmt]) (ExecuteStatement, Node[ast.Node]) {
 	switch item := node.Node.(type) {
-	case *FolderContextInformation:
-		return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-			value := ChangeParamNode[ast.Stmt, ast.Node](node, item)
-			return []Node[ast.Node]{value}, artFCI
-		}, ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
 	case *ast.IfStmt:
 		value := ChangeParamNode(node, item)
 		return compiler.createIfStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
@@ -89,12 +85,14 @@ func (compiler *Compiler) createDeclStmtExecution(node Node[*ast.DeclStmt]) Exec
 
 func (compiler *Compiler) createBlockStmtExecution(node Node[*ast.BlockStmt]) ExecuteStatement {
 	return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-		return compiler.executeBlockStmt(state, node, typeParams, unprocessedArgs)
+		return compiler.executeBlockStmt(state, node)
 	}
 }
 
 func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 	switch item := node.Node.(type) {
+	case iIsLiterateValue:
+		return reflect.ValueOf(node.Node), true
 	case *TrailRecord:
 		rv := item.Value
 		for idx := range rv.NumField() {
@@ -106,7 +104,7 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 			}
 		}
 		return item.Value, true
-	case *IfThenElseSingleValueCondition:
+	case IfThenElseSingleValueCondition:
 		return reflect.Value{}, false
 	case *CheckForNotNullExpression:
 		return isLiterateValue(item.node)
@@ -138,13 +136,15 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 	case *builtInNil:
 		return reflect.Value{}, true
 		// TODO: *BinaryExpr: should always be false, this needs to be fixed where *BinaryExpr: is created
-	case *BinaryExpr:
+	case BinaryExpr:
 		return reflect.Value{}, false
 	case MultiBinaryExpr:
 		return reflect.Value{}, false
 	case *LhsToMultipleRhsOperator:
 		return reflect.Value{}, false
 	default:
+		//rv := reflect.ValueOf(node.Node)
+
 		panic(notFound(reflect.TypeOf(item).String(), "isLiterateValue"))
 	}
 }
@@ -168,6 +168,16 @@ func (compiler *Compiler) createReturnStmtExecution(node Node[*ast.ReturnStmt]) 
 
 func (compiler *Compiler) createAssignStatementExecution(node Node[*ast.AssignStmt]) ExecuteStatement {
 	switch node.Node.Tok {
+	case 0xFFFF:
+		return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+			//state = SetCompilerState(&CurrentAstNode{node.Node}, state)
+			jsonData, _ := strconv.Unquote(node.Node.Rhs[0].(*ast.BasicLit).Value)
+			jsonDataByteArray := []byte(jsonData)
+			fci := &FolderContextInformation{}
+			_ = json.Unmarshal(jsonDataByteArray, fci)
+			return []Node[ast.Node]{Node[ast.Node]{Node: fci, Valid: true}}, artFCI
+		}
+
 	case token.DEFINE, token.ASSIGN:
 		return func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 			var rhsArray []Node[ast.Node]

@@ -16,12 +16,36 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 			return currentCompositeCreateType.typeMapper
 		}
 		typeMapper := typeMapperFn(state, node, node.Node.Type)
-
 		rtKind := typeMapper.Kind()
 		switch rtKind {
+		case reflect.Func:
+			var arr []Node[ast.Node]
+			for _, elt := range node.Node.Elts {
+				switch etlItem := elt.(type) {
+				default:
+					panic("unreachable")
+				case *ast.FuncLit:
+					currentContext := GetCompilerState[*CurrentContext](state)
+					flattenValues := currentContext.flattenVariables()
+					fl := FuncLit{etlItem.Type, etlItem.Body, flattenValues}
+					fn := func(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+						return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+							param := ChangeParamNode[*ast.CompositeLit, FuncLit](node, fl)
+							onCreateExecuteStatement := compiler.onFuncLitExecutionStatement(param)
+							executeStatement := onCreateExecuteStatement(state, funcTypeNode)
+							return executeStatement(state, typeParams, unprocessedArgs)
+						}
+					}
+					fi := functionInformation{fn, ChangeParamNode(node, etlItem.Type), true}
+					arr = append(arr, ChangeParamNode[*ast.CompositeLit, ast.Node](node, fi))
+				}
+			}
+			trailArray := TrailArray{arr, typeMapper}
+			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, trailArray)
+			return []Node[ast.Node]{nodeValue}, artValue
 		case reflect.Struct:
+			typeMapperForStruct := typeMapper.(*TypeMapperForStruct)
 			if len(node.Node.Elts) == 0 {
-				typeMapperForStruct := typeMapper.(*TypeMapperForStruct)
 				param := ChangeParamNode[*ast.CompositeLit, ast.Node](node, node.Node.Type)
 				rv := typeMapperForStruct.createDefaultType(param)
 				nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](
@@ -34,7 +58,7 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 				)
 				return []Node[ast.Node]{nodeValue}, artValue
 			}
-			rt := typeMapper.NodeType()
+			rt := typeMapperForStruct.nodeRt
 			rv := reflect.New(rt).Elem()
 			for idx, elt := range node.Node.Elts {
 				switch expr := elt.(type) {
@@ -74,7 +98,7 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 						es := compiler.findRhsExpression(tempState, param)
 						return compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
 					}
-					rt := typeMapper.NodeType()
+					rt, _ := typeMapper.ActualType()
 					nodeKey, _ := fn(state, expr.Key, typeMapperForMap.keyTypeMapper)
 					rvKey := func(node Node[ast.Node]) reflect.Value {
 						if translateNodeValueToReflectValue, ok := typeMapperForMap.keyTypeMapper.(ITranslateNodeValueToReflectValue); ok {
@@ -92,7 +116,7 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 					panic("unhandled key")
 				}
 			}
-			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, &ReflectValueExpression{rv, ValueKey{}})
+			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, &ReflectValueExpression{rv, ValueKey{"PQR", "PQR"}})
 			return []Node[ast.Node]{nodeValue}, artValue
 		default:
 			panic("dsfsfds")

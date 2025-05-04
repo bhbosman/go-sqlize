@@ -13,11 +13,12 @@ type (
 
 	IFindTypeMapper interface {
 		ast.Node
-		GetTypeMapper() (ITypeMapperArray, bool)
+		GetTypeMapper(State) (ITypeMapperArray, bool)
 	}
 
 	EntitySource struct {
-		rt ITypeMapper
+		typeMapper ITypeMapper
+		queryState queryState
 	}
 	TrailRecord struct {
 		Position   token.Pos     // identifier position
@@ -26,31 +27,31 @@ type (
 	}
 
 	TrailSource struct {
-		Position   token.Pos
 		Alias      string
 		typeMapper ITypeMapper
 	}
 	EntityField struct {
-		Position        token.Pos // identifier position
-		alias           string
-		aliasTypeMapper ITypeMapper
-		field           string
+		alias      string
+		typeMapper ITypeMapper
+		field      string
 	}
 	coercion struct {
 		Position token.Pos
 		to       string
 		Node     Node[ast.Node]
 		rt       reflect.Type
+		vk       ValueKey
 	}
 
 	CheckForNotNullExpression struct {
-		node Node[ast.Node]
+		node       Node[ast.Node]
+		typeMapper ITypeMapper
 	}
 	BinaryExpr struct {
-		OpPos token.Pos   // position of Op
-		Op    token.Token // operator
-		left  Node[ast.Node]
-		right Node[ast.Node]
+		Op         token.Token // operator
+		left       Node[ast.Node]
+		right      Node[ast.Node]
+		typeMapper ITypeMapper
 	}
 	builtInNil struct {
 	}
@@ -75,12 +76,16 @@ type (
 	IfThenElseMultiValueCondition struct {
 		conditionalStatement []MultiValueCondition
 	}
+	BooleanCondition struct {
+		conditions []Node[ast.Node]
+	}
 	IfThenElseSingleValueCondition struct {
 		conditionalStatement []SingleValueCondition
 	}
 	MultiBinaryExpr struct {
 		Op          token.Token // operator
 		expressions []Node[ast.Node]
+		typeMapper  ITypeMapper
 	}
 	CaseClauseNode struct {
 		arr   []Node[ast.Node]
@@ -98,9 +103,86 @@ type (
 		keyTypeMapper   ITypeMapper
 		valueTypeMapper ITypeMapper
 	}
+	VaradicArgument struct {
+		data []Node[ast.Node]
+	}
+	functionInformation struct {
+		fn               OnCreateExecuteStatement
+		funcType         Node[*ast.FuncType]
+		funcTypeRequired bool
+	}
+	TrailArray struct {
+		arr        []Node[ast.Node]
+		typeMapper ITypeMapper
+	}
+
+	FuncLit struct {
+		Type   *ast.FuncType
+		Body   *ast.BlockStmt
+		values map[string]ValueInformation
+	}
 )
 
-func (binop BinaryExpr) GetValueKey() ValueKey {
+func (entityField EntityField) GetValueKey() ValueKey {
+	_, vk := entityField.typeMapper.ActualType()
+	return vk
+}
+
+func (functList FuncLit) Pos() token.Pos {
+	return functList.Body.Pos()
+}
+
+func (functList FuncLit) End() token.Pos {
+	return functList.Body.End()
+}
+
+func (boolcond BooleanCondition) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (boolcond BooleanCondition) End() token.Pos {
+	return token.NoPos
+}
+
+func (ta TrailArray) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (ta TrailArray) End() token.Pos {
+	return token.NoPos
+}
+
+func (value TrailSource) trailMarker() {}
+
+func (e EntitySource) sourceType() {}
+
+func (s SingleValueCondition) Pos() token.Pos {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s SingleValueCondition) End() token.Pos {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c CheckForNotNullExpression) GetTypeMapper(state State) (ITypeMapperArray, bool) {
+	return ITypeMapperArray{c.typeMapper}, true
+}
+
+func (multiBinOp MultiBinaryExpr) GetTypeMapper(state State) (ITypeMapperArray, bool) {
+	return ITypeMapperArray{multiBinOp.typeMapper}, true
+}
+
+func (v VaradicArgument) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (v VaradicArgument) End() token.Pos {
+	return token.NoPos
+}
+
+func (binOp BinaryExpr) GetValueKey() ValueKey {
 	return ValueKey{"builtin", "BinaryExpr"}
 }
 
@@ -116,7 +198,7 @@ func (e EntitySource) End() token.Pos {
 	return token.NoPos
 }
 
-func (e EntitySource) GetTypeMapper() (ITypeMapperArray, bool) {
+func (e EntitySource) GetTypeMapper(State) (ITypeMapperArray, bool) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -129,18 +211,20 @@ func (coercion coercion) GetValueKey() ValueKey {
 	return ValueKey{"builtin", "coercion"}
 }
 
-func (rv *ReflectValueExpression) GetTypeMapper() (ITypeMapperArray, bool) {
+func (rv *ReflectValueExpression) GetTypeMapper(State) (ITypeMapperArray, bool) {
 	return ITypeMapperArray{&WrapReflectTypeInMapper{rv.Rv.Type(), rv.Vk}}, true
 }
 
-func (coercion coercion) GetTypeMapper() (ITypeMapperArray, bool) {
-	return ITypeMapperArray{&WrapReflectTypeInMapper{coercion.rt, ValueKey{}}}, true
+func (coercion coercion) GetTypeMapper(State) (ITypeMapperArray, bool) {
+	return ITypeMapperArray{&WrapReflectTypeInMapper{coercion.rt, coercion.vk}}, true
 }
 
-func (iteSingleCondition IfThenElseSingleValueCondition) GetTypeMapper() (ITypeMapperArray, bool) {
+func (iteSingleCondition IfThenElseSingleValueCondition) GetTypeMapper(state State) (ITypeMapperArray, bool) {
 	switch v := iteSingleCondition.conditionalStatement[0].value.Node.(type) {
-	case *IfThenElseSingleValueCondition:
-		return v.GetTypeMapper()
+	case BinaryExpr:
+		return v.GetTypeMapper(state)
+	case IfThenElseSingleValueCondition:
+		return v.GetTypeMapper(state)
 	case *ReflectValueExpression:
 		return ITypeMapperArray{&WrapReflectTypeInMapper{v.Rv.Type(), v.Vk}}, true
 	case IFindTypeMapper:
@@ -149,41 +233,29 @@ func (iteSingleCondition IfThenElseSingleValueCondition) GetTypeMapper() (ITypeM
 		panic("dfdsfds")
 	}
 	panic("ddd")
-
-	//typeMapper := iteSingleCondition.conditionalStatement[0].value.Node(*IfThenElseSingleValueCondition).()
-	//panic(typeMapper)
-	//
-	//return ITypeMapperArray{typeMapper}, true
 }
 
-func (de *DictionaryExpression) GetTypeMapper() (ITypeMapperArray, bool) {
+func (de *DictionaryExpression) GetTypeMapper(State) (ITypeMapperArray, bool) {
 	return ITypeMapperArray{de.keyTypeMapper, de.valueTypeMapper}, true
 }
 
-func (entityField EntityField) GetTypeMapper() (ITypeMapperArray, bool) {
-	typeMapper := entityField.aliasTypeMapper
-	switch typeMapper.Kind() {
-	case reflect.Struct:
-		typeMapperForStruct := typeMapper.(*TypeMapperForStruct)
-		return ITypeMapperArray{typeMapperForStruct.typeMapperInstance.FieldByName(entityField.field).Interface().(ITypeMapper)}, true
-	default:
-		panic("dfgdfgfd")
-	}
+func (entityField EntityField) GetTypeMapper(State) (ITypeMapperArray, bool) {
+	return ITypeMapperArray{entityField.typeMapper}, true
 }
 
-func (value *TrailRecord) GetTypeMapper() (ITypeMapperArray, bool) {
+func (value *TrailRecord) GetTypeMapper(State) (ITypeMapperArray, bool) {
 	return ITypeMapperArray{value.typeMapper}, true
 }
 
-func (value *TrailSource) GetTypeMapper() (ITypeMapperArray, bool) {
+func (value TrailSource) GetTypeMapper(State) (ITypeMapperArray, bool) {
 	return ITypeMapperArray{value.typeMapper}, true
 }
 
-func (c *CheckForNotNullExpression) Pos() token.Pos {
+func (c CheckForNotNullExpression) Pos() token.Pos {
 	return token.NoPos
 }
 
-func (c *CheckForNotNullExpression) End() token.Pos {
+func (c CheckForNotNullExpression) End() token.Pos {
 	return token.NoPos
 }
 
@@ -217,11 +289,11 @@ func (rv *ReflectValueExpression) Pos() token.Pos {
 func (value *TrailRecord) Pos() token.Pos {
 	return value.Position
 }
-func (value *TrailSource) Pos() token.Pos {
-	return value.Position
+func (value TrailSource) Pos() token.Pos {
+	return token.NoPos
 }
 func (entityField EntityField) Pos() token.Pos {
-	return entityField.Position
+	return token.NoPos
 }
 func (coercion coercion) Pos() token.Pos {
 	return coercion.Position
@@ -229,13 +301,19 @@ func (coercion coercion) Pos() token.Pos {
 func (nilExpression *builtInNil) Pos() token.Pos {
 	return token.NoPos
 }
-func (binop BinaryExpr) Pos() token.Pos {
-	return binop.OpPos
+
+func (binOp BinaryExpr) Pos() token.Pos {
+	return token.NoPos
 }
 
-func (binop BinaryExpr) End() token.Pos {
-	return binop.OpPos
+func (binOp BinaryExpr) End() token.Pos {
+	return token.NoPos
 }
+
+func (binOp BinaryExpr) GetTypeMapper(State) (ITypeMapperArray, bool) {
+	return ITypeMapperArray{binOp.typeMapper}, true
+}
+
 func (nilExpression *builtInNil) End() token.Pos {
 	return token.NoPos
 }
@@ -243,10 +321,10 @@ func (coercion coercion) End() token.Pos {
 	return coercion.Position
 }
 func (entityField EntityField) End() token.Pos {
-	return entityField.Position
+	return token.NoPos
 }
-func (value *TrailSource) End() token.Pos {
-	return value.Position
+func (value TrailSource) End() token.Pos {
+	return token.NoPos
 }
 func (value *TrailRecord) End() token.Pos {
 	return value.Position
@@ -285,22 +363,33 @@ type IExpand interface {
 }
 
 func (ite IfThenElseMultiValueCondition) Expand(parentNode Node[ast.Node]) []Node[ast.Node] {
-	var result []Node[ast.Node]
+	var arr [][]SingleValueCondition
 	for range ite.conditionalStatement[0].values {
-		result = append(result, ChangeParamNode[ast.Node, ast.Node](parentNode, &IfThenElseSingleValueCondition{}))
+		arr = append(arr, []SingleValueCondition{})
 	}
 
-	for partialAnswerIdx, partialAnswer := range result {
-		if partialAnswerNode, ok := partialAnswer.Node.(*IfThenElseSingleValueCondition); ok {
-			for _, stmt := range ite.conditionalStatement {
-				idxNode := stmt.values[partialAnswerIdx]
-				partialAnswerNode.conditionalStatement = append(partialAnswerNode.conditionalStatement, SingleValueCondition{condition: stmt.condition, value: idxNode})
-			}
+	for partialAnswerIdx, _ := range arr {
+		for _, stmt := range ite.conditionalStatement {
+			idxNode := stmt.values[partialAnswerIdx]
+			arr[partialAnswerIdx] = append(arr[partialAnswerIdx], SingleValueCondition{condition: stmt.condition, value: idxNode})
 		}
+	}
+
+	var result []Node[ast.Node]
+	for idx, _ := range ite.conditionalStatement[0].values {
+		result = append(result, ChangeParamNode[ast.Node, ast.Node](parentNode, IfThenElseSingleValueCondition{arr[idx]}))
 	}
 	return result
 }
 
 func (rv *ReflectValueExpression) String() string {
 	return rv.Rv.String()
+}
+
+func (f functionInformation) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (f functionInformation) End() token.Pos {
+	return token.NoPos
 }

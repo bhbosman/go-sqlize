@@ -5,34 +5,43 @@ import (
 	"go/ast"
 )
 
-func (compiler *Compiler) findFunction(state State, node Node[ast.Expr]) (ExecuteStatement, Node[*ast.FuncType]) {
+func (compiler *Compiler) findFunction(state State, node Node[ast.Node]) (ExecuteStatement, Node[*ast.FuncType]) {
 	unk01, unk02 := compiler.internalFindFunction(0, state, node)
 	return unk01.(ExecuteStatement), unk02
 }
 
-func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node Node[ast.Expr]) (interface{}, Node[*ast.FuncType]) {
+func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node Node[ast.Node]) (interface{}, Node[*ast.FuncType]) {
 	switch item := node.Node.(type) {
 	case *ast.FuncLit:
-		param := ChangeParamNode[ast.Expr, *ast.FuncLit](node, item)
-		paramFuncType := ChangeParamNode[ast.Expr, *ast.FuncType](node, item.Type)
+		currentContext := GetCompilerState[*CurrentContext](state)
+		flattenValues := currentContext.flattenVariables()
+
+		fl := FuncLit{item.Type, item.Body, flattenValues}
+		param := ChangeParamNode[ast.Node, FuncLit](node, fl)
+		paramFuncType := ChangeParamNode[ast.Node, *ast.FuncType](node, item.Type)
+		es := compiler.onFuncLitExecutionStatement(param)
+		return compiler.initExecutionStatement(state, stackIndex, es, paramFuncType, nil)
+	case FuncLit:
+		param := ChangeParamNode[ast.Node, FuncLit](node, item)
+		paramFuncType := ChangeParamNode[ast.Node, *ast.FuncType](node, item.Type)
 		es := compiler.onFuncLitExecutionStatement(param)
 		return compiler.initExecutionStatement(state, stackIndex, es, paramFuncType, nil)
 	case *ast.IndexExpr:
-		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
-		indexParam := ChangeParamNode[ast.Expr, ast.Node](node, item.Index)
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
+		indexParam := ChangeParamNode[ast.Node, ast.Node](node, item.Index)
 		unk, unk2 := compiler.internalFindFunction(stackIndex+1, state, param)
 		return compiler.initExecutionStatement(state, stackIndex, unk, unk2, []Node[ast.Node]{indexParam})
 	case *ast.IndexListExpr:
-		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
 		var arrIndices []Node[ast.Node]
 		for _, index := range item.Indices {
-			indexParam := ChangeParamNode[ast.Expr, ast.Node](node, index)
+			indexParam := ChangeParamNode[ast.Node, ast.Node](node, index)
 			arrIndices = append(arrIndices, indexParam)
 		}
 		unk, unk2 := compiler.internalFindFunction(stackIndex+1, state, param)
 		return compiler.initExecutionStatement(state, stackIndex, unk, unk2, arrIndices)
 	case *ast.SelectorExpr:
-		param := ChangeParamNode[ast.Expr, ast.Expr](node, item.X)
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
 		unk, _ := compiler.internalFindFunction(stackIndex+1, state, param)
 		switch value := unk.(type) {
 		case ImportMapEntry:
@@ -84,8 +93,8 @@ func (compiler *Compiler) initExecutionStatement(state State, stackIndex int, un
 		return value(state, unk02), unk02
 	case Node[ast.Node]:
 		switch value02 := value.Node.(type) {
-		case ast.Expr:
-			param := ChangeParamNode(value, value02)
+		case ast.Node:
+			param := ChangeParamNode[ast.Node, ast.Node](value, value02)
 			unkValue, unkValue02 := compiler.internalFindFunction(stackIndex+1, state, param)
 			return compiler.initExecutionStatement(state, stackIndex, unkValue, unkValue02, typeParams)
 		default:

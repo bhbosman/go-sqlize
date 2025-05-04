@@ -16,6 +16,7 @@ type CurrentContext struct {
 	Mm         ValueInformationMap
 	TypeParams map[string]ITypeMapper
 	LocalTypes LocalTypesMap
+	Temp       bool
 	Parent     *CurrentContext
 }
 
@@ -29,6 +30,21 @@ func (self *CurrentContext) flattenTypeParams() map[string]ITypeMapper {
 	}()
 
 	for key, value := range self.TypeParams {
+		result[key] = value
+	}
+	return result
+}
+
+func (self *CurrentContext) flattenVariables() map[string]ValueInformation {
+	result := func() map[string]ValueInformation {
+		if self.Parent == nil {
+			return map[string]ValueInformation{}
+		} else {
+			return self.Parent.flattenVariables()
+		}
+	}()
+
+	for key, value := range self.Mm {
 		result[key] = value
 	}
 	return result
@@ -98,4 +114,27 @@ func (self *CurrentContext) FindTypeParam(value string) (ITypeMapper, bool) {
 		return nil, false
 	}
 	return self.Parent.FindTypeParam(value)
+}
+
+func (self *CurrentContext) ReplaceRoot(root *CurrentContext) {
+	if self.Parent != nil {
+		if !self.Parent.Temp {
+			self.Parent.ReplaceRoot(root)
+		} else {
+			root.Parent = self.Parent
+			self.Parent = root
+		}
+	} else {
+		self.Parent = root
+	}
+}
+
+func (self *CurrentContext) RemoveRoot(root *CurrentContext) {
+	if self.Parent != nil {
+		if self.Parent != root {
+			self.Parent.RemoveRoot(root)
+		} else {
+			self.Parent = root.Parent
+		}
+	}
 }

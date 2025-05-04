@@ -62,18 +62,18 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 					whatIsReturned |= resultTypeForBodyElsePart
 					if resultTypeForBodyElsePart == artReturn {
 						switch item := bodyElseValues[0].Node.(type) {
-						case *IfThenElseSingleValueCondition:
+						case IfThenElseSingleValueCondition:
 							for idx, stmt := range item.conditionalStatement {
 								var nodes []Node[ast.Node]
 								for _, value := range bodyElseValues {
-									pe := value.Node.(*IfThenElseSingleValueCondition)
+									pe := value.Node.(IfThenElseSingleValueCondition)
 									nodes = append(nodes, pe.conditionalStatement[idx].value)
 								}
 								conditionalStatementInstance := MultiValueCondition{stmt.condition, nodes}
 								conditionalStatement = append(conditionalStatement, conditionalStatementInstance)
 							}
 						default:
-							condition := ChangeParamNode[ast.Node, ast.Node](bodyElseValues[0], &ReflectValueExpression{reflect.ValueOf(true), boolValueKey})
+							condition := ChangeParamNode[ast.Node, ast.Node](bodyElseValues[0], &ReflectValueExpression{reflect.ValueOf(false), boolValueKey})
 							conditionalStatementInstance := MultiValueCondition{condition, bodyElseValues}
 							conditionalStatement = append(conditionalStatement, conditionalStatementInstance)
 						}
@@ -90,7 +90,7 @@ func (compiler *Compiler) createIfStmtExecution(node Node[*ast.IfStmt]) ExecuteS
 			}
 		}
 		state = SetCompilerState(newContext.Parent, state)
-		ite := &IfThenElseMultiValueCondition{conditionalStatement}
+		ite := IfThenElseMultiValueCondition{conditionalStatement}
 		resultValue := ChangeParamNode[*ast.IfStmt, ast.Node](node, ite)
 		return []Node[ast.Node]{resultValue}, artReturn
 	}

@@ -24,14 +24,21 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 				case rv.CanFloat():
 					rv = reflect.ValueOf(-1.0 * rv.Float())
 				}
-				rve := &ReflectValueExpression{rv, ValueKey{}}
+				rve := &ReflectValueExpression{rv, ValueKey{"STU", "STU"}}
 				rveNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, rve)
 				return []Node[ast.Node]{rveNode}, artValue
 			} else {
-				rve := &ReflectValueExpression{reflect.ValueOf(-1), ValueKey{}}
+				rve := &ReflectValueExpression{reflect.ValueOf(-1), uintValueKey}
 				rveNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, rve)
 
-				be := &BinaryExpr{arr[0].Node.Pos(), token.MUL, arr[0], rveNode}
+				typeMapperX, _ := arr[0].Node.(IFindTypeMapper).GetTypeMapper(state)
+				typeMapperX0 := typeMapperX[0]
+
+				typeMapperY, _ := rveNode.Node.(IFindTypeMapper).GetTypeMapper(state)
+				typeMapperY0 := typeMapperY[0]
+
+				binTypeMapper := compiler.calculateTypeMapperFn(state, token.MUL, typeMapperX0, typeMapperY0)
+				be := BinaryExpr{token.MUL, arr[0], rveNode, binTypeMapper}
 				beNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)
 				return []Node[ast.Node]{beNode}, artValue
 			}
@@ -42,10 +49,10 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 			es := compiler.findRhsExpression(tempState, param)
 			arr, _ := compiler.executeAndExpandStatement(tempState, typeParams, unprocessedArgs, es)
 			switch nodeItem := arr[0].Node.(type) {
-			case *BinaryExpr:
+			case BinaryExpr:
 				switch nodeItem.Op {
 				case token.NEQ:
-					be := &BinaryExpr{arr[0].Node.Pos(), token.EQL, nodeItem.left, nodeItem.right}
+					be := BinaryExpr{token.EQL, nodeItem.left, nodeItem.right, compiler.registerBool()(state, nil)}
 					beNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)
 					return []Node[ast.Node]{beNode}, artValue
 				default:
@@ -53,7 +60,7 @@ func (compiler *Compiler) createRhsUnaryExprExecution(node Node[*ast.UnaryExpr])
 				}
 			case EntityField:
 				right := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(true), boolValueKey})
-				be := &BinaryExpr{arr[0].Node.Pos(), token.NEQ, arr[0], right}
+				be := BinaryExpr{token.NEQ, arr[0], right, compiler.registerBool()(state, nil)}
 				beNode := ChangeParamNode[*ast.UnaryExpr, ast.Node](node, be)
 				return []Node[ast.Node]{beNode}, artValue
 			default:

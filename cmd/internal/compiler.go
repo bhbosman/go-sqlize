@@ -1,15 +1,21 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
+	"github.com/dominikbraun/graph"
 	"go/ast"
 	"go/token"
 	"io"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 )
 
+type iIsLiterateValue interface {
+	thisIsALiterateValue()
+}
 type GlobalMethodHandlerKey struct {
 	rt         reflect.Type
 	methodName string
@@ -25,7 +31,7 @@ const (
 	CompilerState_InitCalled CompilerState = 1 << iota
 )
 
-type ExecuteStatement func(state State, typeParams map[string]ITypeMapper, unprocessedArgs []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType)
+type ExecuteStatement func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType)
 
 type AssignStatement func(state State, value Node[ast.Node])
 
@@ -33,19 +39,46 @@ type OnCreateExecuteStatement func(state State, funcTypeNode Node[*ast.FuncType]
 
 type OnCreateType func(State, []ITypeMapper) ITypeMapper
 
-type functionInformation struct {
-	fn               OnCreateExecuteStatement
-	funcType         Node[*ast.FuncType]
-	funcTypeRequired bool
+type ISourceType interface {
+	sourceType()
 }
+
+type ITrailMarker interface {
+	ast.Node
+	trailMarker()
+}
+
+type joinType int
+
+const (
+	jtInner joinType = iota
+)
+
+type JoinInformation struct {
+	lhs       string
+	rhs       map[string]ISource
+	condition Node[ast.Node]
+	joinType  joinType
+}
+
+func (j JoinInformation) Dependencies() map[string]ISource {
+	return j.rhs
+}
+
+func (j JoinInformation) SourceName() string {
+	return j.lhs
+}
+
 type Compiler struct {
 	CompilerState   CompilerState
 	InitFunctions   []Node[*ast.FuncDecl]
 	GlobalFunctions map[ValueKey]functionInformation
 	GlobalTypes     map[ValueKey]OnCreateType
-	Sources         map[string]interface{}
-	NextAlias       int
-	Fileset         *token.FileSet
+	Sources         map[string]ISourceType
+	JoinInformation map[string]JoinInformation
+
+	NextAlias int
+	Fileset   *token.FileSet
 }
 
 func (compiler *Compiler) Init(
@@ -58,14 +91,9 @@ func (compiler *Compiler) Init(
 
 	compiler.CompilerState |= CompilerState_InitCalled
 	compiler.Fileset = Fileset
-	compiler.Sources = map[string]interface{}{}
-	compiler.GlobalTypes = map[ValueKey]OnCreateType{
-		ValueKey{"", "bool"}:        compiler.registerBool(),
-		ValueKey{"", "int"}:         compiler.registerInt(),
-		ValueKey{"", "string"}:      compiler.registerString(),
-		ValueKey{"", "float64"}:     compiler.registerFloat64(),
-		ValueKey{"reflect", "Type"}: compiler.registerReflectType(),
-	}
+	compiler.Sources = map[string]ISourceType{}
+	compiler.GlobalTypes = map[ValueKey]OnCreateType{}
+	compiler.JoinInformation = map[string]JoinInformation{}
 
 	compiler.GlobalFunctions = map[ValueKey]functionInformation{
 		ValueKey{"path/filepath", "Join"}: {compiler.pathFilepathJoinImplementation, Node[*ast.FuncType]{}, false},
@@ -179,30 +207,70 @@ const (
 
 func (compiler *Compiler) CompileFunc(state State, fn Node[*ast.FuncDecl]) ([]Node[ast.Node], CallArrayResultType) {
 	param := ChangeParamNode(fn, fn.Node.Body)
-	return compiler.executeBlockStmt(state, param, nil, nil)
+	return compiler.executeBlockStmt(state, param)
 }
 
-func (compiler *Compiler) AddEntitySource(rt ITypeMapper) string {
+func (compiler *Compiler) AddEntitySource(rt ITypeMapper, qs queryState) string {
 	compiler.NextAlias++
 	reference := fmt.Sprintf("T%v", compiler.NextAlias)
-	compiler.Sources[reference] = &EntitySource{rt}
+	compiler.Sources[reference] = &EntitySource{rt, qs}
 	return reference
 }
 
-func (compiler *Compiler) calculateSourceDependency(sources []string) []string {
+func (compiler *Compiler) findAdditionalSourcesFromJoins(sources map[string]ISource) map[string]ISource {
+	for _, valueOuter := range compiler.JoinInformation {
+		for keyInner, valueInner := range valueOuter.rhs {
+			sources[keyInner] = valueInner
+		}
+	}
+	for key, value := range compiler.JoinInformation {
+		if _, ok := sources[key]; ok {
+			sources[key] = value
+		}
+	}
 	return sources
 }
 
-func (compiler *Compiler) projectSources(w io.Writer, tabCount int, sources []string) {
-	_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
-	for _, source := range sources {
-		query, _ := compiler.Sources[source]
-		switch item := query.(type) {
-		case *EntitySource:
-			rt := item.rt.NodeType()
-			_, _ = io.WriteString(w, fmt.Sprintf("%v [%v]", rt.String(), source))
-		default:
-			panic("unhandled default case")
+func (compiler *Compiler) projectSources(w io.Writer, tabCount int, sources []ISource) {
+	if len(sources) > 0 {
+		for _, source := range sources {
+			switch item := source.(type) {
+			default:
+				panic("unhandled default case")
+			case PrimarySource:
+				_, _ = fmt.Fprintf(w, "from\n")
+				_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
+				query, _ := compiler.Sources[item.sourceName]
+				switch item := query.(type) {
+				default:
+					panic("unhandled default case")
+				case *EntitySource:
+					rt, _ := item.typeMapper.ActualType()
+					_, _ = io.WriteString(w, fmt.Sprintf("%v [%v]", rt.String(), source.SourceName()))
+				}
+				_, _ = fmt.Fprintf(w, "\n")
+			case JoinInformation:
+				switch item.joinType {
+				default:
+					panic("dd")
+				case jtInner:
+					_, _ = fmt.Fprintf(w, "inner join\n")
+					_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
+				}
+				query, _ := compiler.Sources[item.lhs]
+				switch item := query.(type) {
+				default:
+					panic("unhandled default case")
+				case *EntitySource:
+					rt, _ := item.typeMapper.ActualType()
+					_, _ = io.WriteString(w, fmt.Sprintf("%v [%v]", rt.String(), source.SourceName()))
+				}
+				_, _ = fmt.Fprintf(w, "\n")
+				_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
+				_, _ = fmt.Fprintf(w, "on\n")
+				_, _ = io.WriteString(w, strings.Repeat("\t", tabCount+1))
+				compiler.internalProjectNode(w, tabCount+1, item.condition)
+			}
 		}
 	}
 }
@@ -279,7 +347,7 @@ func (compiler *Compiler) expandNodeWithSelector(node Node[ast.Node], sel *ast.I
 			return nodeItem.Rv.FieldByName(sel.Name).Interface().(Node[ast.Node]), true
 		}
 
-	case *IfThenElseSingleValueCondition:
+	case IfThenElseSingleValueCondition:
 		var singleValueConditions []SingleValueCondition
 		for _, conditionalStatement := range nodeItem.conditionalStatement {
 
@@ -287,11 +355,13 @@ func (compiler *Compiler) expandNodeWithSelector(node Node[ast.Node], sel *ast.I
 				value := rve.Value.FieldByName(sel.Name).Interface().(Node[ast.Node])
 				singleValueCondition := SingleValueCondition{conditionalStatement.condition, value}
 				singleValueConditions = append(singleValueConditions, singleValueCondition)
-			} else if _, ok := conditionalStatement.value.Node.(*IfThenElseSingleValueCondition); ok {
+			} else if _, ok := conditionalStatement.value.Node.(IfThenElseSingleValueCondition); ok {
 				return node, false
+			} else {
+				panic("unhandled default case")
 			}
 		}
-		ifThenElseSingleValueCondition := &IfThenElseSingleValueCondition{singleValueConditions}
+		ifThenElseSingleValueCondition := IfThenElseSingleValueCondition{singleValueConditions}
 		return ChangeParamNode[ast.Node, ast.Node](node, ifThenElseSingleValueCondition), true
 	}
 	return node, false
@@ -346,15 +416,11 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 				Anonymous: false,
 			}
 			structFields = append(structFields, structField)
-
 		}
 		return reflect.StructOf(structFields)
 	}
 
-	fn := func(node Node[*ast.StructType], arr []struct {
-		name string
-		node Node[ast.Node]
-	}) []FieldInformation {
+	fn := func(node Node[*ast.StructType], arr []ParamNameAndTypes) []FieldInformation {
 		var result []FieldInformation
 		for _, ss := range arr {
 			field := FieldInformation{ss.name, ss.node}
@@ -362,7 +428,7 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 		}
 		return result
 	}
-	fieldList := fn(node, findAllParamNameAndTypes(ChangeParamNode(node, node.Node.Fields)))
+	fieldList := fn(node, findAllParamNameAndTypes(ChangeParamNode(node, node.Node.Fields)).arr)
 	nodeRt := structTypeToType(fieldList, StructTypeWithNodeType)
 	rtWithITypeMapper := structTypeToType(fieldList, StructTypeWithTypeMapper)
 	actualTypeRt := structTypeToType(fieldList, StructTypeWithActualTypes)
@@ -386,17 +452,24 @@ func (compiler *Compiler) builtInStructMethods(rv reflect.Value) OnCreateExecute
 	}
 }
 
-func findAllParamNameAndTypes(node Node[*ast.FieldList]) []struct {
+type ParamNameAndTypes struct {
 	name string
 	node Node[ast.Node]
-} {
-	result := make([]struct {
-		name string
-		node Node[ast.Node]
-	}, 0, node.Node.NumFields())
+}
 
+type findAllParamNameAndTypesResult struct {
+	arr        []ParamNameAndTypes
+	isVariadic bool
+}
+
+func findAllParamNameAndTypes(node Node[*ast.FieldList]) findAllParamNameAndTypesResult {
+	result := make([]ParamNameAndTypes, 0, node.Node.NumFields())
+	isVariadic := false
 	if node.Node != nil {
-		for _, g := range node.Node.List {
+		for idx, g := range node.Node.List {
+			if idx == node.Node.NumFields()-1 {
+				_, isVariadic = g.Type.(*ast.Ellipsis)
+			}
 			if len(g.Names) == 0 {
 				result = append(result, struct {
 					name string
@@ -413,13 +486,13 @@ func findAllParamNameAndTypes(node Node[*ast.FieldList]) []struct {
 			}
 		}
 	}
-	return result
+	return findAllParamNameAndTypesResult{result, isVariadic}
 }
 
 func (compiler *Compiler) executeFuncLit(state State, funcLit Node[*ast.FuncLit], arguments []Node[ast.Node], typeParams map[string]ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
-	nameAndParams := findAllParamNameAndTypes(ChangeParamNode(funcLit, funcLit.Node.Type.Params))
+	nameAndParamsResult := findAllParamNameAndTypes(ChangeParamNode(funcLit, funcLit.Node.Type.Params))
 	mm := ValueInformationMap{}
-	for i, param := range nameAndParams {
+	for i, param := range nameAndParamsResult.arr {
 		mm[param.name] = ValueInformation{arguments[i]}
 	}
 	newContext := &CurrentContext{
@@ -430,7 +503,102 @@ func (compiler *Compiler) executeFuncLit(state State, funcLit Node[*ast.FuncLit]
 	}
 	state = SetCompilerState(newContext, state)
 	param := ChangeParamNode[*ast.FuncLit, *ast.BlockStmt](funcLit, funcLit.Node.Body)
-	values, _ := compiler.executeBlockStmt(state, param, typeParams, arguments)
+	values, _ := compiler.executeBlockStmt(state, param)
 	state = SetCompilerState(newContext.Parent, state)
 	return values, artValue
+}
+
+func (compiler *Compiler) findAdditionalSourcesFromAssociations(sources map[string]ISource) map[string]ISource {
+	return sources
+}
+
+func (compiler *Compiler) calculateSourcesOrder(sources map[string]ISource) []ISource {
+	sourceGraph := graph.New[string, ISource](
+		func(source ISource) string {
+			return source.SourceName()
+		},
+		graph.Directed(),
+		graph.Acyclic(),
+		graph.PreventCycles())
+
+	for sourceKey, sourceValue := range sources {
+		err := sourceGraph.AddVertex(sourceValue)
+		if err != nil {
+			switch {
+			default:
+				panic(err)
+			case errors.Is(err, graph.ErrVertexAlreadyExists):
+				// do nothing
+				break
+			}
+		}
+		for dependencyKey, dependencyValue := range sourceValue.Dependencies() {
+			err := sourceGraph.AddVertex(dependencyValue)
+			if err != nil {
+				switch {
+				default:
+					panic(err)
+				case errors.Is(err, graph.ErrVertexAlreadyExists):
+					// do nothing
+					break
+				}
+			}
+			err = sourceGraph.AddEdge(sourceKey, dependencyKey)
+			if err != nil {
+				switch {
+				default:
+					panic(err)
+				case errors.Is(err, graph.ErrEdgeAlreadyExists):
+					// do nothing
+					break
+				}
+			}
+		}
+	}
+	predecessorMap, err := sourceGraph.AdjacencyMap()
+	if err != nil {
+		panic(err)
+	}
+	ss := compiler.processGraphMap(nil, predecessorMap)
+	var result []ISource
+	for _, s := range ss {
+		result = append(result, sources[s])
+	}
+
+	return result
+}
+
+func (compiler *Compiler) processGraphMap(ss []string, graphMap map[string]map[string]graph.Edge[string]) []string {
+	findSourcesWithNoPredecessor := func(predecessorMap map[string]map[string]graph.Edge[string]) []string {
+		var result []string
+		for key, value := range predecessorMap {
+			if len(value) == 0 {
+				result = append(result, key)
+			}
+		}
+		return result
+	}
+
+	removePredecessorFromMap := func(
+		key string,
+		predecessorMap map[string]map[string]graph.Edge[string]) map[string]map[string]graph.Edge[string] {
+		delete(predecessorMap, key)
+		for _, value := range predecessorMap {
+			if _, ok := value[key]; ok {
+				delete(value, key)
+			}
+		}
+		return predecessorMap
+	}
+
+	noPredecessors := findSourcesWithNoPredecessor(graphMap)
+	for _, predecessor := range noPredecessors {
+		graphMap = removePredecessorFromMap(predecessor, graphMap)
+	}
+	sort.Strings(noPredecessors)
+	ss = append(ss, noPredecessors...)
+	if len(graphMap) > 0 {
+		return compiler.processGraphMap(noPredecessors, graphMap)
+	}
+	return ss
 }

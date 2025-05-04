@@ -11,7 +11,8 @@ func (compiler *Compiler) runBasicLitNode(state State, node Node[*ast.BasicLit])
 	switch node.Node.Kind {
 	case token.INT:
 		intValue, _ := strconv.ParseInt(node.Node.Value, 10, 64)
-		param := ChangeParamNode[*ast.BasicLit, ast.Node](node, &ReflectValueExpression{reflect.ValueOf(intValue), intValueKey})
+		rv := reflect.ValueOf(intValue).Convert(reflect.TypeFor[int]())
+		param := ChangeParamNode[*ast.BasicLit, ast.Node](node, &ReflectValueExpression{rv, intValueKey})
 		return []Node[ast.Node]{param}, artValue
 	case token.FLOAT:
 		floatValue, _ := strconv.ParseFloat(node.Node.Value, 64)

@@ -9,25 +9,32 @@ import (
 	"strings"
 )
 
-func (compiler *Compiler) trailRecordToSql(item *TrailRecord) string {
+func (compiler *Compiler) trailRecordToSelectStatement(node Node[*TrailRecord]) string {
 	sb := &strings.Builder{}
-	sources := compiler.findSources(item)
-	sources = compiler.calculateSourceDependency(sources)
+	sources := compiler.findSourcesFromNode(ChangeParamNode[*TrailRecord, ast.Node](node, node.Node))
+	sources = compiler.findAdditionalSourcesFromJoins(sources)
+	sources = compiler.findAdditionalSourcesFromAssociations(sources)
+	orderedSources := compiler.calculateSourcesOrder(sources)
+
 	_, _ = fmt.Fprintf(sb, "select\n")
-	compiler.projectTrailRecord(sb, 1, item)
-	if len(sources) > 0 {
-		_, _ = fmt.Fprintf(sb, "from\n")
-		compiler.projectSources(sb, 1, sources)
-		_, _ = fmt.Fprintf(sb, "\n")
-	}
+	compiler.projectTrailNode(sb, 1, node)
+	compiler.projectSources(sb, 1, orderedSources)
 	s := sb.String()
 	return s
+
 }
 
-func (compiler *Compiler) projectTrailRecord(w io.Writer, tabCount int, item *TrailRecord) {
-	for idx := 0; idx < item.Value.NumField(); idx++ {
-		if node, ok := item.Value.Field(idx).Interface().(Node[ast.Node]); ok {
-			compiler.internalProjectNode(w, tabCount, idx == item.Value.NumField()-1, 0, item.Value.Type().Field(idx).Name, node)
+func (compiler *Compiler) projectTrailNode(w io.Writer, tabCount int, item Node[*TrailRecord]) {
+	for idx := 0; idx < item.Node.Value.NumField(); idx++ {
+		if node, ok := item.Node.Value.Field(idx).Interface().(Node[ast.Node]); ok && node.Valid {
+			last := idx == item.Node.Value.NumField()-1
+			_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
+			compiler.internalProjectNode(w, tabCount, node)
+			_, _ = io.WriteString(w, fmt.Sprintf(" as %v", item.Node.Value.Type().Field(idx).Name))
+			if !last {
+				_, _ = io.WriteString(w, ",")
+			}
+			_, _ = io.WriteString(w, "\n")
 		}
 	}
 }
@@ -61,47 +68,52 @@ func (compiler *Compiler) nodeOperator(op token.Token) string {
 	}
 }
 
-func (compiler *Compiler) internalProjectRv(w io.Writer, tabCount int, last bool, stackCount int, name string, rv reflect.Value) {
-	kind := rv.Kind()
+func (compiler *Compiler) internalProjectRv(w io.Writer, tabCount int, node Node[*ReflectValueExpression]) {
+	kind := node.Node.Rv.Kind()
 	switch {
 	case kind == reflect.Invalid:
 		_, _ = io.WriteString(w, "nil")
 	case kind == reflect.String:
-		_, _ = io.WriteString(w, fmt.Sprintf("'%v'", rv.String()))
-	case rv.CanInt():
-		_, _ = io.WriteString(w, fmt.Sprintf("%v", rv.Int()))
-	case rv.CanUint():
-		_, _ = io.WriteString(w, fmt.Sprintf("%v", rv.Int()))
-	case rv.CanFloat():
-		_, _ = io.WriteString(w, fmt.Sprintf("%v", rv.Float()))
+		_, _ = io.WriteString(w, fmt.Sprintf("'%v'", node.Node.Rv.String()))
+	case node.Node.Rv.CanInt():
+		_, _ = io.WriteString(w, fmt.Sprintf("%v", node.Node.Rv.Int()))
+	case node.Node.Rv.CanUint():
+		_, _ = io.WriteString(w, fmt.Sprintf("%v", node.Node.Rv.Int()))
+	case node.Node.Rv.CanFloat():
+		_, _ = io.WriteString(w, fmt.Sprintf("%v", node.Node.Rv.Float()))
 	case kind == reflect.Interface:
 		break
 	case kind == reflect.Map:
 		break
 	case kind == reflect.Pointer:
-		compiler.internalProjectRv(w, tabCount, last, stackCount+1, name, rv.Elem())
+
+		compiler.internalProjectRv(w, tabCount, ChangeParamNode(node, &ReflectValueExpression{node.Node.Rv.Elem(), node.Node.Vk}))
 		break
 	case kind == reflect.Bool:
-		_, _ = io.WriteString(w, fmt.Sprintf("%v", rv.Bool()))
+		_, _ = io.WriteString(w, fmt.Sprintf("%v", node.Node.Rv.Bool()))
 	case kind == reflect.Struct:
-		if rv.CanInterface() {
-			unk := rv.Interface()
+		if node.Node.Rv.CanInterface() {
+			unk := node.Node.Rv.Interface()
 			switch expr := unk.(type) {
 			case Node[ast.Node]:
-				compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, expr)
+				compiler.internalProjectNode(w, tabCount, expr)
 			default:
-				if dataType, assigned, rvSomeType := compiler.isValueSomeDataType(rv); dataType {
-					sss, _ := compiler.extractSomeDataTag(rv, "TData")
+				if dataType, assigned, rvSomeType := compiler.isValueSomeDataType(node.Node.Rv); dataType {
+					sss, _ := compiler.extractSomeDataTag(node.Node.Rv, "TData")
 					_, _ = io.WriteString(w, fmt.Sprintf("/* Some[%v](assigned: %v) */\n", sss, assigned))
 					_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
 
 					if assigned {
-						compiler.internalProjectRv(w, tabCount, last, stackCount+1, name, rvSomeType)
+
+						compiler.internalProjectRv(w, tabCount, ChangeParamNode(node, &ReflectValueExpression{rvSomeType, ValueKey{"ccccc", "ddddd"}}))
 					} else {
 						_, _ = io.WriteString(w, "nil")
 					}
 				} else {
-					compiler.internalProjectUnk(w, tabCount, last, stackCount+1, name, rv.Interface())
+					if node00, ok := node.Node.Rv.Interface().(ast.Node); ok {
+						compiler.internalProjectUnk(w, tabCount, ChangeParamNode[*ReflectValueExpression, ast.Node](node, node00))
+					}
+
 				}
 			}
 		} else {
@@ -112,14 +124,14 @@ func (compiler *Compiler) internalProjectRv(w io.Writer, tabCount int, last bool
 	}
 }
 
-func (compiler *Compiler) internalProjectUnk(w io.Writer, tabCount int, last bool, stackCount int, name string, node interface{}) {
-	switch nodeItem := node.(type) {
+func (compiler *Compiler) internalProjectUnk(w io.Writer, tabCount int, node Node[ast.Node]) {
+	switch nodeItem := node.Node.(type) {
 	default:
 		panic("implement me")
 	case *SupportedFunction:
 		_, _ = io.WriteString(w, fmt.Sprintf("%v(", nodeItem.functionName))
 		for idx, param := range nodeItem.params {
-			compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, param)
+			compiler.internalProjectNode(w, tabCount, param)
 			if idx != len(nodeItem.params)-1 {
 				_, _ = io.WriteString(w, ", ")
 			}
@@ -129,18 +141,15 @@ func (compiler *Compiler) internalProjectUnk(w io.Writer, tabCount int, last boo
 		_, _ = io.WriteString(w, "(")
 		for idx, rhs := range nodeItem.Rhs {
 			_, _ = io.WriteString(w, "(")
-			compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, nodeItem.Lhs)
+			compiler.internalProjectNode(w, tabCount, nodeItem.Lhs)
 			_, _ = io.WriteString(w, compiler.nodeOperator(nodeItem.LhsToRhsOp))
-			compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, rhs)
+			compiler.internalProjectNode(w, tabCount, rhs)
 			_, _ = io.WriteString(w, ")")
 			if idx != len(nodeItem.Rhs)-1 {
 				_, _ = io.WriteString(w, compiler.nodeOperator(nodeItem.betweenTerminalsOp))
 			}
 		}
 		_, _ = io.WriteString(w, ")")
-
-	case *IfThenElseSingleValueCondition:
-		compiler.internalProjectUnk(w, tabCount, last, stackCount+1, name, *nodeItem)
 	case IfThenElseSingleValueCondition:
 		_, _ = io.WriteString(w, "case\n")
 
@@ -149,21 +158,21 @@ func (compiler *Compiler) internalProjectUnk(w io.Writer, tabCount int, last boo
 			_, isLiteral := isLiterateValue(expr.condition)
 			if !isLiteral {
 				_, _ = io.WriteString(w, fmt.Sprintf("%vwhen ", strings.Repeat("\t", tabCount)))
-				compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, expr.condition)
+				compiler.internalProjectNode(w, tabCount, expr.condition)
 				_, _ = io.WriteString(w, " then\n")
 			} else {
 				_, _ = io.WriteString(w, fmt.Sprintf("%velse\n", strings.Repeat("\t", tabCount)))
 			}
 			tabCount++
 			_, _ = io.WriteString(w, fmt.Sprintf("%v", strings.Repeat("\t", tabCount)))
-			compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, expr.value)
+			compiler.internalProjectNode(w, tabCount, expr.value)
 			tabCount--
 			_, _ = io.WriteString(w, "\n")
 			tabCount--
 		}
 		_, _ = io.WriteString(w, fmt.Sprintf("%vend", strings.Repeat("\t", tabCount)))
-	case *MultiBinaryExpr:
-		compiler.internalProjectUnk(w, tabCount, last, stackCount+1, name, *nodeItem)
+	//case *MultiBinaryExpr:
+	//	compiler.internalProjectUnk(w, tabCount, stackCount+1, *nodeItem)
 	case MultiBinaryExpr:
 		_, _ = io.WriteString(w, "(")
 		for idx, expr := range nodeItem.expressions {
@@ -177,32 +186,30 @@ func (compiler *Compiler) internalProjectUnk(w io.Writer, tabCount int, last boo
 					panic("unhandled default case")
 				}
 			}
-			compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, expr)
+			compiler.internalProjectNode(w, tabCount, expr)
 		}
 		_, _ = io.WriteString(w, ")")
-	case *BinaryExpr:
-		compiler.internalProjectUnk(w, tabCount, last, stackCount+1, name, *nodeItem)
 	case BinaryExpr:
 		_, _ = io.WriteString(w, "(")
-		compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, nodeItem.left)
+		compiler.internalProjectNode(w, tabCount, nodeItem.left)
 		_, _ = io.WriteString(w, compiler.nodeOperator(nodeItem.Op))
-		compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, nodeItem.right)
+		compiler.internalProjectNode(w, tabCount, nodeItem.right)
 		_, _ = io.WriteString(w, ")")
-	case *EntityField:
-		compiler.internalProjectUnk(w, tabCount, last, stackCount+1, name, *nodeItem)
+	//case *EntityField:
+	//	compiler.internalProjectUnk(w, tabCount, stackCount+1, *nodeItem)
 	case EntityField:
 		_, _ = io.WriteString(w, fmt.Sprintf("[%v].[%v]", nodeItem.alias, nodeItem.field))
 	case *CheckForNotNullExpression:
-		compiler.internalProjectUnk(w, tabCount, last, stackCount+1, name, *nodeItem)
+		compiler.internalProjectUnk(w, tabCount, ChangeParamNode[ast.Node, ast.Node](node, *nodeItem))
 	case CheckForNotNullExpression:
 		_, _ = io.WriteString(w, "(")
-		compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, nodeItem.node)
+		compiler.internalProjectNode(w, tabCount, nodeItem.node)
 		_, _ = io.WriteString(w, " is not null)")
 	case *coercion:
-		compiler.internalProjectUnk(w, tabCount, last, stackCount+1, name, *nodeItem)
+		compiler.internalProjectUnk(w, tabCount, ChangeParamNode[ast.Node, ast.Node](node, *nodeItem))
 	case coercion:
 		_, _ = io.WriteString(w, "CAST(")
-		compiler.internalProjectNode(w, tabCount, last, stackCount+1, name, nodeItem.Node)
+		compiler.internalProjectNode(w, tabCount, nodeItem.Node)
 		_, _ = io.WriteString(w, " as ")
 		switch nodeItem.to {
 		case "float64":
@@ -218,28 +225,19 @@ func (compiler *Compiler) internalProjectUnk(w io.Writer, tabCount int, last boo
 	}
 }
 
-func (compiler *Compiler) internalProjectNode(w io.Writer, tabCount int, last bool, stackCount int, name string, node Node[ast.Node]) {
+func (compiler *Compiler) internalProjectNode(w io.Writer, tabCount int, node Node[ast.Node]) {
 	if !node.Valid {
 		return
 	}
-	if stackCount == 0 {
-		_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
-	}
 	switch nodeItem := node.Node.(type) {
 	default:
-		compiler.internalProjectUnk(w, tabCount, last, stackCount+1, name, node.Node)
+		compiler.internalProjectUnk(w, tabCount, node)
 	case *ReflectValueExpression:
 		kind := nodeItem.Rv.Kind()
 		switch kind {
 		default:
-			compiler.internalProjectRv(w, tabCount, last, stackCount+1, name, nodeItem.Rv)
+
+			compiler.internalProjectRv(w, tabCount, ChangeParamNode(node, nodeItem))
 		}
-	}
-	if stackCount == 0 {
-		_, _ = io.WriteString(w, fmt.Sprintf(" as %v", name))
-		if !last {
-			_, _ = io.WriteString(w, ",")
-		}
-		_, _ = io.WriteString(w, "\n")
 	}
 }

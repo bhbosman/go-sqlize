@@ -5,27 +5,40 @@ import (
 	"reflect"
 )
 
-func (compiler *Compiler) findSources(item *TrailRecord) []string {
-	m := map[string]bool{}
-	for idx := 0; idx < item.Value.NumField(); idx++ {
-		if node, ok := item.Value.Field(idx).Interface().(Node[ast.Node]); ok {
-			compiler.internalFindSources(node, m)
-		}
-	}
-	ss := make([]string, 0, len(m))
-	for key, _ := range m {
-		ss = append(ss, key)
-	}
-	return ss
+type ISource interface {
+	SourceName() string
+	Dependencies() map[string]ISource
 }
 
-func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]bool) {
+type PrimarySource struct {
+	sourceName string
+}
+
+func (ps PrimarySource) Dependencies() map[string]ISource {
+	return map[string]ISource{}
+}
+
+func (ps PrimarySource) SourceName() string {
+	return ps.sourceName
+}
+
+func (compiler *Compiler) findSourcesFromNode(node Node[ast.Node]) map[string]ISource {
+	m := map[string]bool{}
+	compiler.internalFindSourcesFromNode(node, m)
+	arr := map[string]ISource{}
+	for key, _ := range m {
+		arr[key] = PrimarySource{key}
+	}
+	return arr
+}
+
+func (compiler *Compiler) internalFindSourcesFromNode(node Node[ast.Node], m map[string]bool) {
 	if !node.Valid {
 		return
 	}
 	switch nodeItem := node.Node.(type) {
 	case *CheckForNotNullExpression:
-		compiler.internalFindSources(nodeItem.node, m)
+		compiler.internalFindSourcesFromNode(nodeItem.node, m)
 
 	case EntityField:
 		m[nodeItem.alias] = true
@@ -33,34 +46,34 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 	case *ast.BasicLit:
 		break
 	case coercion:
-		compiler.internalFindSources(nodeItem.Node, m)
+		compiler.internalFindSourcesFromNode(nodeItem.Node, m)
 		break
-	case *BinaryExpr:
-		compiler.internalFindSources(nodeItem.left, m)
-		compiler.internalFindSources(nodeItem.right, m)
+	case BinaryExpr:
+		compiler.internalFindSourcesFromNode(nodeItem.left, m)
+		compiler.internalFindSourcesFromNode(nodeItem.right, m)
 		break
 	case *ReflectValueExpression:
 		// nothing to do
 		break
 	case *SupportedFunction:
 		for _, param := range nodeItem.params {
-			compiler.internalFindSources(param, m)
+			compiler.internalFindSourcesFromNode(param, m)
 		}
 		break
 	case MultiBinaryExpr:
 		for _, expression := range nodeItem.expressions {
-			compiler.internalFindSources(expression, m)
+			compiler.internalFindSourcesFromNode(expression, m)
 		}
-	case *IfThenElseSingleValueCondition:
+	case IfThenElseSingleValueCondition:
 		for _, conditionalStatement := range nodeItem.conditionalStatement {
-			compiler.internalFindSources(conditionalStatement.condition, m)
-			compiler.internalFindSources(conditionalStatement.value, m)
+			compiler.internalFindSourcesFromNode(conditionalStatement.condition, m)
+			compiler.internalFindSourcesFromNode(conditionalStatement.value, m)
 		}
 		break
 	case *LhsToMultipleRhsOperator:
-		compiler.internalFindSources(nodeItem.Lhs, m)
+		compiler.internalFindSourcesFromNode(nodeItem.Lhs, m)
 		for _, rhs := range nodeItem.Rhs {
-			compiler.internalFindSources(rhs, m)
+			compiler.internalFindSourcesFromNode(rhs, m)
 		}
 	case *TrailRecord:
 		rv := nodeItem.Value
@@ -70,7 +83,7 @@ func (compiler *Compiler) internalFindSources(node Node[ast.Node], m map[string]
 				if !rvIdxField.Valid {
 					continue
 				}
-				compiler.internalFindSources(rvIdxField, m)
+				compiler.internalFindSourcesFromNode(rvIdxField, m)
 			}
 		}
 	default:

@@ -31,7 +31,7 @@ func (impl libDictionaryLookupImplementation) Run(state State, typeParams map[st
 			inputData := arguments[1]
 			expressions := impl.walk(inputData, rvKey)
 
-			mbe := MultiBinaryExpr{token.LAND, expressions}
+			mbe := MultiBinaryExpr{token.LAND, expressions, impl.compiler.registerBool()(state, nil)}
 			mbeNode := ChangeParamNode[ast.Node, ast.Node](impl.state.currentNode, mbe)
 
 			singleValueCondition := SingleValueCondition{mbeNode, rvValue.Interface().(Node[ast.Node])}
@@ -44,17 +44,26 @@ func (impl libDictionaryLookupImplementation) Run(state State, typeParams map[st
 		singleValueCondition := SingleValueCondition{condition: condition, value: rvDefault}
 		conditionalStatement = append(conditionalStatement, singleValueCondition)
 	}
-	ite := &IfThenElseSingleValueCondition{conditionalStatement}
+	ite := IfThenElseSingleValueCondition{conditionalStatement}
 	resultValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, ite)
 	return []Node[ast.Node]{resultValue}, artReturn
 }
 
 func (impl libDictionaryLookupImplementation) walk(inputData Node[ast.Node], rvKey reflect.Value) []Node[ast.Node] {
 	switch {
-	case rvKey.CanFloat() || rvKey.CanInt() || rvKey.Kind() == reflect.String:
+	case rvKey.CanFloat() || rvKey.CanInt() || rvKey.CanUint() || rvKey.Kind() == reflect.String:
 		left := inputData
-		right := ChangeParamNode[ast.Node, ast.Node](impl.state.currentNode, &ReflectValueExpression{rvKey, ValueKey{}})
-		be := &BinaryExpr{token.NoPos, token.EQL, left, right}
+		right := ChangeParamNode[ast.Node, ast.Node](impl.state.currentNode, &ReflectValueExpression{rvKey, ValueKey{"VWX", "VWX"}})
+
+		typeMapperX, _ := left.Node.(IFindTypeMapper).GetTypeMapper(impl.state)
+		typeMapperX0 := typeMapperX[0]
+
+		typeMapperY, _ := right.Node.(IFindTypeMapper).GetTypeMapper(impl.state)
+		typeMapperY0 := typeMapperY[0]
+
+		binTypeMapper := impl.compiler.calculateTypeMapperFn(impl.state, token.MUL, typeMapperX0, typeMapperY0)
+
+		be := BinaryExpr{token.EQL, left, right, binTypeMapper}
 		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](impl.state.currentNode, be)}
 	case rvKey.Kind() == reflect.Struct:
 		switch leftItem := inputData.Node.(type) {

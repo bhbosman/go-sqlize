@@ -46,7 +46,7 @@ func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) 
 
 		paramBody := ChangeParamNode(node, node.Node.Body)
 		tempState := state.setCurrentNode(ChangeParamNode[*ast.SwitchStmt, ast.Node](node, node.Node.Body))
-		stmt, resultType := compiler.executeBlockStmt(tempState, paramBody, typeParams, unprocessedArgs)
+		stmt, resultType := compiler.executeBlockStmt(tempState, paramBody)
 		if resultType != artReturnAndContinue {
 			panic("need a return statement")
 		}
@@ -84,7 +84,7 @@ func (compiler *Compiler) createSwitchStmtExecution(node Node[*ast.SwitchStmt]) 
 				panic("need a case statement")
 			}
 		}
-		ite := &IfThenElseMultiValueCondition{conditionalStatement}
+		ite := IfThenElseMultiValueCondition{conditionalStatement}
 		resultValue := ChangeParamNode[*ast.SwitchStmt, ast.Node](node, ite)
 		return []Node[ast.Node]{resultValue}, artReturn
 	}

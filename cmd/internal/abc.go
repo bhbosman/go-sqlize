@@ -1,10 +1,12 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/ugurcsen/gods-generic/queues"
 	"go/ast"
 	"go/token"
+	"strconv"
 )
 
 type ValueKey struct {
@@ -43,7 +45,24 @@ func CreateFciStmtNode(importMap FileImports,
 	absPath string,
 	relPath string,
 	fileName string,
-) *FolderContextInformation {
+) *ast.AssignStmt {
 	fci := &FolderContextInformation{nodePos, fileName, absPath, relPath, importMap}
-	return fci
+	marshal, err := json.Marshal(fci)
+	if err != nil {
+		return nil
+	}
+	m := []struct {
+		key   string
+		value string
+	}{
+		{"json", string(marshal)},
+	}
+	var lhs []ast.Expr
+	var rhs []ast.Expr
+	for i := 0; i < len(m); i++ {
+		lhs = append(lhs, &ast.Ident{nodePos, m[i].key, nil})
+		quoteValue := strconv.Quote(m[i].value)
+		rhs = append(rhs, &ast.BasicLit{nodePos, token.STRING, quoteValue})
+	}
+	return &ast.AssignStmt{lhs, nodePos, 0xFFFF, rhs}
 }

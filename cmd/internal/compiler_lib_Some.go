@@ -17,6 +17,9 @@ func (compiler *Compiler) registerSomeType() OnCreateType {
 
 func (compiler *Compiler) createSomeType(state State, typeParams []ITypeMapper) ITypeMapper {
 	typ, vk := typeParams[0].ActualType()
+	if vk.Key == "" {
+		println(vk.Key)
+	}
 	structFieldTag := reflect.StructTag(fmt.Sprintf(`Type:"%v" TData:"%v"`, someTypeType, vk.String()))
 	var sfArr []reflect.StructField
 	sfAssigned := reflect.StructField{Name: "Assigned", Type: reflect.TypeOf(true), Tag: structFieldTag}
@@ -27,7 +30,6 @@ func (compiler *Compiler) createSomeType(state State, typeParams []ITypeMapper) 
 		return rt
 	}
 	return &ReflectTypeHolder{
-		nil,
 		fn,
 		func() (reflect.Type, ValueKey) {
 			return rt, SomeValueKey
@@ -41,12 +43,19 @@ func (compiler *Compiler) createSomeType(state State, typeParams []ITypeMapper) 
 
 const someTypeType = "__built_in_Some_Type__"
 
-func (compiler *Compiler) isValueSomeDataType(rv reflect.Value) (bool, bool, reflect.Value) {
-	rt := rv.Type()
+func (compiler *Compiler) isTypeSomeDataType(rt reflect.Type) bool {
 	if rt.Kind() == reflect.Struct && rt.NumField() >= 2 && rt.Name() == "" {
 		if sv := rt.Field(0).Tag.Get("Type"); sv == someTypeType {
-			return true, rv.FieldByName("Assigned").Bool(), rv.FieldByName("Value")
+			return true
 		}
+	}
+	return false
+}
+
+func (compiler *Compiler) isValueSomeDataType(rv reflect.Value) (bool, bool, reflect.Value) {
+	rt := rv.Type()
+	if compiler.isTypeSomeDataType(rt) {
+		return true, rv.FieldByName("Assigned").Bool(), rv.FieldByName("Value")
 	}
 	return false, false, reflect.Value{}
 }
@@ -54,6 +63,15 @@ func (compiler *Compiler) isValueSomeDataType(rv reflect.Value) (bool, bool, ref
 func (compiler *Compiler) extractSomeDataType(rv reflect.Value) (reflect.Type, bool) {
 	if ok, _, _ := compiler.isValueSomeDataType(rv); ok {
 		return rv.FieldByName("Value").Type(), true
+	}
+	return nil, false
+}
+
+func (compiler *Compiler) extractSomeDataTypeMapper(rt reflect.Type) (ITypeMapper, bool) {
+	if compiler.isTypeSomeDataType(rt) {
+		if sf, ok := rt.FieldByName("Value"); ok {
+			return &WrapReflectTypeInMapper{sf.Type, ValueKey{}}, true
+		}
 	}
 	return nil, false
 }
@@ -85,7 +103,7 @@ func (compiler *Compiler) getGetSomeDataNCompiled(state State, funcTypeNode Node
 				binaryOperations = append(binaryOperations, item)
 			}
 		}
-		return ChangeParamNode[ast.Node, ast.Node](state.currentNode, MultiBinaryExpr{token.LAND, binaryOperations})
+		return ChangeParamNode[ast.Node, ast.Node](state.currentNode, MultiBinaryExpr{token.LAND, binaryOperations, compiler.registerBool()(state, nil)})
 	}
 	return append(compiledArguments, fn()), artValue
 }

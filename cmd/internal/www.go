@@ -26,5 +26,3 @@ func (fci *FolderContextInformation) Pos() token.Pos {
 func (fci *FolderContextInformation) End() token.Pos {
 	return fci.Position
 }
-
-func (fci *FolderContextInformation) StmtNode() {}

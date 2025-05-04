@@ -37,10 +37,6 @@ func (typeMapperForStruct TypeMapperForStruct) ActualType() (reflect.Type, Value
 	return typeMapperForStruct.actualTypeRt, typeMapperForStruct.vk
 }
 
-func (typeMapperForStruct TypeMapperForStruct) MapperKeyType() reflect.Type {
-	return typeMapperForStruct.actualTypeRt
-}
-
 func (typeMapperForStruct TypeMapperForStruct) Kind() reflect.Kind {
 	return reflect.Struct
 }
@@ -65,15 +61,12 @@ func (typeMapperForStruct TypeMapperForStruct) walk(newRt reflect.Type, newRv re
 	}
 }
 
-func (typeMapperForStruct TypeMapperForStruct) NodeType() reflect.Type {
-	return typeMapperForStruct.nodeRt
-}
-
 func (typeMapperForStruct TypeMapperForStruct) createDefaultType(parentNode Node[ast.Node]) reflect.Value {
 	rv := reflect.New(typeMapperForStruct.nodeRt).Elem()
 	for idx := range typeMapperForStruct.nodeRt.NumField() {
 		typeMapper := typeMapperForStruct.typeMapperInstance.Field(idx).Interface().(ITypeMapper)
-		rvZero := reflect.Zero(typeMapper.NodeType())
+		rt, _ := typeMapper.ActualType()
+		rvZero := reflect.Zero(rt)
 		_, vk := typeMapper.ActualType()
 		node := ChangeParamNode[ast.Node, ast.Node](parentNode, &ReflectValueExpression{rvZero, vk})
 		rv.Field(idx).Set(reflect.ValueOf(node))

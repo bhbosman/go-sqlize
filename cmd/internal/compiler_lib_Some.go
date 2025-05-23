@@ -105,5 +105,21 @@ func (compiler *Compiler) getGetSomeDataNCompiled(state State, funcTypeNode Node
 		}
 		return ChangeParamNode[ast.Node, ast.Node](state.currentNode, MultiBinaryExpr{token.LAND, binaryOperations, compiler.registerBool()(state, nil)})
 	}
-	return append(compiledArguments, fn()), artValue
+
+	var extractedArguments []Node[ast.Node]
+	for _, argument := range compiledArguments {
+		switch argItem := argument.Node.(type) {
+		default:
+			extractedArguments = append(extractedArguments, argument)
+		case *ReflectValueExpression:
+			if ok, assigned, rv := compiler.isValueSomeDataType(argItem.Rv); ok && assigned {
+				unk := rv.Interface()
+				extractedArguments = append(extractedArguments, ChangeParamNode[ast.Node, ast.Node](argument, unk.(ast.Node)))
+			} else {
+				panic(argItem.Rv)
+			}
+		}
+	}
+
+	return append(extractedArguments, fn()), artValue
 }

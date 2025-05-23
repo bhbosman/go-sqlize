@@ -12,6 +12,8 @@ import (
 const libFolder = "github.com/bhbosman/go-sqlize/lib"
 
 var SomeValueKey = ValueKey{libFolder, "Some"}
+var IQueryOptValueKey = ValueKey{libFolder, "IQueryOpt"}
+var IRelationshipOptValueKey = ValueKey{libFolder, "IRelationshipOpt"}
 
 func (compiler *Compiler) addLibFunctions() {
 	compiler.addLibSomeType()
@@ -47,7 +49,8 @@ func (compiler *Compiler) addLibFunctions() {
 func (compiler *Compiler) libGenerateSql(state State, argument Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 	switch item := argument.Node.(type) {
 	case *TrailRecord:
-		s := compiler.trailRecordToSelectStatement(state, ChangeParamNode[ast.Node, *TrailRecord](argument, item))
+		p01 := ChangeParamNode[ast.Node, *TrailRecord](argument, item)
+		s := compiler.trailRecordToSelectStatement(state, p01)
 		basicLit := &ast.BasicLit{state.currentNode.Node.Pos(), token.STRING, strconv.Quote(s)}
 		nodeValue := ChangeParamNode[ast.Node, ast.Node](state.currentNode, basicLit)
 		return []Node[ast.Node]{nodeValue}, artValue

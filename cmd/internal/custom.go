@@ -111,17 +111,46 @@ type (
 		funcType         Node[*ast.FuncType]
 		funcTypeRequired bool
 	}
+	callExpressionInformation struct {
+		fn OnCreateExecuteStatement
+		ce Node[*ast.CallExpr]
+	}
+
 	TrailArray struct {
 		arr        []Node[ast.Node]
 		typeMapper ITypeMapper
 	}
-
 	FuncLit struct {
-		Type   *ast.FuncType
-		Body   *ast.BlockStmt
-		values map[string]ValueInformation
+		Type       *ast.FuncType
+		Body       *ast.BlockStmt
+		values     map[string]ValueInformation
+		typeMapper ITypeMapper
+	}
+	CallExpression struct {
+		CallExpression Node[*ast.CallExpr]
+		values         map[string]ValueInformation
 	}
 )
+
+func (functList FuncLit) GetTypeMapper(state State) (ITypeMapperArray, bool) {
+	return ITypeMapperArray{functList.typeMapper}, true
+}
+
+func (c callExpressionInformation) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (c callExpressionInformation) End() token.Pos {
+	return token.NoPos
+}
+
+func (c CallExpression) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (c CallExpression) End() token.Pos {
+	return token.NoPos
+}
 
 func (entityField EntityField) GetValueKey() ValueKey {
 	_, vk := entityField.typeMapper.ActualType()
@@ -377,7 +406,8 @@ func (ite IfThenElseMultiValueCondition) Expand(parentNode Node[ast.Node]) []Nod
 
 	var result []Node[ast.Node]
 	for idx, _ := range ite.conditionalStatement[0].values {
-		result = append(result, ChangeParamNode[ast.Node, ast.Node](parentNode, IfThenElseSingleValueCondition{arr[idx]}))
+		p01 := ChangeParamNode[ast.Node, ast.Node](parentNode, IfThenElseSingleValueCondition{arr[idx]})
+		result = append(result, p01)
 	}
 	return result
 }

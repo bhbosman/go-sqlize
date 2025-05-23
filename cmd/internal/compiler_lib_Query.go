@@ -13,8 +13,8 @@ type (
 	}
 	IQueryOptions interface {
 		ast.Node
-		iIsLiterateValue
-		apply(*queryState)
+		IIsLiterateValue
+		Apply(*queryState)
 	}
 	queryTop struct {
 		count int
@@ -23,19 +23,19 @@ type (
 	}
 )
 
-func (qd queryDistinct) apply(state *queryState) {
+func (qd queryDistinct) Apply(state *queryState) {
 	state.distinct = true
 }
 
-func (qt queryTop) apply(state *queryState) {
+func (qt queryTop) Apply(state *queryState) {
 	state.top = qt.count
 }
 
-func (qd queryDistinct) thisIsALiterateValue() {
+func (qd queryDistinct) ThisIsALiterateValue() {
 
 }
 
-func (qt queryTop) thisIsALiterateValue() {
+func (qt queryTop) ThisIsALiterateValue() {
 }
 
 func (qd queryDistinct) Pos() token.Pos {
@@ -87,7 +87,7 @@ func (compiler *Compiler) libQueryDistinctImplementation(state State, node Node[
 func (compiler *Compiler) query(typeMapper ITypeMapper, options ...IQueryOptions) ITrailMarker {
 	qs := &queryState{}
 	for _, option := range options {
-		option.apply(qs)
+		option.Apply(qs)
 	}
 	alias := compiler.AddEntitySource(typeMapper, *qs)
 	trailSource := TrailSource{alias, typeMapper}

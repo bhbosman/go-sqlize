@@ -28,31 +28,39 @@ func (compiler *Compiler) findStatement(state State, node Node[ast.Stmt]) (Execu
 	switch item := node.Node.(type) {
 	case *ast.IfStmt:
 		value := ChangeParamNode(node, item)
-		return compiler.createIfStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		p01 := ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		return compiler.createIfStmtExecution(value), p01
 	case *ast.SwitchStmt:
 		value := ChangeParamNode(node, item)
-		return compiler.createSwitchStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		p01 := ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		return compiler.createSwitchStmtExecution(value), p01
 
 	case *ast.CaseClause:
 		value := ChangeParamNode(node, item)
-		return compiler.createCaseClauseExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		p01 := ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		return compiler.createCaseClauseExecution(value), p01
 
 	case *ast.AssignStmt:
 		value := ChangeParamNode(node, item)
-		return compiler.createAssignStatementExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		p01 := ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		return compiler.createAssignStatementExecution(value), p01
 	case *ast.ExprStmt:
 		param := ChangeParamNode[ast.Stmt, ast.Node](node, item.X)
 		tempState := state.setCurrentNode(ChangeParamNode[ast.Stmt, ast.Node](node, item.X))
-		return compiler.findRhsExpression(tempState, param), ChangeParamNode[ast.Stmt, ast.Node](node, item.X)
+		p01 := ChangeParamNode[ast.Stmt, ast.Node](node, item.X)
+		return compiler.findRhsExpression(tempState, param), p01
 	case *ast.ReturnStmt:
 		value := ChangeParamNode(node, item)
-		return compiler.createReturnStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		p01 := ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		return compiler.createReturnStmtExecution(value), p01
 	case *ast.BlockStmt:
 		value := ChangeParamNode(node, item)
-		return compiler.createBlockStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		p01 := ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		return compiler.createBlockStmtExecution(value), p01
 	case *ast.DeclStmt:
 		value := ChangeParamNode(node, item)
-		return compiler.createDeclStmtExecution(value), ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		p01 := ChangeParamNode[ast.Stmt, ast.Node](node, node.Node)
+		return compiler.createDeclStmtExecution(value), p01
 	default:
 		panic(notFound(reflect.TypeOf(item).String(), "findStatement"))
 	}
@@ -91,7 +99,7 @@ func (compiler *Compiler) createBlockStmtExecution(node Node[*ast.BlockStmt]) Ex
 
 func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 	switch item := node.Node.(type) {
-	case iIsLiterateValue:
+	case IIsLiterateValue:
 		return reflect.ValueOf(node.Node), true
 	case *TrailRecord:
 		rv := item.Value

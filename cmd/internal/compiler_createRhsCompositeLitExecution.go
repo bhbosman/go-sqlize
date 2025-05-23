@@ -18,31 +18,42 @@ func (compiler *Compiler) createRhsCompositeLitExecution(node Node[*ast.Composit
 		typeMapper := typeMapperFn(state, node, node.Node.Type)
 		rtKind := typeMapper.Kind()
 		switch rtKind {
-		case reflect.Func:
-			var arr []Node[ast.Node]
-			for _, elt := range node.Node.Elts {
-				switch etlItem := elt.(type) {
-				default:
-					panic("unreachable")
-				case *ast.FuncLit:
-					currentContext := GetCompilerState[*CurrentContext](state)
-					flattenValues := currentContext.flattenVariables()
-					fl := FuncLit{etlItem.Type, etlItem.Body, flattenValues}
-					fn := func(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
-						return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-							param := ChangeParamNode[*ast.CompositeLit, FuncLit](node, fl)
-							onCreateExecuteStatement := compiler.onFuncLitExecutionStatement(param)
-							executeStatement := onCreateExecuteStatement(state, funcTypeNode)
-							return executeStatement(state, typeParams, unprocessedArgs)
-						}
-					}
-					fi := functionInformation{fn, ChangeParamNode(node, etlItem.Type), true}
-					arr = append(arr, ChangeParamNode[*ast.CompositeLit, ast.Node](node, fi))
-				}
-			}
-			trailArray := TrailArray{arr, typeMapper}
-			nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, trailArray)
-			return []Node[ast.Node]{nodeValue}, artValue
+		//case reflect.Func:
+		//	var arr []Node[ast.Node]
+		//	for _, elt := range node.Node.Elts {
+		//		currentContext := GetCompilerState[*CurrentContext](state)
+		//		flattenValues := currentContext.flattenVariables()
+		//		switch etlItem := elt.(type) {
+		//		default:
+		//			panic("unreachable")
+		//		case *ast.CallExpr:
+		//			ce := CallExpression{ChangeParamNode[*ast.CompositeLit, *ast.CallExpr](node, etlItem), flattenValues}
+		//			fn := func(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+		//				return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+		//					onCreateExecuteStatement := compiler.createRhsCallExpressionExecution(ce.CallExpression)
+		//					//executeStatement, _ := onCreateExecuteStatement(state, typeParams, arguments)
+		//					return onCreateExecuteStatement(state, typeParams, arguments)
+		//				}
+		//			}
+		//			fi := callExpressionInformation{fn, ChangeParamNode[*ast.CompositeLit, *ast.CallExpr](node, etlItem)}
+		//			arr = append(arr, ChangeParamNode[*ast.CompositeLit, ast.Node](node, fi))
+		//		case *ast.FuncLit:
+		//			fl := FuncLit{etlItem.Type, etlItem.Body, flattenValues}
+		//			fn := func(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+		//				return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+		//					param := ChangeParamNode[*ast.CompositeLit, FuncLit](node, fl)
+		//					onCreateExecuteStatement := compiler.onFuncLitExecutionStatement(param)
+		//					executeStatement := onCreateExecuteStatement(state, funcTypeNode)
+		//					return executeStatement(state, typeParams, unprocessedArgs)
+		//				}
+		//			}
+		//			fi := functionInformation{fn, ChangeParamNode(node, etlItem.Type), true}
+		//			arr = append(arr, ChangeParamNode[*ast.CompositeLit, ast.Node](node, fi))
+		//		}
+		//	}
+		//	trailArray := TrailArray{arr, typeMapper}
+		//	nodeValue := ChangeParamNode[*ast.CompositeLit, ast.Node](node, trailArray)
+		//	return []Node[ast.Node]{nodeValue}, artValue
 		case reflect.Struct:
 			typeMapperForStruct := typeMapper.(*TypeMapperForStruct)
 			if len(node.Node.Elts) == 0 {

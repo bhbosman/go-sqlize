@@ -16,7 +16,9 @@ func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node
 		currentContext := GetCompilerState[*CurrentContext](state)
 		flattenValues := currentContext.flattenVariables()
 
-		fl := FuncLit{item.Type, item.Body, flattenValues}
+		p01 := ChangeParamNode(node, item.Type)
+		typeMapper := compiler.createTypeMapperForFuncType(state, p01)
+		fl := FuncLit{item.Type, item.Body, flattenValues, typeMapper}
 		param := ChangeParamNode[ast.Node, FuncLit](node, fl)
 		paramFuncType := ChangeParamNode[ast.Node, *ast.FuncType](node, item.Type)
 		es := compiler.onFuncLitExecutionStatement(param)

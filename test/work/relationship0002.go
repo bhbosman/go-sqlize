@@ -29,7 +29,8 @@ func init() {
 		lib.Map(
 			masterData,
 			func(inputData Master) Master {
-				motherData := lib.Relationship(motherRelation(inputData))
+				preds := lib.CombinePredFunctionsWithAnd(motherRelation(inputData), motherRelation(inputData), motherRelation(inputData))
+				motherData := lib.Relationship(preds)
 				v := lib.SetSomeValue(motherData.Id)
 				vv, _ := lib.GetSomeData(v)
 				return Master{

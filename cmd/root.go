@@ -87,7 +87,10 @@ var RootCmd = &cobra.Command{
 
 			currentContext := &internal.CurrentContext{
 				internal.ValueInformationMap{
-					"__stdOut__": internal.ValueInformation{internal.Node[ast.Node]{Node: &internal.ReflectValueExpression{reflect.ValueOf(cmd.OutOrStdout()), internal.ValueKey{"ABC", "ABC"}}}},
+					"__stdOut__": internal.ValueInformation{
+						internal.Node[ast.Node]{Node: &internal.ReflectValueExpression{
+							reflect.ValueOf(cmd.OutOrStdout()),
+							internal.ValueKey{"ABC", "ABC"}}}},
 				},
 				map[string]internal.ITypeMapper{},
 				internal.LocalTypesMap{},

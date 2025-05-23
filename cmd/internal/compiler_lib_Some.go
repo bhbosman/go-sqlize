@@ -9,6 +9,39 @@ import (
 
 func (compiler *Compiler) addLibSomeType() {
 	compiler.GlobalTypes[SomeValueKey] = compiler.registerSomeType()
+	compiler.GlobalTypes[IQueryOptValueKey] = func(state State, mappers []ITypeMapper) ITypeMapper {
+		return &ReflectTypeHolder{
+			func() reflect.Type {
+				return reflect.TypeFor[IQueryOptions]()
+			},
+			func() (reflect.Type, ValueKey) {
+				return reflect.TypeFor[IQueryOptions](), IQueryOptValueKey
+			},
+			func() reflect.Kind {
+				return reflect.Interface
+			},
+			func() reflect.Type {
+				return reflect.TypeFor[IQueryOptions]()
+			},
+		}
+	}
+	compiler.GlobalTypes[IRelationshipOptValueKey] = func(state State, mappers []ITypeMapper) ITypeMapper {
+
+		return &ReflectTypeHolder{
+			func() reflect.Type {
+				return reflect.TypeFor[IRelationshipOpt]()
+			},
+			func() (reflect.Type, ValueKey) {
+				return reflect.TypeFor[IRelationshipOpt](), IRelationshipOptValueKey
+			},
+			func() reflect.Kind {
+				return reflect.Interface
+			},
+			func() reflect.Type {
+				return reflect.TypeFor[IRelationshipOpt]()
+			},
+		}
+	}
 }
 
 func (compiler *Compiler) registerSomeType() OnCreateType {
@@ -105,5 +138,33 @@ func (compiler *Compiler) getGetSomeDataNCompiled(state State, funcTypeNode Node
 		}
 		return ChangeParamNode[ast.Node, ast.Node](state.currentNode, MultiBinaryExpr{token.LAND, binaryOperations, compiler.registerBool()(state, nil)})
 	}
-	return append(compiledArguments, fn()), artValue
+
+	var extractedArguments []Node[ast.Node]
+	for _, argument := range compiledArguments {
+		if _, ok := isLiterateValue(argument); ok {
+			switch argItem := argument.Node.(type) {
+			default:
+				extractedArguments = append(extractedArguments, argument)
+			case *ReflectValueExpression:
+				if ok, assigned, rv := compiler.isValueSomeDataType(argItem.Rv); ok && assigned {
+					unk := rv.Interface()
+					if astNode, ok := unk.(ast.Node); ok {
+						p01 := ChangeParamNode[ast.Node, ast.Node](argument, astNode)
+						extractedArguments = append(extractedArguments, p01)
+					} else {
+						p01 := ChangeParamNode[ast.Node, ast.Node](argument, &ReflectValueExpression{reflect.ValueOf(unk), ValueKey{"dddddd", "CCCCCCC"}})
+						extractedArguments = append(extractedArguments, p01)
+					}
+				} else {
+					panic(argItem.Rv)
+				}
+			}
+
+		} else {
+			extractedArguments = append(extractedArguments, argument)
+		}
+
+	}
+
+	return append(extractedArguments, fn()), artValue
 }

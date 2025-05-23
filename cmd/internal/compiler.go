@@ -11,8 +11,8 @@ import (
 	"sort"
 )
 
-type iIsLiterateValue interface {
-	thisIsALiterateValue()
+type IIsLiterateValue interface {
+	ThisIsALiterateValue()
 }
 type GlobalMethodHandlerKey struct {
 	rt         reflect.Type
@@ -113,18 +113,23 @@ func (compiler *Compiler) Init(
 						currentContext := GetCompilerState[*CurrentContext](state)
 						flattenValues := currentContext.flattenVariables()
 
-						funcLit := FuncLit{node.Node.Type, node.Node.Body, flattenValues}
-						param := ChangeParamNode[*ast.FuncDecl, FuncLit](node, funcLit)
-						onCreateExecuteStatement := compiler.onFuncLitExecutionStatement(param)
-						executeStatement := onCreateExecuteStatement(state, funcTypeNode)
-						return executeStatement(state, typeParams, unprocessedArgs)
+						p01 := ChangeParamNode(node, node.Node.Type)
+						typeMapper := compiler.createTypeMapperForFuncType(state, p01)
+						funcLit := FuncLit{node.Node.Type, node.Node.Body, flattenValues, typeMapper}
+						param := ChangeParamNode[*ast.FuncDecl, ast.Node](node, funcLit)
+						return []Node[ast.Node]{param}, artValue
+						//onCreateExecuteStatement := compiler.onFuncLitExecutionStatement(param)
+						//executeStatement := onCreateExecuteStatement(state, funcTypeNode)
+						//return executeStatement(state, typeParams, unprocessedArgs)
 					}
 				}
-				return functionInformation{fn, ChangeParamNode(value, value.Node.Type), true}
+				p01 := ChangeParamNode(value, value.Node.Type)
+				return functionInformation{fn, p01, true}
 			}
 			compiler.GlobalFunctions[key] = fn(key, value)
 		} else {
-			compiler.GlobalFunctions[key] = functionInformation{current.fn, ChangeParamNode(value, value.Node.Type), current.funcTypeRequired}
+			p01 := ChangeParamNode(value, value.Node.Type)
+			compiler.GlobalFunctions[key] = functionInformation{current.fn, p01, current.funcTypeRequired}
 		}
 	}
 	for key, information := range compiler.GlobalFunctions {
@@ -190,13 +195,7 @@ func (compiler *Compiler) Compile(currentContext *CurrentContext, fileNames ...s
 			compiler.CompileFunc(
 				State{
 					[]IABC{
-						&CurrentContext{
-							ValueInformationMap{},
-							map[string]ITypeMapper{},
-							LocalTypesMap{},
-							false,
-							currentContext,
-						},
+						&CurrentContext{ValueInformationMap{}, map[string]ITypeMapper{}, LocalTypesMap{}, false, currentContext},
 					},
 					currentNode}, initFunction)
 		}
@@ -379,7 +378,8 @@ func (compiler *Compiler) createStructTypeMapper(state State, node Node[*ast.Str
 		}
 		return result
 	}
-	fieldList := fn(node, findAllParamNameAndTypes(ChangeParamNode(node, node.Node.Fields)).arr)
+	p0 := ChangeParamNode(node, node.Node.Fields)
+	fieldList := fn(node, findAllParamNameAndTypes(p0).arr)
 	nodeRt := structTypeToType(fieldList, StructTypeWithNodeType)
 	rtWithITypeMapper := structTypeToType(fieldList, StructTypeWithTypeMapper)
 	actualTypeRt := structTypeToType(fieldList, StructTypeWithActualTypes)
@@ -441,26 +441,17 @@ func findAllParamNameAndTypes(node Node[*ast.FieldList]) findAllParamNameAndType
 }
 
 func (compiler *Compiler) executeFuncLit(state State, funcLit Node[FuncLit], arguments []Node[ast.Node], typeParams map[string]ITypeMapper) ([]Node[ast.Node], CallArrayResultType) {
-	nameAndParamsResult := findAllParamNameAndTypes(ChangeParamNode(funcLit, funcLit.Node.Type.Params))
 	mm := ValueInformationMap{}
-	for i, param := range nameAndParamsResult.arr {
-		mm[param.name] = ValueInformation{arguments[i]}
+	if funcLit.Node.Type != nil {
+		p0 := ChangeParamNode(funcLit, funcLit.Node.Type.Params)
+		nameAndParamsResult := findAllParamNameAndTypes(p0)
+		for i, param := range nameAndParamsResult.arr {
+			mm[param.name] = ValueInformation{arguments[i]}
+		}
 	}
-	newContext := &CurrentContext{
-		mm,
-		map[string]ITypeMapper{},
-		LocalTypesMap{},
-		false,
-		GetCompilerState[*CurrentContext](state),
-	}
+	newContext := &CurrentContext{mm, map[string]ITypeMapper{}, LocalTypesMap{}, false, GetCompilerState[*CurrentContext](state)}
 
-	newRoot := &CurrentContext{
-		funcLit.Node.values,
-		map[string]ITypeMapper{},
-		LocalTypesMap{},
-		true,
-		nil,
-	}
+	newRoot := &CurrentContext{funcLit.Node.values, map[string]ITypeMapper{}, LocalTypesMap{}, true, nil}
 	var values []Node[ast.Node]
 	newContext.ReplaceRoot(newRoot)
 	{

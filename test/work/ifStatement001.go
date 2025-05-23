@@ -64,7 +64,7 @@ func init() {
 		}
 	}
 	query := lib.Query[UserInformationForIf]()
-	mapFn := func(inputData UserInformationForIf) UserInformationForIfView {
+	mapFn2 := func(inputData UserInformationForIf) UserInformationForIfView {
 		x, y := statusFn(inputData)
 		return UserInformationForIfView{
 			Name:    inputData.Name,
@@ -75,6 +75,6 @@ func init() {
 			Level2:  levelFn(inputData),
 		}
 	}
-	mapValue := lib.Map(query, mapFn)
+	mapValue := lib.Map(query, mapFn2)
 	lib.GenerateSqlTest(mapValue)
 }

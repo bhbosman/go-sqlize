@@ -13,7 +13,7 @@ func (compiler *Compiler) internalFindRhsExpression(stackIndex int, state State,
 	switch item := node.Node.(type) {
 	default:
 		panic(node.Node)
-	case iIsLiterateValue:
+	case IIsLiterateValue:
 		var es func(node Node[ast.Node]) ExecuteStatement = func(node Node[ast.Node]) ExecuteStatement {
 			return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
 				return []Node[ast.Node]{node}, artValue
@@ -159,13 +159,7 @@ func (compiler *Compiler) onFuncLitExecutionStatement(node Node[FuncLit]) OnCrea
 				}
 			}
 
-			newContext := &CurrentContext{
-				m,
-				map[string]ITypeMapper{},
-				LocalTypesMap{},
-				false,
-				GetCompilerState[*CurrentContext](state),
-			}
+			newContext := &CurrentContext{m, map[string]ITypeMapper{}, LocalTypesMap{}, false, GetCompilerState[*CurrentContext](state)}
 			state = SetCompilerState(newContext, state)
 			param := ChangeParamNode[ast.Node, *ast.BlockStmt](state.currentNode, node.Node.Body)
 			values, art := compiler.executeBlockStmt(state, param)

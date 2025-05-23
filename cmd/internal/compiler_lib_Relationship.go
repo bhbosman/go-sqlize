@@ -1,10 +1,9 @@
 package internal
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
-	"hash"
-	"hash/crc32"
 )
 
 type (
@@ -12,10 +11,10 @@ type (
 		top      int
 		distinct bool
 	}
-	iRelationshipOpt interface {
+	IRelationshipOpt interface {
 		ast.Node
-		iIsLiterateValue
-		apply(*relationshipState)
+		IIsLiterateValue
+		Apply(*relationshipState)
 	}
 	relationshipJoinType struct {
 	}
@@ -29,32 +28,60 @@ func (relationJoinType relationshipJoinType) End() token.Pos {
 	return token.NoPos
 }
 
-func (relationJoinType relationshipJoinType) thisIsALiterateValue() {
+func (relationJoinType relationshipJoinType) ThisIsALiterateValue() {
 }
 
-func (relationJoinType relationshipJoinType) apply(state *relationshipState) {
+func (relationJoinType relationshipJoinType) Apply(state *relationshipState) {
 }
 
 func (compiler *Compiler) libCoreRelationshipImplementation(state State, node Node[*ast.FuncType]) ExecuteStatement {
 	return func(state State, typeParams map[string]ITypeMapper, arguments []Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
-		funcLit, _ := arguments[1].Node.(FuncLit)
-		callback, _ := compiler.executeFuncLit(state, ChangeParamNode(arguments[1], funcLit), arguments, typeParams)
-
-		var relationshipOpt []iRelationshipOpt
-		for _, arg := range arguments[2:] {
-			rv, _ := isLiterateValue(arg)
-			relationshipOpt = append(relationshipOpt, rv.Interface().(iRelationshipOpt))
+		if len(arguments) != 2 {
+			panic(fmt.Errorf("Lib.CoreRelationship implementation requires 2 arguments, got %d", len(arguments)))
 		}
-		return []Node[ast.Node]{
-			ChangeParamNode[ast.Node, ast.Node](
-				state.currentNode,
-				compiler.coreRelationship(state, arguments[0].Node.(ITrailMarker), callback[0], relationshipOpt...),
-			),
-		}, artValue
+		return compiler.internalLibCoreRelationshipImplementation(state, typeParams, arguments[0], arguments[1])
 	}
 }
 
-func (compiler *Compiler) coreRelationship(state State, from ITrailMarker, callback Node[ast.Node], relationshipOpt ...iRelationshipOpt) ITrailMarker {
+func (compiler *Compiler) internalLibCoreRelationshipImplementation(state State, typeParams map[string]ITypeMapper, arg0, arg1 Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {
+	switch argItem := arg1.Node.(type) {
+	default:
+		panic(argItem)
+	case *ast.Ident, *ast.FuncLit:
+		fn := compiler.findRhsExpression(state, arg1)
+		v, _ := compiler.executeAndExpandStatement(state, typeParams, nil, fn)
+		return compiler.internalLibCoreRelationshipImplementation(state, typeParams, arg0, v[0])
+	case FuncLit:
+		param := ChangeParamNode[ast.Node, FuncLit](arg1, argItem)
+		callback, _ := compiler.executeFuncLit(state, param, []Node[ast.Node]{arg0}, typeParams)
+
+		//var relationshipOpt []IRelationshipOpt
+		//for _, arg := range arguments[2:] {
+		//	rv, _ := isLiterateValue(arg)
+		//	relationshipOpt = append(relationshipOpt, rv.Interface().(IRelationshipOpt))
+		//}
+
+		pp := compiler.coreRelationship(state, arg0.Node.(ITrailMarker), callback[0])
+		return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, pp)}, artValue
+
+	}
+
+	//funcLit, _ := arg1.Node.(FuncLit)
+	//p01 := ChangeParamNode(arg1, funcLit)
+	//callback, _ := compiler.executeFuncLit(state, p01, []Node[ast.Node]{arg0}, typeParams)
+
+	//var relationshipOpt []IRelationshipOpt
+	//for _, arg := range arguments[2:] {
+	//	rv, _ := isLiterateValue(arg)
+	//	relationshipOpt = append(relationshipOpt, rv.Interface().(IRelationshipOpt))
+	//}
+
+	//pp := compiler.coreRelationship(state, arguments[0].Node.(ITrailMarker), callback[0], relationshipOpt...)
+	//return []Node[ast.Node]{ChangeParamNode[ast.Node, ast.Node](state.currentNode, pp)}, artValue
+
+}
+
+func (compiler *Compiler) coreRelationship(state State, from ITrailMarker, callback Node[ast.Node], relationshipOpt ...IRelationshipOpt) ITrailMarker {
 	fn := func() (map[string]ISource, string, bool) {
 		hashValue := compiler.calculateHash(callback)
 		for key, value := range compiler.JoinInformation {
@@ -93,51 +120,5 @@ func (compiler *Compiler) coreRelationship(state State, from ITrailMarker, callb
 			compiler.JoinInformation[item.Alias] = joinInformation
 			return from
 		}
-	}
-}
-
-func (compiler *Compiler) calculateHash(node Node[ast.Node]) uint32 {
-	hashCalculator := crc32.NewIEEE()
-	compiler.internalCalculateHash(hashCalculator, node)
-	return hashCalculator.Sum32()
-}
-
-func (compiler *Compiler) internalCalculateHash(hash hash.Hash, node Node[ast.Node]) {
-	switch item := node.Node.(type) {
-	default:
-		panic(item)
-		panic("internalCalculateHash: unknown node type")
-	case EntityField:
-		hash.Write([]byte(item.alias))
-		hash.Write([]byte(item.field))
-		compiler.internalCalculateHash(hash, ChangeParamNode[ast.Node, ast.Node](node, item.typeMapper))
-		hash.Write([]byte(item.field))
-	case *ReflectValueExpression:
-		hash.Write([]byte(item.Rv.String()))
-		hash.Write([]byte(item.Vk.String()))
-	case ITypeMapper:
-		actualType, key := item.ActualType()
-		hash.Write([]byte(actualType.String()))
-		hash.Write([]byte(key.String()))
-		hash.Write([]byte{byte(item.Kind())})
-	case BinaryExpr:
-		hash.Write([]byte{byte(item.Op)})
-		compiler.internalCalculateHash(hash, item.left)
-		compiler.internalCalculateHash(hash, item.right)
-		compiler.internalCalculateHash(hash, ChangeParamNode[ast.Node, ast.Node](node, item.typeMapper))
-	case *CheckForNotNullExpression:
-	case MultiBinaryExpr:
-		hash.Write([]byte{byte(item.Op)})
-		for _, expression := range item.expressions {
-			compiler.internalCalculateHash(hash, expression)
-		}
-		compiler.internalCalculateHash(hash, ChangeParamNode[ast.Node, ast.Node](node, item.typeMapper))
-	case IfThenElseSingleValueCondition:
-		for _, condition := range item.conditionalStatement {
-			compiler.internalCalculateHash(hash, ChangeParamNode[ast.Node, ast.Node](node, condition))
-		}
-	case SingleValueCondition:
-		compiler.internalCalculateHash(hash, item.condition)
-		compiler.internalCalculateHash(hash, item.value)
 	}
 }

@@ -35,7 +35,8 @@ func (compiler *Compiler) internalTransformToBooleanExpression(state State, cond
 				expressions := []Node[ast.Node]{conditionalStatement.condition}
 				expressions = append(expressions, localConditions...)
 				mbe := MultiBinaryExpr{token.LAND, expressions, compiler.registerBool()(state, nil)}
-				conditions = append(conditions, ChangeParamNode[ast.Node, ast.Node](node, mbe))
+				p01 := ChangeParamNode[ast.Node, ast.Node](node, mbe)
+				conditions = append(conditions, p01)
 			}
 		}
 		return conditions

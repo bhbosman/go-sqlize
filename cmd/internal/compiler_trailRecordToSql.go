@@ -86,8 +86,8 @@ func (compiler *Compiler) internalProjectRv(w io.Writer, tabCount int, node Node
 	case kind == reflect.Map:
 		break
 	case kind == reflect.Pointer:
-
-		compiler.internalProjectRv(w, tabCount, ChangeParamNode(node, &ReflectValueExpression{node.Node.Rv.Elem(), node.Node.Vk}))
+		p01 := ChangeParamNode(node, &ReflectValueExpression{node.Node.Rv.Elem(), node.Node.Vk})
+		compiler.internalProjectRv(w, tabCount, p01)
 		break
 	case kind == reflect.Bool:
 		_, _ = io.WriteString(w, fmt.Sprintf("%v", node.Node.Rv.Bool()))
@@ -104,14 +104,15 @@ func (compiler *Compiler) internalProjectRv(w io.Writer, tabCount int, node Node
 					_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
 
 					if assigned {
-
-						compiler.internalProjectRv(w, tabCount, ChangeParamNode(node, &ReflectValueExpression{rvSomeType, ValueKey{"ccccc", "ddddd"}}))
+						p01 := ChangeParamNode(node, &ReflectValueExpression{rvSomeType, ValueKey{"ccccc", "ddddd"}})
+						compiler.internalProjectRv(w, tabCount, p01)
 					} else {
 						_, _ = io.WriteString(w, "nil")
 					}
 				} else {
 					if node00, ok := node.Node.Rv.Interface().(ast.Node); ok {
-						compiler.internalProjectUnk(w, tabCount, ChangeParamNode[*ReflectValueExpression, ast.Node](node, node00))
+						p01 := ChangeParamNode[*ReflectValueExpression, ast.Node](node, node00)
+						compiler.internalProjectUnk(w, tabCount, p01)
 					}
 
 				}
@@ -219,13 +220,15 @@ func (compiler *Compiler) internalProjectUnk(w io.Writer, tabCount int, node Nod
 	case EntityField:
 		_, _ = io.WriteString(w, fmt.Sprintf("[%v].[%v]", nodeItem.alias, nodeItem.field))
 	case *CheckForNotNullExpression:
-		compiler.internalProjectUnk(w, tabCount, ChangeParamNode[ast.Node, ast.Node](node, *nodeItem))
+		p01 := ChangeParamNode[ast.Node, ast.Node](node, *nodeItem)
+		compiler.internalProjectUnk(w, tabCount, p01)
 	case CheckForNotNullExpression:
 		_, _ = io.WriteString(w, "(")
 		compiler.internalProjectNode(w, tabCount, nodeItem.node)
 		_, _ = io.WriteString(w, " is not null)")
 	case *coercion:
-		compiler.internalProjectUnk(w, tabCount, ChangeParamNode[ast.Node, ast.Node](node, *nodeItem))
+		p01 := ChangeParamNode[ast.Node, ast.Node](node, *nodeItem)
+		compiler.internalProjectUnk(w, tabCount, p01)
 	case coercion:
 		_, _ = io.WriteString(w, "CAST(")
 		compiler.internalProjectNode(w, tabCount, nodeItem.Node)
@@ -255,8 +258,8 @@ func (compiler *Compiler) internalProjectNode(w io.Writer, tabCount int, node No
 		kind := nodeItem.Rv.Kind()
 		switch kind {
 		default:
-
-			compiler.internalProjectRv(w, tabCount, ChangeParamNode(node, nodeItem))
+			p01 := ChangeParamNode(node, nodeItem)
+			compiler.internalProjectRv(w, tabCount, p01)
 		}
 	}
 }

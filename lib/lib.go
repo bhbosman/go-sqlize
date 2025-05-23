@@ -20,7 +20,7 @@ func QueryDistinct() IQueryOpt {
 
 func Query[TInputData interface{}](...IQueryOpt) []TInputData { panic("implement Query") }
 
-func Map[TInputData interface{}, TOutputData interface{}](inputData []TInputData, cb func(inputData TInputData) TOutputData) []TOutputData {
+func Map[TInputData interface{}, TOutputData interface{}]([]TInputData, func(TInputData) TOutputData) []TOutputData {
 	panic("implement Map")
 }
 
@@ -118,7 +118,7 @@ func DictionaryDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TVa
 
 type IRelationshipOpt interface{}
 
-func CombinePredFunctionsWithAnd[TTarget interface{}]([]func(TTarget) bool) func(TTarget) bool {
+func CombinePredFunctionsWithAnd[TTarget interface{}](...func(TTarget) bool) func(TTarget) bool {
 	panic("implement CombinePredFunctionsWithAnd")
 }
 

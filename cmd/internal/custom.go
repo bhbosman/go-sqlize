@@ -78,6 +78,7 @@ type (
 	}
 	BooleanCondition struct {
 		conditions []Node[ast.Node]
+		op         token.Token
 	}
 	IfThenElseSingleValueCondition struct {
 		conditionalStatement []SingleValueCondition

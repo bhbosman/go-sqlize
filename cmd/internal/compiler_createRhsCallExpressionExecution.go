@@ -52,14 +52,9 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 				}
 			}
 			if len(requiredTypeParams) > 0 {
-				var argumentArr []CalculateTypeArgumentType
+				var argumentArr []Node[ast.Node]
 				for _, arg := range args {
-					argumentArr = append(argumentArr, CalculateTypeArgumentType{
-						//idx,
-						//ChangeParamNode[*ast.CallExpr, ast.Node](node, node.Node.Args[idx]),
-						//nameAndParams[idx].node,
-						arg,
-					})
+					argumentArr = append(argumentArr, arg)
 				}
 
 				if mappers, b := compiler.calculateTypeMapperForCallExpression(
@@ -95,6 +90,9 @@ func (compiler *Compiler) createRhsCallExpressionExecution(node Node[*ast.CallEx
 			}
 
 			fn, resultType := execFn(tempState02, deltaTypeParams, args)
+			if resultType == artReturn {
+				return fn, resultType
+			}
 			if len(fn) == 1 {
 				switch dd := fn[0].Node.(type) {
 				case FuncLit:
@@ -117,7 +115,7 @@ func (compiler *Compiler) calculateTypeMapperForCallExpression(
 	node Node[*ast.CallExpr],
 	nameAndTypeParams findAllParamNameAndTypesResult,
 	funcTypeNode Node[*ast.FuncType],
-	args []CalculateTypeArgumentType,
+	args []Node[ast.Node],
 ) (map[string]ITypeMapper, bool) {
 	if len(nameAndTypeParams.arr) == 0 {
 		return map[string]ITypeMapper{}, true
@@ -154,21 +152,6 @@ func (compiler *Compiler) calculateTypeMapperForCallExpression(
 		}
 		return nil, true
 	}
-}
-
-type CalculateTypeFuncDeclType struct {
-	node Node[ast.Node]
-}
-
-type CalculateTypeParamType struct {
-	node Node[ast.Node]
-}
-
-type CalculateTypeArgumentType struct {
-	//index int
-	//inputArgumentNode Node[ast.Node]
-	//paramStruct      Node[ast.Node]
-	compiledArgument Node[ast.Node]
 }
 
 func NodeStringValue(node Node[ast.Node]) string {

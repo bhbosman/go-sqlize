@@ -130,19 +130,19 @@ func (compiler *Compiler) internalProjectUnk(w io.Writer, tabCount int, node Nod
 	default:
 		panic("implement me")
 	case BooleanCondition:
-		_, _ = io.WriteString(w, "-- BooleanCondition\n")
+		_, _ = io.WriteString(w, fmt.Sprintf("-- BooleanCondition%v\n", compiler.nodeOperator(nodeItem.op)))
 		_, _ = io.WriteString(w, fmt.Sprintf("%v", strings.Repeat("\t", tabCount)))
 		_, _ = io.WriteString(w, "(\n")
+
 		for idx, condition := range nodeItem.conditions {
 			_, _ = io.WriteString(w, fmt.Sprintf("%v", strings.Repeat("\t", tabCount+1)))
-
 			_, _ = io.WriteString(w, fmt.Sprintf("-- %v\n", reflect.ValueOf(condition.Node).Type().String()))
 			_, _ = io.WriteString(w, fmt.Sprintf("%v", strings.Repeat("\t", tabCount+1)))
-			compiler.internalProjectNode(w, tabCount, condition)
+			compiler.internalProjectNode(w, tabCount+1, condition)
 			if idx != len(nodeItem.conditions)-1 {
 				_, _ = io.WriteString(w, "\n")
 				_, _ = io.WriteString(w, fmt.Sprintf("%v", strings.Repeat("\t", tabCount)))
-				_, _ = io.WriteString(w, compiler.nodeOperator(token.LOR))
+				_, _ = io.WriteString(w, compiler.nodeOperator(nodeItem.op))
 				_, _ = io.WriteString(w, "\n")
 			}
 		}
@@ -317,8 +317,8 @@ func (compiler *Compiler) projectSources(state State, w io.Writer, tabCount int,
 				_, _ = fmt.Fprintf(w, "on\n")
 				_, _ = io.WriteString(w, strings.Repeat("\t", tabCount+1))
 
-				booleanExpression := compiler.transformToBooleanExpression(state, item.condition)
-				compiler.internalProjectNode(w, tabCount+1, booleanExpression)
+				p2 := ChangeParamNode[BooleanCondition, ast.Node](item.condition, item.condition.Node)
+				compiler.internalProjectNode(w, tabCount+1, p2)
 				_, _ = fmt.Fprintf(w, "\n")
 			}
 		}

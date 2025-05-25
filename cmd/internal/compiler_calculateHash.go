@@ -4,6 +4,8 @@ import (
 	"go/ast"
 	"hash"
 	"hash/crc32"
+	"reflect"
+	"strconv"
 )
 
 func (compiler *Compiler) calculateHash(node Node[ast.Node]) uint32 {
@@ -17,6 +19,11 @@ func (compiler *Compiler) internalCalculateHash(hash hash.Hash, node Node[ast.No
 	default:
 		panic(item)
 		panic("internalCalculateHash: unknown node type")
+	case BooleanCondition:
+		hash.Write([]byte{byte(item.op)})
+		for _, condition := range item.conditions {
+			compiler.internalCalculateHash(hash, condition)
+		}
 	case EntityField:
 		hash.Write([]byte(item.alias))
 		hash.Write([]byte(item.field))
@@ -24,7 +31,19 @@ func (compiler *Compiler) internalCalculateHash(hash hash.Hash, node Node[ast.No
 		compiler.internalCalculateHash(hash, p01)
 		hash.Write([]byte(item.field))
 	case *ReflectValueExpression:
-		hash.Write([]byte(item.Rv.String()))
+		switch item.Rv.Kind() {
+		default:
+			panic(item.Rv.Kind())
+		case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
+			hash.Write([]byte(strconv.FormatInt(item.Rv.Int(), 10)))
+		case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
+			hash.Write([]byte(strconv.FormatUint(item.Rv.Uint(), 10)))
+		case reflect.Float32, reflect.Float64:
+			hash.Write([]byte(strconv.FormatFloat(item.Rv.Float(), 'g', -1, 64)))
+		case reflect.String:
+			hash.Write([]byte(item.Rv.String()))
+		}
+		hash.Write([]byte(item.Rv.Type().String()))
 		hash.Write([]byte(item.Vk.String()))
 	case ITypeMapper:
 		actualType, key := item.ActualType()
@@ -38,6 +57,9 @@ func (compiler *Compiler) internalCalculateHash(hash hash.Hash, node Node[ast.No
 		p01 := ChangeParamNode[ast.Node, ast.Node](node, item.typeMapper)
 		compiler.internalCalculateHash(hash, p01)
 	case *CheckForNotNullExpression:
+		compiler.internalCalculateHash(hash, item.node)
+		p01 := ChangeParamNode[ast.Node, ast.Node](node, item.typeMapper)
+		compiler.internalCalculateHash(hash, p01)
 	case MultiBinaryExpr:
 		hash.Write([]byte{byte(item.Op)})
 		for _, expression := range item.expressions {

@@ -55,7 +55,7 @@ const (
 type JoinInformation struct {
 	lhs       string
 	rhs       map[string]ISource
-	condition Node[ast.Node]
+	condition Node[BooleanCondition]
 	joinType  joinType
 }
 

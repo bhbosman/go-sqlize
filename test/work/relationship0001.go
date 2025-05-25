@@ -26,7 +26,18 @@ func init() {
 							} else {
 								return false
 							}
-
+						} else if _, ok := lib.GetSomeData(target.FatherId); ok {
+							if target.Surname == "Bosman" {
+								return true
+							} else {
+								return false
+							}
+						} else if _, ok := lib.GetSomeData(target.FatherId); ok {
+							if target.Surname == "Bosman" {
+								return true
+							} else {
+								return false
+							}
 						} else if _, ok := lib.GetSomeData(target.FatherId); ok {
 							if target.Surname == "Bosman" {
 								return true

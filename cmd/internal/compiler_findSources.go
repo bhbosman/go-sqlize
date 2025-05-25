@@ -86,6 +86,10 @@ func (compiler *Compiler) internalFindSourcesFromNode(node Node[ast.Node], m map
 				compiler.internalFindSourcesFromNode(rvIdxField, m)
 			}
 		}
+	case BooleanCondition:
+		for _, condition := range nodeItem.conditions {
+			compiler.internalFindSourcesFromNode(condition, m)
+		}
 	default:
 		panic(reflect.TypeOf(node.Node).String())
 	}

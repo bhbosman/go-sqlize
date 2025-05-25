@@ -12,7 +12,7 @@ func (compiler *Compiler) libCombinePredFunctionsWithAndImplementation(state Sta
 			panic(fmt.Errorf("Lib.CombinePredFunctionsWithAnd implementation requires at least 1 argument, got %d", len(arguments)))
 		}
 		typeMapper := compiler.findType(state, arguments[0], Default)
-		mbe := ChangeParamNode[*ast.FuncType, ast.Node](node, MultiBinaryExpr{token.AND, arguments, typeMapper})
+		mbe := ChangeParamNode[*ast.FuncType, ast.Node](node, MultiBinaryExpr{token.LAND, arguments, typeMapper})
 		return []Node[ast.Node]{mbe}, artValue
 	}
 }

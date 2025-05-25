@@ -6,16 +6,30 @@ import (
 	"reflect"
 )
 
-func (compiler *Compiler) transformToBooleanExpression(state State, node Node[ast.Node]) Node[ast.Node] {
-	conditions := compiler.internalTransformToBooleanExpression(state, nil, node)
-	booleanCondition := BooleanCondition{conditions}
-	return ChangeParamNode[ast.Node, ast.Node](node, booleanCondition)
+func (compiler *Compiler) transformToBooleanExpression(state State, op token.Token, node Node[ast.Node]) Node[BooleanCondition] {
+	allConditions := compiler.internalTransformToBooleanExpression(state, nil, node)
+
+	var uniqueConditions []Node[ast.Node]
+	m := make(map[uint32]bool)
+	for _, condition := range allConditions {
+		hashValue := compiler.calculateHash(condition)
+		if _, ok := m[hashValue]; !ok {
+			m[hashValue] = true
+			uniqueConditions = append(uniqueConditions, condition)
+		}
+	}
+
+	booleanCondition := BooleanCondition{uniqueConditions, op}
+	return ChangeParamNode[ast.Node, BooleanCondition](node, booleanCondition)
 }
 
 func (compiler *Compiler) internalTransformToBooleanExpression(state State, conditions []Node[ast.Node], node Node[ast.Node]) []Node[ast.Node] {
 	switch nodeItem := node.Node.(type) {
 	default:
 		panic(nodeItem)
+	case BooleanCondition:
+		conditions = append(conditions, node)
+		return conditions
 	case BinaryExpr:
 		conditions = append(conditions, node)
 		return conditions

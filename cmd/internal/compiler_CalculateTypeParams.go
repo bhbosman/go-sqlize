@@ -257,96 +257,26 @@ func (compiler *Compiler) internalCalculateTypeParams(
 						panic(typeMapper)
 					}
 				}
-			} else if _, ok := args[0].Node.(*ast.Ident); ok {
-				typeMapper := compiler.findType(state, args[0], Default)
-				var b bool
-				if s, b = compiler.internalCalculateTypeParams(
-					state,
-					requiredTypeParams,
-					funcDecl,
-					s,
-					Node[ast.Node]{Node: typeMapper, Valid: true},
-					nil,
-				); !b {
-					return s, len(requiredTypeParams) > 0
-				}
-
-			} else if funcLit, ok := args[0].Node.(*ast.FuncLit); ok {
-				funcLitTypeParamsNameAndTypeExpressions := findAllParamNameAndTypes(ChangeParamNode(args[0], funcLit.Type.Params))
+			}
+			if (funcDeclItem.Params != nil) && (len(funcDeclItem.Params.List) == len(args)) {
+				funcLitTypeParamsNameAndTypeExpressions := args
 				funcDeclItemParamsNameAndTypeExpressions := findAllParamNameAndTypes(ChangeParamNode(funcDecl, funcDeclItem.Params))
-				paramItemParamList := findAllParamNameAndTypes(ChangeParamNode(Params, paramItem.Params))
-				if len(funcLitTypeParamsNameAndTypeExpressions.arr) == len(funcDeclItemParamsNameAndTypeExpressions.arr) && len(funcLitTypeParamsNameAndTypeExpressions.arr) == len(paramItemParamList.arr) {
-					for idx := 0; idx < len(funcDeclItemParamsNameAndTypeExpressions.arr); idx++ {
-						a := NodeStringValue(funcDeclItemParamsNameAndTypeExpressions.arr[idx].node)
-						b := NodeStringValue(paramItemParamList.arr[idx].node)
-						if _, ok := requiredTypeParams[a]; ok && a == b {
-							typeMapper := compiler.findType(state, funcLitTypeParamsNameAndTypeExpressions.arr[idx].node, Default|TypeParamType)
-							var b bool
-							if s, b = compiler.internalCalculateTypeParams(
-								state,
-								requiredTypeParams,
-								funcDeclItemParamsNameAndTypeExpressions.arr[idx].node,
-								s,
-								Node[ast.Node]{Node: typeMapper, Valid: true},
-								nil,
-							); !b {
-								return s, len(requiredTypeParams) > 0
-							}
+				for idx := 0; idx < len(args); idx++ {
+					a := NodeStringValue(funcDeclItemParamsNameAndTypeExpressions.arr[idx].node)
+					//b := NodeStringValue(funcLitTypeParamsNameAndTypeExpressions[idx])
+					if _, ok := requiredTypeParams[a]; ok {
+						typeMapper := compiler.findType(state, funcLitTypeParamsNameAndTypeExpressions[idx], Default|TypeParamType)
+						var b bool
+						if s, b = compiler.internalCalculateTypeParams(
+							state,
+							requiredTypeParams,
+							funcDeclItemParamsNameAndTypeExpressions.arr[idx].node,
+							s,
+							Node[ast.Node]{Node: typeMapper, Valid: true},
+							nil,
+						); !b {
+							return s, len(requiredTypeParams) > 0
 						}
-					}
-				}
-			} else if funcLit_, ok := args[0].Node.(FuncLit); ok {
-				funcLitTypeParamsNameAndTypeExpressions := findAllParamNameAndTypes(ChangeParamNode(args[0], funcLit_.Type.Params))
-				funcDeclItemParamsNameAndTypeExpressions := findAllParamNameAndTypes(ChangeParamNode(funcDecl, funcDeclItem.Params))
-				paramItemParamList := findAllParamNameAndTypes(ChangeParamNode(Params, paramItem.Params))
-				if len(funcLitTypeParamsNameAndTypeExpressions.arr) == len(funcDeclItemParamsNameAndTypeExpressions.arr) && len(funcLitTypeParamsNameAndTypeExpressions.arr) == len(paramItemParamList.arr) {
-					for idx := 0; idx < len(funcDeclItemParamsNameAndTypeExpressions.arr); idx++ {
-						a := NodeStringValue(funcDeclItemParamsNameAndTypeExpressions.arr[idx].node)
-						b := NodeStringValue(paramItemParamList.arr[idx].node)
-						if _, ok := requiredTypeParams[a]; ok && a == b {
-							typeMapper := compiler.findType(state, funcLitTypeParamsNameAndTypeExpressions.arr[idx].node, Default|TypeParamType)
-							var b bool
-							if s, b = compiler.internalCalculateTypeParams(
-								state,
-								requiredTypeParams,
-								funcDeclItemParamsNameAndTypeExpressions.arr[idx].node,
-								s,
-								Node[ast.Node]{Node: typeMapper, Valid: true},
-								nil,
-							); !b {
-								return s, len(requiredTypeParams) > 0
-							}
-						}
-					}
-				}
-			} else {
-				findITypeMapperForFuncType := func() (ITypeMapperForFuncType, bool) {
-					if CallExpr, ok := args[0].Node.(*ast.CallExpr); ok {
-						p1 := ChangeParamNode[ast.Node, ast.Node](args[0], CallExpr.Fun)
-						typeMapper := compiler.findType(state, p1, Default|TypeParamType)
-						if typeMapperForFuncType, ok := typeMapper.(ITypeMapperForFuncType); ok {
-							return typeMapperForFuncType, true
-						}
-					}
-					if trailArray, ok := args[0].Node.(TrailArray); ok {
-						if typeMapperForFuncType, ok := trailArray.typeMapper.(ITypeMapperForFuncType); ok {
-							return typeMapperForFuncType, true
-						}
-					}
-					return nil, false
-				}
-
-				if typeMapper, ok := findITypeMapperForFuncType(); ok {
-					var b bool
-					if s, b = compiler.internalCalculateTypeParams(
-						state,
-						requiredTypeParams,
-						funcDecl,
-						s,
-						Node[ast.Node]{Node: typeMapper, Valid: true},
-						nil,
-					); !b {
-						return s, len(requiredTypeParams) > 0
 					}
 				}
 			}

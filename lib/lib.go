@@ -7,6 +7,9 @@ import (
 	"strconv"
 )
 
+// ToDo: define this type and refactor all the functions that use the syntax
+//type BooleanExpression[TTarget interface{}] func(TTarget) bool
+
 type IQueryOpt interface {
 }
 
@@ -118,7 +121,7 @@ func DictionaryDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TVa
 
 type IRelationshipOpt interface{}
 
-func CombinePredFunctionsWithAnd[TTarget interface{}](...func(TTarget) bool) func(TTarget) bool {
+func CombinePredFunctionsWithAnd[TTarget interface{}]([]func(TTarget) bool) func(TTarget) bool {
 	panic("implement CombinePredFunctionsWithAnd")
 }
 

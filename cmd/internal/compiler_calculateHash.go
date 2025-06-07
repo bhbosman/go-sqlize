@@ -31,7 +31,8 @@ func (compiler *Compiler) internalCalculateHash(hash hash.Hash, node Node[ast.No
 		compiler.internalCalculateHash(hash, p01)
 		hash.Write([]byte(item.field))
 	case *ReflectValueExpression:
-		switch item.Rv.Kind() {
+		kind := item.Rv.Kind()
+		switch kind {
 		default:
 			panic(item.Rv.Kind())
 		case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
@@ -42,6 +43,8 @@ func (compiler *Compiler) internalCalculateHash(hash hash.Hash, node Node[ast.No
 			hash.Write([]byte(strconv.FormatFloat(item.Rv.Float(), 'g', -1, 64)))
 		case reflect.String:
 			hash.Write([]byte(item.Rv.String()))
+		case reflect.Bool:
+			hash.Write([]byte(strconv.FormatBool(item.Rv.Bool())))
 		}
 		hash.Write([]byte(item.Rv.Type().String()))
 		hash.Write([]byte(item.Vk.String()))

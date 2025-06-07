@@ -93,6 +93,9 @@ func (compiler *Compiler) internalFindType(stackIndex int, state State, node Nod
 	switch item := node.Node.(type) {
 	default:
 		panic(node.Node)
+	case *ast.CompositeLit:
+		param := ChangeParamNode[ast.Node, ast.Node](node, item.Type)
+		return compiler.internalFindType(stackIndex+1, state, param, flags)
 	case *ast.CallExpr:
 		param := ChangeParamNode[ast.Node, ast.Node](node, item.Fun)
 		return compiler.internalFindType(stackIndex+1, state, param, flags)

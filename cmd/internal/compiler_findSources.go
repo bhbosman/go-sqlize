@@ -37,6 +37,12 @@ func (compiler *Compiler) internalFindSourcesFromNode(node Node[ast.Node], m map
 		return
 	}
 	switch nodeItem := node.Node.(type) {
+	default:
+		panic(reflect.TypeOf(node.Node).String())
+	case TrailSource:
+		m[nodeItem.Alias] = true
+		break
+
 	case *CheckForNotNullExpression:
 		compiler.internalFindSourcesFromNode(nodeItem.node, m)
 
@@ -90,7 +96,5 @@ func (compiler *Compiler) internalFindSourcesFromNode(node Node[ast.Node], m map
 		for _, condition := range nodeItem.conditions {
 			compiler.internalFindSourcesFromNode(condition, m)
 		}
-	default:
-		panic(reflect.TypeOf(node.Node).String())
 	}
 }

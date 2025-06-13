@@ -99,8 +99,14 @@ func (compiler *Compiler) createBlockStmtExecution(node Node[*ast.BlockStmt]) Ex
 
 func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 	switch item := node.Node.(type) {
+	default:
+		//rv := reflect.ValueOf(node.Node)
+
+		panic(notFound(reflect.TypeOf(item).String(), "isLiterateValue"))
 	case IIsLiterateValue:
 		return reflect.ValueOf(node.Node), true
+	case TrailSource:
+		return reflect.Value{}, false
 	case *TrailRecord:
 		rv := item.Value
 		for idx := range rv.NumField() {
@@ -150,10 +156,6 @@ func isLiterateValue(node Node[ast.Node]) (reflect.Value, bool) {
 		return reflect.Value{}, false
 	case *LhsToMultipleRhsOperator:
 		return reflect.Value{}, false
-	default:
-		//rv := reflect.ValueOf(node.Node)
-
-		panic(notFound(reflect.TypeOf(item).String(), "isLiterateValue"))
 	}
 }
 

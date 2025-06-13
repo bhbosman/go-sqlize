@@ -49,7 +49,8 @@ type ITrailMarker interface {
 type joinType int
 
 const (
-	jtInner joinType = iota
+	jtLeftInner joinType = iota
+	jtLeftOuter
 )
 
 type JoinInformation struct {

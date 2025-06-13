@@ -42,8 +42,10 @@ func (compiler *Compiler) addLibFunctions() {
 	compiler.GlobalFunctions[ValueKey{libFolder, "DictionaryDefault"}] = functionInformation{compiler.libDictionaryDefaultImplementation, Node[*ast.FuncType]{}, true}
 	compiler.GlobalFunctions[ValueKey{libFolder, "TypeFor"}] = functionInformation{compiler.libTypeForImplementation, Node[*ast.FuncType]{}, true}
 	compiler.GlobalFunctions[ValueKey{libFolder, "TestType"}] = functionInformation{compiler.libTestTypeImplementation, Node[*ast.FuncType]{}, true}
-	compiler.GlobalFunctions[ValueKey{libFolder, "CoreRelationship"}] = functionInformation{compiler.libCoreRelationshipImplementation, Node[*ast.FuncType]{}, true}
 	compiler.GlobalFunctions[ValueKey{libFolder, "CombinePredFunctionsWithAnd"}] = functionInformation{compiler.libCombinePredFunctionsWithAndImplementation, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "CoreRelationship"}] = functionInformation{compiler.libCoreRelationshipImpl, Node[*ast.FuncType]{}, true}
+	compiler.GlobalFunctions[ValueKey{libFolder, "CoreOptionalRelationship"}] = functionInformation{compiler.libCoreOptRelationshipImpl, Node[*ast.FuncType]{}, true}
+
 }
 
 func (compiler *Compiler) libGenerateSql(state State, argument Node[ast.Node]) ([]Node[ast.Node], CallArrayResultType) {

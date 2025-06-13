@@ -159,12 +159,9 @@ func (compiler *Compiler) getGetSomeDataNCompiled(state State, funcTypeNode Node
 					panic(argItem.Rv)
 				}
 			}
-
 		} else {
 			extractedArguments = append(extractedArguments, argument)
 		}
-
 	}
-
 	return append(extractedArguments, fn()), artValue
 }

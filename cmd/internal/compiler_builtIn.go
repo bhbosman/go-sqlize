@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"reflect"
+	"time"
 )
 
 var intValueKey = ValueKey{"", "int"}
@@ -22,8 +23,10 @@ var float32ValueKey = ValueKey{"", "float32"}
 var float64ValueKey = ValueKey{"", "float64"}
 var stringValueKey = ValueKey{"", "string"}
 var boolValueKey = ValueKey{"", "bool"}
+var timeTimeValueKey = ValueKey{"time", "Time"}
 
 func (compiler *Compiler) addBuiltInFunctions() {
+	compiler.GlobalTypes[timeTimeValueKey] = compiler.registerTimeTime()
 	compiler.GlobalTypes[intValueKey] = compiler.registerInt()
 	compiler.GlobalTypes[int64ValueKey] = compiler.registerInt64()
 	compiler.GlobalTypes[int32ValueKey] = compiler.registerInt32()
@@ -192,6 +195,12 @@ func (rth *ReflectTypeHolder) Kind() reflect.Kind {
 func (compiler *Compiler) registerInt() OnCreateType {
 	return func(state State, i []ITypeMapper) ITypeMapper {
 		return &WrapReflectTypeInMapper{reflect.TypeFor[int](), intValueKey}
+	}
+}
+
+func (compiler *Compiler) registerTimeTime() OnCreateType {
+	return func(state State, i []ITypeMapper) ITypeMapper {
+		return &WrapReflectTypeInMapper{reflect.TypeFor[time.Time](), timeTimeValueKey}
 	}
 }
 

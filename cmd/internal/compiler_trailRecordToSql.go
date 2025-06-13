@@ -129,6 +129,9 @@ func (compiler *Compiler) internalProjectUnk(w io.Writer, tabCount int, node Nod
 	switch nodeItem := node.Node.(type) {
 	default:
 		panic("implement me")
+	case TrailSource:
+		_, _ = io.WriteString(w, fmt.Sprintf("XXXXXXXXXXXXX %v XXXXXXXXXXXXX", nodeItem.Alias))
+
 	case BooleanCondition:
 		_, _ = io.WriteString(w, fmt.Sprintf("-- BooleanCondition%v\n", compiler.nodeOperator(nodeItem.op)))
 		_, _ = io.WriteString(w, fmt.Sprintf("%v", strings.Repeat("\t", tabCount)))
@@ -300,8 +303,11 @@ func (compiler *Compiler) projectSources(state State, w io.Writer, tabCount int,
 				switch item.joinType {
 				default:
 					panic("dd")
-				case jtInner:
+				case jtLeftInner:
 					_, _ = fmt.Fprintf(w, "inner join\n")
+					_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
+				case jtLeftOuter:
+					_, _ = fmt.Fprintf(w, "left outer join\n")
 					_, _ = io.WriteString(w, strings.Repeat("\t", tabCount))
 				}
 				query, _ := compiler.Sources[item.lhs]

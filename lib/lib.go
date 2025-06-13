@@ -132,3 +132,11 @@ func CoreRelationship[TTarget interface{}]([]TTarget, func(TTarget) bool, ...IRe
 func Relationship[TTarget interface{}](pred func(TTarget) bool, opts ...IRelationshipOpt) TTarget {
 	return CoreRelationship[TTarget](Query[TTarget](), pred, opts...)
 }
+
+func CoreOptionalRelationship[TTarget interface{}]([]TTarget, func(TTarget) bool, ...IRelationshipOpt) Some[TTarget] {
+	panic("implement CoreOptionalRelationship")
+}
+
+func OptionalRelationship[TTarget interface{}](pred func(TTarget) bool, opts ...IRelationshipOpt) Some[TTarget] {
+	return CoreOptionalRelationship[TTarget](Query[TTarget](), pred, opts...)
+}

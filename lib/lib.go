@@ -121,7 +121,7 @@ func DictionaryDefault[TKey comparable, TValue interface{}](Dictionary[TKey, TVa
 
 type IRelationshipOpt interface{}
 
-func CombinePredFunctionsWithAnd[TTarget interface{}]([]func(TTarget) bool) func(TTarget) bool {
+func CombinePredFunctionsWithAnd[TTarget interface{}](...func(TTarget) bool) func(TTarget) bool {
 	panic("implement CombinePredFunctionsWithAnd")
 }
 

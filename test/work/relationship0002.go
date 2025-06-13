@@ -33,10 +33,11 @@ func init() {
 			masterData,
 			func(inputData Master) Master {
 				preds := lib.CombinePredFunctionsWithAnd(
-					[]func(master Master) bool{
-						motherRelation(inputData, 22222),
-						motherRelation(inputData, 23333),
-						motherRelation(inputData, 24444)},
+					//[]func(master Master) bool{
+					motherRelation(inputData, 22222),
+					motherRelation(inputData, 23333),
+					motherRelation(inputData, 24444),
+					//},
 				)
 				//preds := motherRelation(inputData)
 				motherData := lib.Relationship(preds)

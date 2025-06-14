@@ -46,6 +46,9 @@ func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node
 		param := ChangeParamNode[ast.Node, ast.Node](node, item.X)
 		unk, _ := compiler.internalFindFunction(stackIndex+1, state, param)
 		switch value := unk.(type) {
+		default:
+			panic("sdfdsfds")
+
 		case ImportMapEntry:
 			vk := ValueKey{value.Path, item.Sel.Name}
 			returnValue, ok := compiler.GlobalFunctions[vk]
@@ -55,14 +58,25 @@ func (compiler *Compiler) internalFindFunction(stackIndex int, state State, node
 			panic(fmt.Errorf("can not find function %s", vk))
 		case Node[ast.Node]:
 			switch nodeItem := value.Node.(type) {
-			case *ReflectValueExpression:
-				rvFn := nodeItem.Rv.MethodByName(item.Sel.Name)
-				return compiler.initExecutionStatement(state, stackIndex, compiler.builtInStructMethods(rvFn), Node[*ast.FuncType]{}, nil)
+			//case *ReflectValueExpression:
+			//	rvFn := nodeItem.Rv.MethodByName(item.Sel.Name)
+			//	return compiler.initExecutionStatement(state, stackIndex, compiler.builtInStructMethods(rvFn), Node[*ast.FuncType]{}, nil)
+			case EntityField:
+				switch typeMapper := nodeItem.typeMapper.(type) {
+				default:
+					panic(nodeItem)
+				case *TypeMapperForSomeType:
+					if rvFn, ok := typeMapper.dataRt.MethodByName(item.Sel.Name); ok {
+						return compiler.initExecutionStatement(state, stackIndex, compiler.builtInStructMethods(rvFn.Func), Node[*ast.FuncType]{}, nil)
+					}
+					panic("implement me")
+				case ITypeMapper:
+					panic("implement me")
+				}
+
 			default:
-				panic(value.Node)
+				panic(nodeItem)
 			}
-		default:
-			panic("sdfdsfds")
 		}
 	case *ast.Ident:
 		if path, ok := node.ImportMap[item.Name]; ok {

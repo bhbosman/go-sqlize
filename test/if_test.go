@@ -4,9 +4,18 @@ import (
 	"github.com/bhbosman/go-sqlize/cmd"
 	"github.com/stretchr/testify/require"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
+
+func TestName444(t *testing.T) {
+
+	rv := reflect.ValueOf(time.Time.Before)
+	println(rv.String())
+
+}
 
 func TestName(t *testing.T) {
 

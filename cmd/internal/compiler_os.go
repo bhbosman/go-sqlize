@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"os"
 	"reflect"
+	"time"
 )
 
 func (compiler *Compiler) addOsFunctions() {
@@ -13,6 +14,8 @@ func (compiler *Compiler) addOsFunctions() {
 	compiler.GlobalFunctions[ValueKey{"os", "MkdirAll"}] = functionInformation{compiler.osMkdirAllImplementation, Node[*ast.FuncType]{}, false}
 	compiler.GlobalFunctions[ValueKey{"os", "Create"}] = functionInformation{compiler.osCreateImplementation, Node[*ast.FuncType]{}, false}
 	compiler.GlobalFunctions[ValueKey{"os", "Stdout"}] = functionInformation{compiler.osStdout, Node[*ast.FuncType]{}, false}
+	compiler.GlobalFunctions[ValueKey{"time", "Time.Before"}] = functionInformation{compiler.timeTimeBefore, Node[*ast.FuncType]{}, false}
+
 }
 
 func (compiler *Compiler) genericValue(rv reflect.Value, vk ValueKey) ExecuteStatement {
@@ -30,6 +33,11 @@ func (compiler *Compiler) osModePermImplementation(state State, funcTypeNode Nod
 
 func (compiler *Compiler) osStdout(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
 	rv := reflect.ValueOf(os.Stdout)
+	return compiler.genericValue(rv, ValueKey{})
+}
+
+func (compiler *Compiler) timeTimeBefore(state State, funcTypeNode Node[*ast.FuncType]) ExecuteStatement {
+	rv := reflect.ValueOf(time.Time.Before)
 	return compiler.genericValue(rv, ValueKey{})
 }
 

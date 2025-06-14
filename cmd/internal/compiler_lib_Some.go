@@ -48,30 +48,41 @@ func (compiler *Compiler) registerSomeType() OnCreateType {
 	return compiler.createSomeType
 }
 
+type TypeMapperForSomeType struct {
+	someRt reflect.Type
+	dataRt reflect.Type
+	vk     ValueKey
+}
+
+func (tm TypeMapperForSomeType) Pos() token.Pos {
+	return token.NoPos
+}
+
+func (tm TypeMapperForSomeType) End() token.Pos {
+	return token.NoPos
+}
+
+func (tm TypeMapperForSomeType) ActualType() (reflect.Type, ValueKey) {
+	return tm.someRt, tm.vk
+}
+
+func (tm TypeMapperForSomeType) Kind() reflect.Kind {
+	return reflect.Struct
+}
+
 func (compiler *Compiler) createSomeType(state State, typeParams []ITypeMapper) ITypeMapper {
-	typ, vk := typeParams[0].ActualType()
-	if vk.Key == "" {
-		println(vk.Key)
+	dataType, dataValueKey := typeParams[0].ActualType()
+	if dataValueKey.Key == "" {
+		println(dataValueKey.Key)
 	}
-	structFieldTag := reflect.StructTag(fmt.Sprintf(`Type:"%v" TData:"%v"`, someTypeType, vk.String()))
+	structFieldTag := reflect.StructTag(fmt.Sprintf(`Type:"%v" TData:"%v"`, someTypeType, dataValueKey.String()))
 	var sfArr []reflect.StructField
 	sfAssigned := reflect.StructField{Name: "Assigned", Type: reflect.TypeOf(true), Tag: structFieldTag}
-	sfValue := reflect.StructField{Name: "Value", Type: typ, Tag: structFieldTag}
+	sfValue := reflect.StructField{Name: "Value", Type: dataType, Tag: structFieldTag}
 	sfArr = append(sfArr, sfAssigned, sfValue)
 	rt := reflect.StructOf(sfArr)
-	fn := func() reflect.Type {
-		return rt
-	}
-	return &ReflectTypeHolder{
-		fn,
-		func() (reflect.Type, ValueKey) {
-			return rt, SomeValueKey
-		},
-		func() reflect.Kind {
-			return reflect.Struct
-		},
-		fn,
-	}
+
+	return &TypeMapperForSomeType{rt, dataType, ValueKey{SomeValueKey.Folder, fmt.Sprintf("%v_%v.%v", SomeValueKey.Key, dataValueKey.Folder, dataValueKey.Key)}}
 }
 
 const someTypeType = "__built_in_Some_Type__"

@@ -31,6 +31,7 @@ func TestName(t *testing.T) {
 		{"Relation 002", false, "./work/relationship0002.go", ""},
 		{"OptionalRelationship 001", false, "./work/optionalRelationship.go", ""},
 	}
+
 	for _, s := range ss {
 		t.Run(
 			s.testName,

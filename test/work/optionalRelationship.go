@@ -101,7 +101,7 @@ func init() {
 					OldestParent: func() lib.Some[time.Time] {
 						if fatherValue, motherValue, ok := lib.GetSomeData02(fatherId, motherId); ok {
 							if fatherBirthDate, motherBirthDate, ok := lib.GetSomeData02(fatherValue.BirthDate, motherValue.BirthDate); ok {
-								if fatherBirthDate.Unix() > motherBirthDate.Unix() {
+								if fatherBirthDate.Before(motherBirthDate) {
 									return lib.SetSomeValue(fatherBirthDate)
 								} else {
 									return lib.SetSomeValue(motherBirthDate)

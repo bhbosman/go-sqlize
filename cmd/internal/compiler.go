@@ -100,6 +100,7 @@ func (compiler *Compiler) Init(
 	}
 	compiler.addBuiltInFunctions()
 	compiler.addOsFunctions()
+	compiler.addTimeFunctions()
 	compiler.addIoFunctions()
 	compiler.addStrconvFunctions()
 	compiler.addMathFunctions()
@@ -264,6 +265,9 @@ func (compiler *Compiler) valuesToNodes(state State, values []reflect.Value) []N
 func (compiler *Compiler) valueToNode(value reflect.Value) Node[ast.Node] {
 	kind := value.Kind()
 	switch kind {
+	case reflect.Struct:
+		return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value, stringValueKey}}
+
 	case reflect.String:
 		return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value, stringValueKey}}
 	case reflect.Int:

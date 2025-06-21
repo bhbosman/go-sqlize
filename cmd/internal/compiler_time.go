@@ -7,7 +7,11 @@ import (
 	"time"
 )
 
+var timeTimeValueKey = ValueKey{"time", "Time"}
+
 func (compiler *Compiler) addTimeFunctions() {
+	compiler.GlobalTypes[timeTimeValueKey] = compiler.registerTimeTime()
+	compiler.TypesToValueKeys[reflect.TypeFor[time.Time]()] = timeTimeValueKey
 	compiler.GlobalFunctions[ValueKey{"time", "Now"}] = functionInformation{compiler.timeNowImplementation, Node[*ast.FuncType]{}, false}
 }
 

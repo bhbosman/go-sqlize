@@ -69,12 +69,13 @@ func (j JoinInformation) SourceName() string {
 }
 
 type Compiler struct {
-	CompilerState   CompilerState
-	InitFunctions   []Node[*ast.FuncDecl]
-	GlobalFunctions map[ValueKey]functionInformation
-	GlobalTypes     map[ValueKey]OnCreateType
-	Sources         map[string]ISourceType
-	JoinInformation map[string]JoinInformation
+	CompilerState    CompilerState
+	InitFunctions    []Node[*ast.FuncDecl]
+	GlobalFunctions  map[ValueKey]functionInformation
+	GlobalTypes      map[ValueKey]OnCreateType
+	Sources          map[string]ISourceType
+	JoinInformation  map[string]JoinInformation
+	TypesToValueKeys map[reflect.Type]ValueKey
 
 	NextAlias int
 	Fileset   *token.FileSet
@@ -92,6 +93,7 @@ func (compiler *Compiler) Init(
 	compiler.Fileset = Fileset
 	compiler.Sources = map[string]ISourceType{}
 	compiler.GlobalTypes = map[ValueKey]OnCreateType{}
+	compiler.TypesToValueKeys = map[reflect.Type]ValueKey{}
 	compiler.JoinInformation = map[string]JoinInformation{}
 
 	compiler.GlobalFunctions = map[ValueKey]functionInformation{
@@ -266,6 +268,7 @@ func (compiler *Compiler) valueToNode(value reflect.Value) Node[ast.Node] {
 	kind := value.Kind()
 	switch kind {
 	case reflect.Struct:
+		panic("dddddd")
 		return Node[ast.Node]{Valid: true, Node: &ReflectValueExpression{value, stringValueKey}}
 
 	case reflect.String:

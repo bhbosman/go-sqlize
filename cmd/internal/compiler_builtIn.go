@@ -23,10 +23,9 @@ var float32ValueKey = ValueKey{"", "float32"}
 var float64ValueKey = ValueKey{"", "float64"}
 var stringValueKey = ValueKey{"", "string"}
 var boolValueKey = ValueKey{"", "bool"}
-var timeTimeValueKey = ValueKey{"time", "Time"}
 
 func (compiler *Compiler) addBuiltInFunctions() {
-	compiler.GlobalTypes[timeTimeValueKey] = compiler.registerTimeTime()
+
 	compiler.GlobalTypes[intValueKey] = compiler.registerInt()
 	compiler.GlobalTypes[int64ValueKey] = compiler.registerInt64()
 	compiler.GlobalTypes[int32ValueKey] = compiler.registerInt32()
